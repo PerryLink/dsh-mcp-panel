@@ -17,7 +17,6 @@
     "esModuleInterop": true,
     "allowImportingTsExtensions": true,
     "jsx": "react-jsx",
-    "baseUrl": ".",
     "paths": {
       "react": [
         "../../../node_modules/.pnpm/@types+react@18.3.31/node_modules/@types/react/index.d.ts"

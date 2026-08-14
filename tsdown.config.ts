@@ -51,11 +51,15 @@ export default defineConfig([
     clean: false,
     // ESM output under a "type": "module" package must land on .js, not .mjs.
     fixedExtension: false,
-    external: [/^node:/],
-    // zod is the only non-peer dependency: bundle it so the host half stays
-    // self-contained when a profile resolves the package outside pnpm's tree
-    // (the shared profiles/node_modules fallback carries no dependency set).
-    noExternal: ['zod'],
+    deps: {
+      // Only zod may come in from node_modules; everything else stays external
+      // (zod is the only non-peer dependency: bundling it keeps the host half
+      // self-contained when a profile resolves the package outside pnpm's tree,
+      // since the shared profiles/node_modules fallback carries no dep set).
+      onlyBundle: ['zod'],
+      alwaysBundle: ['zod'],
+      neverBundle: [/^node:/],
+    },
   },
   {
     name: `${PLUGIN_ID}/client`,
@@ -66,8 +70,15 @@ export default defineConfig([
     dts: false,
     sourcemap: true,
     clean: false,
-    external: [...PLATFORM_EXTERNALS],
-    noExternal: (id: string) => (PLATFORM_EXTERNALS.includes(id) ? undefined : true),
+    deps: {
+      // Platform modules stay external (the factory's `require` answers them
+      // from the shell's frozen module table); every other import is inlined.
+      // `onlyBundle: false` suppresses the bundled-dependency warning — the
+      // inlining here is deliberate, not accidental.
+      onlyBundle: false,
+      alwaysBundle: (id: string) => (PLATFORM_EXTERNALS.includes(id) ? undefined : true),
+      neverBundle: [...PLATFORM_EXTERNALS],
+    },
     define: {
       'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV ?? 'production'),
       'import.meta.env.MODE': JSON.stringify(process.env.NODE_ENV ?? 'production'),
