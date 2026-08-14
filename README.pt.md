@@ -30,7 +30,10 @@
 ## Início rápido
 
 ```sh
+# canal git (compila pelo script prepare do pacote)
 dsh plugin --profile web add github:PerryLink/dsh-mcp-panel#v0.2.0
+# canal npm (tarball publicado, sem aprovação de compilação)
+dsh plugin --profile web add dsh-mcp-panel@0.2.0
 ```
 
 Reinicie (ou deixe a superfície web recarregar seu `cordis.patch.yml`) e execute:

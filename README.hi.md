@@ -30,7 +30,10 @@
 ## त्वरित शुरुआत
 
 ```sh
+# git चैनल (पैकेज के prepare स्क्रिप्ट से बिल्ड होता है)
 dsh plugin --profile web add github:PerryLink/dsh-mcp-panel#v0.2.0
+# npm चैनल (प्रकाशित tarball, बिल्ड अनुमोदन की आवश्यकता नहीं)
+dsh plugin --profile web add dsh-mcp-panel@0.2.0
 ```
 
 फिर रीस्टार्ट करें (या वेब सतह को अपनी `cordis.patch.yml` हॉट-रीलोड करने दें) और चलाएँ:

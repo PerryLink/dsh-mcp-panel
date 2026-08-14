@@ -30,7 +30,10 @@
 ## 快速上手
 
 ```sh
+# git 通道（经包的 prepare 脚本构建）
 dsh plugin --profile web add github:PerryLink/dsh-mcp-panel#v0.2.0
+# npm 通道（已发布产物，免构建放行）
+dsh plugin --profile web add dsh-mcp-panel@0.2.0
 ```
 
 重启（或让 web 面板热重载 `cordis.patch.yml`），然后：
