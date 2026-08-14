@@ -81,7 +81,7 @@ MCP servers (1):
 | `probeTimeoutMs` | `10000` | 单次探测超时 |
 | `maxProbes` | `10` | 面板展示的探测记录上限 |
 | `refreshIntervalMs` | `0` | 建议的面板刷新间隔（毫秒；`0` = 仅手动刷新） |
-| `outputLanguage` | `en` | `/mcp` 命令输出语言（`en` \| `zh`） |
+| `outputLanguage` | `en` | `/mcp` 命令输出语言（`en` \| `zh` \| `es` \| `pt` \| `hi`） |
 | `passiveProbeEnabled` | `false` | 是否周期性后台探测 streamable-http 服务器 |
 | `passiveProbeIntervalMs` | `60000` | 被动探测间隔（毫秒） |
 

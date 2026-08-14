@@ -81,7 +81,7 @@ respaldo compartilhado `$DSH_HOME/profiles/node_modules`) e adicione a linha a `
 | `probeTimeoutMs` | `10000` | Tempo limite por sonda |
 | `maxProbes` | `10` | Limite de registros de sonda exibidos no painel |
 | `refreshIntervalMs` | `0` | Intervalo de atualização sugerido para o painel em ms (`0` = somente sob demanda) |
-| `outputLanguage` | `en` | Idioma de saída do comando `/mcp` (`en` \| `zh`) |
+| `outputLanguage` | `en` | Idioma de saída do comando `/mcp` (`en` \| `zh` \| `es` \| `pt` \| `hi`) |
 | `passiveProbeEnabled` | `false` | Sondear periodicamente servidores streamable-http em segundo plano |
 | `passiveProbeIntervalMs` | `60000` | Intervalo da sonda passiva em milissegundos |
 

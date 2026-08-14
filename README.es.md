@@ -81,7 +81,7 @@ respaldo compartido `$DSH_HOME/profiles/node_modules`) y añade la fila a `cordi
 | `probeTimeoutMs` | `10000` | Tiempo límite por sonda |
 | `maxProbes` | `10` | Límite de registros de sonda mostrados en el panel |
 | `refreshIntervalMs` | `0` | Intervalo de refresco sugerido para el panel en ms (`0` = solo bajo demanda) |
-| `outputLanguage` | `en` | Idioma de salida del comando `/mcp` (`en` \| `zh`) |
+| `outputLanguage` | `en` | Idioma de salida del comando `/mcp` (`en` \| `zh` \| `es` \| `pt` \| `hi`) |
 | `passiveProbeEnabled` | `false` | Sondear periódicamente servidores streamable-http en segundo plano |
 | `passiveProbeIntervalMs` | `60000` | Intervalo de la sonda pasiva en milisegundos |
 

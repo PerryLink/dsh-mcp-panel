@@ -81,7 +81,7 @@ MCP servers (1):
 | `probeTimeoutMs` | `10000` | प्रति प्रोब समय-सीमा |
 | `maxProbes` | `10` | पैनल में दिखाए जाने वाले प्रोब रिकॉर्ड की सीमा |
 | `refreshIntervalMs` | `0` | पैनल के लिए सुझाया गया रिफ्रेश अंतराल (ms; `0` = केवल मांग पर) |
-| `outputLanguage` | `en` | `/mcp` कमांड की आउटपुट भाषा (`en` \| `zh`) |
+| `outputLanguage` | `en` | `/mcp` कमांड की आउटपुट भाषा (`en` \| `zh` \| `es` \| `pt` \| `hi`) |
 | `passiveProbeEnabled` | `false` | streamable-http सर्वरों की बैकग्राउंड में आवधिक प्रोब |
 | `passiveProbeIntervalMs` | `60000` | पैसिव प्रोब अंतराल (मिलीसेकंड) |
 

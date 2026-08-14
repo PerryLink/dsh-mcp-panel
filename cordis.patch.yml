@@ -15,7 +15,7 @@
         # maxProbes: 10
         # Suggested panel refresh interval in ms; 0 = on demand only.
         # refreshIntervalMs: 0
-        # Output language of the /mcp command (en | zh).
+        # Output language of the /mcp command (en | zh | es | pt | hi).
         # outputLanguage: en
         # Periodically probe streamable-http servers in the background.
         # passiveProbeEnabled: false

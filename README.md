@@ -81,7 +81,7 @@ Manual install: put `dsh-mcp-panel` into the profile's `node_modules` (or the sh
 | `probeTimeoutMs` | `10000` | Per-probe timeout |
 | `maxProbes` | `10` | Cap on probe records shown in the panel |
 | `refreshIntervalMs` | `0` | Suggested panel refresh interval in ms (`0` = on demand only) |
-| `outputLanguage` | `en` | Output language of the `/mcp` command (`en` \| `zh`) |
+| `outputLanguage` | `en` | Output language of the `/mcp` command (`en` \| `zh` \| `es` \| `pt` \| `hi`) |
 | `passiveProbeEnabled` | `false` | Periodically probe streamable-http servers in the background |
 | `passiveProbeIntervalMs` | `60000` | Passive probe interval in milliseconds |
 
