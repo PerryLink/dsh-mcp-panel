@@ -17,10 +17,12 @@ import type { McpPanelService } from '../src/service.ts'
 
 /** Fake loader entry: the stable Entry face the service reads. */
 export interface FakeEntry {
+  /** Loader-composed id (may carry an enclosing group prefix such as `include:`). */
   readonly id: string
   readonly disabled: boolean
   readonly fiber: { readonly state: number } | undefined
   readonly options: {
+    readonly id: string
     readonly name: string
     readonly config?: unknown
   }
@@ -32,7 +34,17 @@ export function mcpRow(entryId: string, config: unknown, state = 2, disabled = f
     id: entryId,
     disabled,
     fiber: state === -1 ? undefined : { state },
-    options: { name: '@deepseek-ai/dsh-mcp-client', config },
+    options: { id: entryId, name: '@deepseek-ai/dsh-mcp-client', config },
+  }
+}
+
+/** Build one fake row nested under an enclosing group (group-prefixed `id`). */
+export function nestedMcpRow(groupId: string, entryId: string, config: unknown, state = 2, disabled = false): FakeEntry {
+  return {
+    id: `${groupId}:${entryId}`,
+    disabled,
+    fiber: state === -1 ? undefined : { state },
+    options: { id: entryId, name: '@deepseek-ai/dsh-mcp-client', config },
   }
 }
 

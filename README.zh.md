@@ -8,7 +8,12 @@
 [![dsh-plugin](https://img.shields.io/badge/ecosystem-dsh--plugin-8b5cf6)](https://github.com/topics/dsh-plugin)
 [![deepseek-harness](https://img.shields.io/badge/runtime-deepseek--harness-4f46e5)](https://github.com/deepseek-ai/deepseek-harness)
 
-> 🔭 **可观测优先。** [`@deepseek-ai/dsh-mcp-client`](https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/mcp/mcp-client) 的连接状态是私有的——只有日志。本插件展示一切**能**观测到的事实（配置、工具注册表、Loader 状态），对观测不到的字段如实显示 **"unknown"**，绝不猜测；同时给出让状态可观测的最小上游 seam 提案（见 [upstream proposal](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/upstream-proposal.md)）。
+> 🔭 **可观测优先。** [`@deepseek-ai/dsh-mcp-client`](https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/mcp/mcp-client) 的连接状态是私有的——只有日志。本插件展示一切**能**观测到的事实（配置、工具注册表、Loader 状态），对观测不到的字段如实显示 **"unknown"**，绝不猜测；同时给出让状态可观测的最小上游 seam 提案（见 [upstream proposal](docs/upstream-proposal.md)）。
+
+## 兼容性
+
+- **运行时**：DeepSeek Harness ≥ `0.1.0-rc.5`（peerDependencies 固定 `0.1.0-rc.6` 包线）。
+- **最后验证**：2026-08-14，针对 deepseek-harness 源码 checkout（workspace 包 `0.1.0-rc.5`，mainline `7b9644f`）——headless `/mcp` 端到端 + 实时 web profile；证据见 [docs/research-notes.zh.md](docs/research-notes.zh.md)。
 
 ## 你能得到什么
 
@@ -22,7 +27,7 @@
 ## 快速上手
 
 ```sh
-dsh plugin --profile web add github:PerryLink/dsh-mcp-panel#main
+dsh plugin --profile web add github:PerryLink/dsh-mcp-panel#v0.1.0
 ```
 
 重启（或让 web 面板热重载 `cordis.patch.yml`），然后：
@@ -35,7 +40,7 @@ dsh plugin --profile web add github:PerryLink/dsh-mcp-panel#main
 
 ```text
 MCP servers (1):
-- everything [include:mcp-everything] stdio node …/server-everything/dist/index.js
+- everything [mcp-everything] stdio node …/server-everything/dist/index.js
   | 13 tools | enabled | status: unknown (source: derived) | reconnects: — | last error: —
 ```
 
@@ -51,13 +56,19 @@ MCP servers (1):
         probeTimeoutMs: 10000
 ```
 
+### 卸载
+
+1. 从 `cordis.patch.yml` 移除 `mcp-panel` 行（web 面板会热重载；其他面板重启）。
+2. 从 profile 的 `node_modules`（或共享的 `profiles/node_modules` 回退目录）删除该包。
+3. 用 `dsh web --dump-config` 确认没有残留的 `mcp-panel` 行。
+
 ## 诚实契约
 
 - **只读。** 绝不写任何配置文件；`disable`/`enable` 只是打印建议，由你自行应用。
 - **不伪造状态。** 无上游数据的连接字段显示 `unknown` / `—`，并标注 `statusSource: derived`。
 - **展示脱敏。** URL 查询串凭据、userinfo 密码、header 值、Bearer token、JWT 在渲染前全部清洗；配置中的 `headers` 从不进入任何快照。
 - **panel-only 结果。** 探测细节只进设置页签，不进模型上下文；`/mcp` 输出是模型可读面，且完全可从会话日志重建。
-- **零 mcp-client 改动。** 传输 / OAuth / 协议不动——可观测缺口由[上游提案](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/upstream-proposal.md)覆盖，本插件已实现其消费侧（类型化的 `mcp/status` 事件 + `mcpStatus` 查询服务，运行时特性探测）。
+- **零 mcp-client 改动。** 传输 / OAuth / 协议不动——可观测缺口由[上游提案](docs/upstream-proposal.md)覆盖，本插件已实现其消费侧（类型化的 `mcp/status` 事件 + `mcpStatus` 查询服务，运行时特性探测）。
 
 ## 配置
 
@@ -65,6 +76,24 @@ MCP servers (1):
 |---|---|---|
 | `probeEnabled` | `true` | 是否注册 `mcp_probe` 工具（需要组合里有 `ctx.jobs`） |
 | `probeTimeoutMs` | `10000` | 单次探测超时 |
+
+## 权限与数据
+
+- **读取**：Loader 条目、工具注册表（`mcp__<server>__` 名字）以及上游落地后的 `mcp/status` 事件。
+- **写入**：无。绝不修改任何配置文件。
+- **网络**：仅一次性 `mcp_probe`（及可选被动探测）向你**已配置**的端点 POST 一次 MCP `initialize` 请求；已配置 headers 仅用于该请求，从不展示或记录。
+- 无遥测、无外部服务，除可选探测定时器外无后台任务。
+
+## 故障排查
+
+- 行不见了？运行 `dsh web --dump-config`，检查 `mcp-panel` insert 是否生效且 id 唯一。
+- 面板显示 `status: unknown (source: derived)`——在上游 seam 落地前属预期；见 [docs/upstream-proposal.md](docs/upstream-proposal.md)。
+- 启动日志出现 FAILED 的 `mcp-panel` fiber——确认包能从 profile 解析（裸 `name: dsh-mcp-panel` 经 profile 的 `node_modules` 或共享回退目录解析）。
+- 回滚：移除该行（见「卸载」）。
+
+## 安全
+
+发现安全问题？请在 GitHub 提 issue，但**不要**粘贴密钥、key 或 token——先脱敏。本插件仅在内存中持有你所配置 MCP 服务器的凭据用于探测请求；它们从不进入日志或快照。
 
 ## 工作原理
 

@@ -9,7 +9,7 @@
  */
 
 import { describe, expect, it } from 'vitest'
-import { mcpRow, mountHarness, runCommand } from './harness.ts'
+import { mcpRow, mountHarness, nestedMcpRow, runCommand } from './harness.ts'
 
 function text(result: unknown): string {
   return (result as { result?: { text?: string }; text?: string }).result?.text ?? (result as { text?: string }).text ?? ''
@@ -116,6 +116,18 @@ describe('/mcp command', () => {
     const harness = await mountHarness([mcpRow('mcp-github', GITHUB_CONFIG, 2, true)])
     const output = text(await runCommand(harness, '/mcp github enable'))
     expect(output).toContain("- set: { id: mcp-github, name: '@deepseek-ai/dsh-mcp-client', disabled: false }")
+  })
+
+  it('suggests the user-writable id for rows nested under a loader group', async () => {
+    // entry.id carries the enclosing group prefix (`include:`); patch files
+    // match the bare options.id, so the suggestion must use the bare id.
+    const harness = await mountHarness([nestedMcpRow('include', 'mcp-github', GITHUB_CONFIG)])
+    const listOutput = text(await runCommand(harness, '/mcp'))
+    expect(listOutput).toContain('- github [mcp-github] stdio')
+    expect(listOutput).not.toContain('include:mcp-github')
+    const output = text(await runCommand(harness, '/mcp github disable'))
+    expect(output).toContain("- set: { id: mcp-github, name: '@deepseek-ai/dsh-mcp-client', disabled: true }")
+    expect(output).not.toContain('include:mcp-github')
   })
 
   it('rejects unknown servers and bad usage', async () => {

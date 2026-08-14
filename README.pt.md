@@ -8,7 +8,12 @@
 [![dsh-plugin](https://img.shields.io/badge/ecosystem-dsh--plugin-8b5cf6)](https://github.com/topics/dsh-plugin)
 [![deepseek-harness](https://img.shields.io/badge/runtime-deepseek--harness-4f46e5)](https://github.com/deepseek-ai/deepseek-harness)
 
-> 🔭 **Observabilidade em primeiro lugar.** [`@deepseek-ai/dsh-mcp-client`](https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/mcp/mcp-client) mantém seu estado de conexão privado — apenas logs. Este plugin mostra tudo o que *consegue* observar (configuração, registro de ferramentas, estado do Loader) e diz **"unknown"** para o que não consegue, em vez de adivinhar. Ele também propõe a costura mínima que tornaria o status real: veja a [proposta upstream](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/upstream-proposal.md).
+> 🔭 **Observabilidade em primeiro lugar.** [`@deepseek-ai/dsh-mcp-client`](https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/mcp/mcp-client) mantém seu estado de conexão privado — apenas logs. Este plugin mostra tudo o que *consegue* observar (configuração, registro de ferramentas, estado do Loader) e diz **"unknown"** para o que não consegue, em vez de adivinhar. Ele também propõe a costura mínima que tornaria o status real: veja a [proposta upstream](docs/upstream-proposal.md).
+
+## Compatibilidade
+
+- **Runtime**: DeepSeek Harness ≥ `0.1.0-rc.5` (as peerDependencies fixam a linha `0.1.0-rc.6`).
+- **Última verificação**: 2026-08-14 contra um checkout do código-fonte do deepseek-harness (pacotes do workspace em `0.1.0-rc.5`, mainline `7b9644f`) — `/mcp` headless de ponta a ponta mais um perfil web ao vivo; evidências em [docs/research-notes.zh.md](docs/research-notes.zh.md).
 
 ## O que você ganha
 
@@ -22,7 +27,7 @@
 ## Início rápido
 
 ```sh
-dsh plugin --profile web add github:PerryLink/dsh-mcp-panel#main
+dsh plugin --profile web add github:PerryLink/dsh-mcp-panel#v0.1.0
 ```
 
 Reinicie (ou deixe a superfície web recarregar seu `cordis.patch.yml`) e execute:
@@ -35,7 +40,7 @@ Reinicie (ou deixe a superfície web recarregar seu `cordis.patch.yml`) e execut
 
 ```text
 MCP servers (1):
-- everything [include:mcp-everything] stdio node …/server-everything/dist/index.js
+- everything [mcp-everything] stdio node …/server-everything/dist/index.js
   | 13 tools | enabled | status: unknown (source: derived) | reconnects: — | last error: —
 ```
 
@@ -51,13 +56,19 @@ respaldo compartilhado `$DSH_HOME/profiles/node_modules`) e adicione a linha a `
         probeTimeoutMs: 10000
 ```
 
+### Desinstalação
+
+1. Remova a linha `mcp-panel` de `cordis.patch.yml` (a superfície web a recarrega em quente; outras superfícies reiniciam).
+2. Apague o pacote do `node_modules` do perfil (ou do respaldo compartilhado `profiles/node_modules`).
+3. Confirme com `dsh web --dump-config` que nenhuma linha `mcp-panel` restou.
+
 ## Honestidade por contrato
 
 - **Somente leitura.** Nenhum arquivo de configuração é gravado. `disable`/`enable` imprime uma sugestão que você aplica.
 - **Sem status falso.** Campos de conexão sem dados upstream mostram `unknown` / `—`, com `statusSource: derived`.
 - **Exibição sanitizada.** Credenciais em query strings, senhas userinfo, valores de cabeçalhos, tokens bearer e JWTs são removidos antes da renderização; os `headers` configurados nunca entram em nenhum snapshot.
 - **Resultados somente do painel.** Os detalhes das sondas ficam na aba de configurações, nunca no contexto do modelo; `/mcp` é a superfície legível pelo modelo e é totalmente reconstruível a partir do log da sessão.
-- **Sem mudanças no mcp-client.** Transporte, OAuth e protocolo permanecem intactos — a lacuna de observabilidade é coberta pela [proposta upstream](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/upstream-proposal.md), que este plugin já consome (evento tipado `mcp/status` + serviço de consulta `mcpStatus`, detectados em tempo de execução).
+- **Sem mudanças no mcp-client.** Transporte, OAuth e protocolo permanecem intactos — a lacuna de observabilidade é coberta pela [proposta upstream](docs/upstream-proposal.md), que este plugin já consome (evento tipado `mcp/status` + serviço de consulta `mcpStatus`, detectados em tempo de execução).
 
 ## Configuração
 
@@ -65,6 +76,24 @@ respaldo compartilhado `$DSH_HOME/profiles/node_modules`) e adicione a linha a `
 |---|---|---|
 | `probeEnabled` | `true` | Registra a ferramenta `mcp_probe` (requer `ctx.jobs` na composição) |
 | `probeTimeoutMs` | `10000` | Tempo limite por sonda |
+
+## Permissões e dados
+
+- **Lê**: linhas do Loader, o registro de ferramentas (nomes `mcp__<server>__`) e, quando o upstream implementar, eventos `mcp/status`.
+- **Escreve**: nada. Nenhum arquivo de configuração é modificado.
+- **Rede**: apenas a sonda de uso único `mcp_probe` (e a sonda passiva opcional) envia uma requisição MCP `initialize` para os endpoints que você configurou; os cabeçalhos configurados são usados na requisição e nunca são exibidos nem registrados.
+- Sem telemetria, sem serviços externos, sem trabalho em segundo plano além dos temporizadores de sonda opcionais.
+
+## Solução de problemas
+
+- A linha não aparece? Rode `dsh web --dump-config` e confira se o insert `mcp-panel` foi aplicado com um id único.
+- O painel mostra `status: unknown (source: derived)` — esperado até a costura upstream aterrissar; veja [docs/upstream-proposal.md](docs/upstream-proposal.md).
+- O log de boot mostra um fiber `mcp-panel` FAILED — o pacote precisa resolver a partir do perfil (o `name: dsh-mcp-panel` simples resolve via o `node_modules` do perfil ou o respaldo compartilhado).
+- Rollback: remova a linha (ver Desinstalação).
+
+## Segurança
+
+Encontrou um problema de segurança? Abra uma issue no GitHub **sem** colar segredos, chaves ou tokens — redija tudo antes. Este plugin mantém as credenciais dos seus servidores MCP configurados apenas em memória para as requisições de sonda; elas nunca chegam a logs ou snapshots.
 
 ## Como funciona
 

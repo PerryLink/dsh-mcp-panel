@@ -106,7 +106,9 @@ export class McpPanelService extends TypertRemoteService {
     for (const entry of this.ctx.loader.entries()) {
       if (entry.options.name !== MCP_CLIENT_MODULE) continue
       rows.push({
-        entryId: entry.id,
+        // options.id is the user-written patch id (entry.id prefixes enclosing
+        // group ids such as `include:`), so patch suggestions match on reload.
+        entryId: entry.options.id,
         disabled: entry.disabled,
         fiberPhase: entry.fiber === undefined ? null : FIBER_PHASE[entry.fiber.state] ?? null,
         config: entry.options.config,

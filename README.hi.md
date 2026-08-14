@@ -8,7 +8,12 @@
 [![dsh-plugin](https://img.shields.io/badge/ecosystem-dsh--plugin-8b5cf6)](https://github.com/topics/dsh-plugin)
 [![deepseek-harness](https://img.shields.io/badge/runtime-deepseek--harness-4f46e5)](https://github.com/deepseek-ai/deepseek-harness)
 
-> 🔭 **ऑब्ज़र्वेबिलिटी सबसे पहले।** [`@deepseek-ai/dsh-mcp-client`](https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/mcp/mcp-client) अपना कनेक्शन स्टेट निजी रखता है — सिर्फ़ लॉग। यह प्लगइन वह सब दिखाता है जो *देखा जा सकता है* (कॉन्फ़िगरेशन, टूल रजिस्ट्री, Loader स्टेट) और जो नहीं देखा जा सकता उसके लिए अनुमान लगाने की बजाय साफ़-साफ़ **"unknown"** कहता है। यह वह न्यूनतम अपस्ट्रीम सीम भी प्रस्तावित करता है जिससे स्टेटस वास्तविक बनेगा: देखें [upstream proposal](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/upstream-proposal.md)।
+> 🔭 **ऑब्ज़र्वेबिलिटी सबसे पहले।** [`@deepseek-ai/dsh-mcp-client`](https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/mcp/mcp-client) अपना कनेक्शन स्टेट निजी रखता है — सिर्फ़ लॉग। यह प्लगइन वह सब दिखाता है जो *देखा जा सकता है* (कॉन्फ़िगरेशन, टूल रजिस्ट्री, Loader स्टेट) और जो नहीं देखा जा सकता उसके लिए अनुमान लगाने की बजाय साफ़-साफ़ **"unknown"** कहता है। यह वह न्यूनतम अपस्ट्रीम सीम भी प्रस्तावित करता है जिससे स्टेटस वास्तविक बनेगा: देखें [upstream proposal](docs/upstream-proposal.md)।
+
+## संगतता
+
+- **रनटाइम**: DeepSeek Harness ≥ `0.1.0-rc.5` (peerDependencies `0.1.0-rc.6` पैकेज लाइन पिन करती हैं)।
+- **अंतिम सत्यापन**: 2026-08-14, deepseek-harness के सोर्स checkout के विरुद्ध (workspace पैकेज `0.1.0-rc.5`, mainline `7b9644f`) — headless `/mcp` एंड-टू-एंड + लाइव वेब प्रोफ़ाइल; प्रमाण [docs/research-notes.zh.md](docs/research-notes.zh.md) में।
 
 ## आपको क्या मिलता है
 
@@ -22,7 +27,7 @@
 ## त्वरित शुरुआत
 
 ```sh
-dsh plugin --profile web add github:PerryLink/dsh-mcp-panel#main
+dsh plugin --profile web add github:PerryLink/dsh-mcp-panel#v0.1.0
 ```
 
 फिर रीस्टार्ट करें (या वेब सतह को अपनी `cordis.patch.yml` हॉट-रीलोड करने दें) और चलाएँ:
@@ -35,7 +40,7 @@ dsh plugin --profile web add github:PerryLink/dsh-mcp-panel#main
 
 ```text
 MCP servers (1):
-- everything [include:mcp-everything] stdio node …/server-everything/dist/index.js
+- everything [mcp-everything] stdio node …/server-everything/dist/index.js
   | 13 tools | enabled | status: unknown (source: derived) | reconnects: — | last error: —
 ```
 
@@ -51,13 +56,19 @@ MCP servers (1):
         probeTimeoutMs: 10000
 ```
 
+### अनइंस्टॉल
+
+1. `cordis.patch.yml` से `mcp-panel` लाइन हटाएँ (वेब सतह इसे हॉट-रीलोड करती है; अन्य सतहें रीस्टार्ट करें)।
+2. प्रोफ़ाइल के `node_modules` (या साझा `profiles/node_modules` फ़ॉलबैक) से पैकेज हटाएँ।
+3. `dsh web --dump-config` से पुष्टि करें कि कोई `mcp-panel` लाइन नहीं बची।
+
 ## अनुबंध द्वारा ईमानदारी
 
 - **रीड-ओनली।** कोई कॉन्फ़िगरेशन फ़ाइल कभी नहीं लिखी जाती। `disable`/`enable` एक सुझाव छापता है जिसे आप स्वयं लागू करते हैं।
 - **नकली स्टेटस नहीं।** अपस्ट्रीम डेटा के बिना कनेक्शन फ़ील्ड `unknown` / `—` दिखाते हैं, साथ में `statusSource: derived`।
 - **सैनिटाइज़्ड प्रदर्शन।** URL क्वेरी क्रेडेंशियल, userinfo पासवर्ड, हेडर मान, बियरर टोकन और JWT रेंडरिंग से पहले हटा दिए जाते हैं; कॉन्फ़िगर किए गए `headers` किसी भी स्नैपशॉट में नहीं जाते।
 - **केवल-पैनल परिणाम।** प्रोब विवरण सेटिंग्स टैब में रहते हैं, मॉडल संदर्भ में कभी नहीं; `/mcp` आउटपुट मॉडल-रीडेबल सतह है और सेशन लॉग से पूरी तरह रीकंस्ट्रक्टेबल है।
-- **mcp-client में कोई बदलाव नहीं।** ट्रांसपोर्ट, OAuth और प्रोटोकॉल अछूते रहते हैं — ऑब्ज़र्वेबिलिटी का अंतर [upstream proposal](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/upstream-proposal.md) से ढका जाता है, जिसे यह प्लगइन पहले से उपभोग करता है (टाइप्ड `mcp/status` इवेंट + `mcpStatus` क्वेरी सेवा, रनटाइम फ़ीचर-डिटेक्शन)।
+- **mcp-client में कोई बदलाव नहीं।** ट्रांसपोर्ट, OAuth और प्रोटोकॉल अछूते रहते हैं — ऑब्ज़र्वेबिलिटी का अंतर [upstream proposal](docs/upstream-proposal.md) से ढका जाता है, जिसे यह प्लगइन पहले से उपभोग करता है (टाइप्ड `mcp/status` इवेंट + `mcpStatus` क्वेरी सेवा, रनटाइम फ़ीचर-डिटेक्शन)।
 
 ## कॉन्फ़िगरेशन
 
@@ -65,6 +76,24 @@ MCP servers (1):
 |---|---|---|
 | `probeEnabled` | `true` | `mcp_probe` टूल पंजीकृत करें (रचना में `ctx.jobs` चाहिए) |
 | `probeTimeoutMs` | `10000` | प्रति प्रोब समय-सीमा |
+
+## अनुमतियाँ और डेटा
+
+- **पढ़ता है**: Loader पंक्तियाँ, टूल रजिस्ट्री (`mcp__<server>__` नाम), और upstream लागू होने पर `mcp/status` इवेंट।
+- **लिखता है**: कुछ नहीं। कोई कॉन्फ़िगरेशन फ़ाइल कभी संशोधित नहीं होती।
+- **नेटवर्क**: केवल एक-बार `mcp_probe` (और वैकल्पिक पैसिव प्रोब) आपके कॉन्फ़िगर किए एंडपॉइंट्स पर एक MCP `initialize` अनुरोध भेजती है; कॉन्फ़िगर किए हेडर केवल अनुरोध के लिए उपयोग होते हैं और कभी प्रदर्शित या लॉग नहीं होते।
+- कोई टेलीमेट्री नहीं, कोई बाहरी सेवा नहीं, वैकल्पिक प्रोब टाइमर के अलावा कोई बैकग्राउंड कार्य नहीं।
+
+## समस्या निवारण
+
+- लाइन दिखाई नहीं दे रही? `dsh web --dump-config` चलाएँ और जाँचें कि `mcp-panel` insert अद्वितीय id के साथ लागू हुआ।
+- पैनल `status: unknown (source: derived)` दिखाता है — upstream सीम आने तक अपेक्षित; देखें [docs/upstream-proposal.md](docs/upstream-proposal.md)।
+- बूट लॉग में FAILED `mcp-panel` fiber — पैकेज को प्रोफ़ाइल से रिज़ॉल्व होना चाहिए (बेयर `name: dsh-mcp-panel` प्रोफ़ाइल के `node_modules` या साझा फ़ॉलबैक से रिज़ॉल्व होता है)।
+- रोलबैक: लाइन हटाएँ (अनइंस्टॉल देखें)।
+
+## सुरक्षा
+
+सुरक्षा समस्या मिली? GitHub issue खोलें **बिना** सीक्रेट, की या टोकन चिपकाए — पहले सब रिडैक्ट करें। यह प्लगइन आपके कॉन्फ़िगर किए MCP सर्वरों की क्रेडेंशियल केवल प्रोब अनुरोधों के लिए मेमोरी में रखता है; वे कभी लॉग या स्नैपशॉट तक नहीं पहुँचते।
 
 ## यह कैसे काम करता है
 
