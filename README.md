@@ -19,7 +19,7 @@
 
 | Surface | What it shows |
 |---|---|
-| **`/mcp` command** | transport, target, tool count, connection status, last error, reconnect count — model-readable, session-log reconstructable, bilingual (`outputLanguage: en\|zh`) |
+| **`/mcp` command** | transport, target, tool count, connection status, last error, reconnect count — model-readable, session-log reconstructable, five output languages (`outputLanguage: en\|zh\|es\|pt\|hi`) |
 | **Settings → Plugins → MCP tab** | the same snapshot read-only, with status badges, expandable tool lists, sanitized errors, probe results |
 | **Panel probe button** | one-click connectivity probe of one streamable-http server from the tab; results stay panel-only |
 | **Passive probes** | optional background reachability badges per server, kept separate from connection status |
@@ -117,10 +117,12 @@ Found a security issue? Open a GitHub issue **without** pasting secrets, keys, o
 
 ```sh
 pnpm install
-pnpm run typecheck
-pnpm test          # 96 tests: sanitizer extremes, grouping, aggregation tolerance, command output (5 languages), probe gating, client wiring, presenter
-pnpm run build     # tsc declarations → lib/types; tsdown → lib/index.js + lib/typert.host.js + lib/client.js
+pnpm run typecheck    # local gate: resolves the harness checkout's fresh type faces via tsconfig paths
+pnpm run typecheck:ci # npm gate: resolves the published 0.1.0-rc.6 type faces (what CI runs)
+pnpm test             # 105 tests: sanitizer extremes, grouping, aggregation tolerance, command output (5 languages), probe gating, client wiring, presenter
+pnpm run build        # tsc declarations → lib/types; tsdown → lib/index.js + lib/typert.host.js + lib/client.js
 pnpm run verify:self-contained
+pnpm run verify:artifacts
 pnpm pack
 ```
 

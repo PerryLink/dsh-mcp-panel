@@ -19,7 +19,7 @@
 
 | Superfície | O que mostra |
 |---|---|
-| **Comando `/mcp`** | transporte, alvo, contagem de ferramentas, status de conexão, último erro, contador de reconexões — legível pelo modelo e reconstruível pelo log, bilíngue (`outputLanguage: en\|zh`) |
+| **Comando `/mcp`** | transporte, alvo, contagem de ferramentas, status de conexão, último erro, contador de reconexões — legível pelo modelo e reconstruível pelo log, cinco idiomas de saída (`outputLanguage: en\|zh\|es\|pt\|hi`) |
 | **Configurações → Plugins → aba MCP** | o mesmo snapshot somente leitura, com selos de status, listas expansíveis de ferramentas, erros sanitizados e resultados de sondas |
 | **Botão de sonda do painel** | sonda de conectividade em um clique para um servidor streamable-http a partir da aba; os resultados continuam somente do painel |
 | **Sondas passivas** | selos de alcançabilidade opcionais em segundo plano por servidor, separados do status de conexão |
@@ -117,10 +117,12 @@ Encontrou um problema de segurança? Abra uma issue no GitHub **sem** colar segr
 
 ```sh
 pnpm install
-pnpm run typecheck
-pnpm test          # 96 testes: extremos do sanitizador, agrupamento, tolerância de agregação, saída do comando (5 idiomas), controle de sondas, fiação do cliente, apresentador
-pnpm run build     # declarações tsc → lib/types; tsdown → lib/index.js + lib/typert.host.js + lib/client.js
+pnpm run typecheck    # porta local: resolve as faces de tipo frescas do checkout do harness via caminhos tsconfig
+pnpm run typecheck:ci # porta npm: resolve as faces de tipo publicadas 0.1.0-rc.6 (o que o CI executa)
+pnpm test             # 105 testes: extremos do sanitizador, agrupamento, tolerância de agregação, saída do comando (5 idiomas), controle de sondas, fiação do cliente, apresentador
+pnpm run build        # declarações tsc → lib/types; tsdown → lib/index.js + lib/typert.host.js + lib/client.js
 pnpm run verify:self-contained
+pnpm run verify:artifacts
 pnpm pack
 ```
 

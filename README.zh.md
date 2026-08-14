@@ -19,7 +19,7 @@
 
 | 界面 | 展示内容 |
 |---|---|
-| **`/mcp` 命令** | transport、目标、工具数、连接状态、最近错误、重连计数——模型可读、可日志重建，支持双语（`outputLanguage: en\|zh`） |
+| **`/mcp` 命令** | transport、目标、工具数、连接状态、最近错误、重连计数——模型可读、可日志重建，支持五种输出语言（`outputLanguage: en\|zh\|es\|pt\|hi`） |
 | **设置 → 插件 → MCP 页签** | 同一快照的只读视图：状态徽标、可展开工具清单、脱敏错误、探测结果 |
 | **面板探测按钮** | 从页签对单个 streamable-http 服务器一键发起连通性探测；结果仍仅面板可见 |
 | **被动探测** | 可选的每服务器后台可达性徽标，与连接状态严格分离展示 |
@@ -117,10 +117,12 @@ MCP servers (1):
 
 ```sh
 pnpm install
-pnpm run typecheck
-pnpm test          # 96 个测试：脱敏极端用例、分组、聚合容错、命令输出（五语言）、探测门控、客户端接线、presenter
-pnpm run build     # tsc 声明 → lib/types；tsdown → lib/index.js + lib/typert.host.js + lib/client.js
+pnpm run typecheck    # 本地门禁：经 tsconfig paths 解析 harness checkout 的最新类型面
+pnpm run typecheck:ci # npm 门禁：解析已发布的 0.1.0-rc.6 类型面（CI 实际执行）
+pnpm test             # 105 个测试：脱敏极端用例、分组、聚合容错、命令输出（五语言）、探测门控、客户端接线、presenter
+pnpm run build        # tsc 声明 → lib/types；tsdown → lib/index.js + lib/typert.host.js + lib/client.js
 pnpm run verify:self-contained
+pnpm run verify:artifacts
 pnpm pack
 ```
 

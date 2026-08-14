@@ -1,6 +1,6 @@
 {
   "name": "dsh-mcp-panel",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Read-only runtime management panel for the official DeepSeek Harness MCP client: /mcp command, a Settings page MCP tab with connection status, recent errors, reconnect counts and tool inventory (sanitized for display), controlled enable/disable patch suggestions, and an optional one-shot Streamable HTTP connectivity probe.",
   "repository": {
     "type": "git",
@@ -28,9 +28,15 @@
   "files": [
     "lib",
     "src",
+    "docs",
     "cordis.patch.yml",
+    "CHANGELOG.md",
+    "THIRD_PARTY_NOTICES.md",
     "README.md",
     "README.zh.md",
+    "README.es.md",
+    "README.pt.md",
+    "README.hi.md",
     "LICENSE"
   ],
   "dsh": {

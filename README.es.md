@@ -19,7 +19,7 @@
 
 | Superficie | Qué muestra |
 |---|---|
-| **Comando `/mcp`** | transporte, destino, número de herramientas, estado de conexión, último error, contador de reconexiones — legible por el modelo y reconstruible desde el log, bilingüe (`outputLanguage: en\|zh`) |
+| **Comando `/mcp`** | transporte, destino, número de herramientas, estado de conexión, último error, contador de reconexiones — legible por el modelo y reconstruible desde el log, cinco idiomas de salida (`outputLanguage: en\|zh\|es\|pt\|hi`) |
 | **Ajustes → Plugins → pestaña MCP** | la misma instantánea en solo lectura, con insignias de estado, listas de herramientas expandibles, errores saneados y resultados de sondas |
 | **Botón de sonda del panel** | sonda de conectividad de un clic para un servidor streamable-http desde la pestaña; los resultados siguen siendo solo del panel |
 | **Sondas pasivas** | insignias de alcanzabilidad opcionales en segundo plano por servidor, separadas del estado de conexión |
@@ -117,10 +117,12 @@ respaldo compartido `$DSH_HOME/profiles/node_modules`) y añade la fila a `cordi
 
 ```sh
 pnpm install
-pnpm run typecheck
-pnpm test          # 96 pruebas: extremos del saneador, agrupación, tolerancia de agregación, salida del comando (5 idiomas), control de sondas, cableado del cliente, presentador
-pnpm run build     # declaraciones tsc → lib/types; tsdown → lib/index.js + lib/typert.host.js + lib/client.js
+pnpm run typecheck    # compuerta local: resuelve las caras de tipo frescas del checkout del harness vía rutas tsconfig
+pnpm run typecheck:ci # compuerta npm: resuelve las caras de tipo publicadas 0.1.0-rc.6 (lo que ejecuta CI)
+pnpm test             # 105 pruebas: extremos del saneador, agrupación, tolerancia de agregación, salida del comando (5 idiomas), control de sondas, cableado del cliente, presentador
+pnpm run build        # declaraciones tsc → lib/types; tsdown → lib/index.js + lib/typert.host.js + lib/client.js
 pnpm run verify:self-contained
+pnpm run verify:artifacts
 pnpm pack
 ```
 

@@ -6,30 +6,33 @@ Thanks for your interest! PRs fixing bugs, improving tests, or tightening docs a
 
 ```sh
 pnpm install
-pnpm run typecheck        # requires a deepseek-harness checkout (see below)
+pnpm run typecheck        # local gate: requires a deepseek-harness checkout (see below)
+pnpm run typecheck:ci     # npm gate: published 0.1.0-rc.6 type faces, no checkout needed
 pnpm test
 pnpm run build
 pnpm run verify:self-contained
 pnpm run verify:artifacts
 ```
 
-CI runs `test → build → verify:self-contained → verify:artifacts` on Linux and Windows (`.github/workflows/ci.yml`).
+CI (`ci.yml`) runs `typecheck:ci → test → build → verify:self-contained → verify:artifacts`
+on Linux and Windows with Node 22 and 24, plus a monthly `harness-compat` job
+(`compat.yml`) that boots the real deepseek-harness web profile with the packed
+plugin installed.
 
 ## Typecheck boundary
 
 `tsconfig.json` maps `@deepseek-ai/cordis`, `@deepseek-ai/dsh-typert-protocol` and
-the four client type faces to **relative paths into a deepseek-harness checkout**
-(`../../../packages/…`, `../../../vendor/cordis/…`): the harness's published npm
-packages are older than its source tree, and its client type faces are not
-published at all. Consequences:
+the client type faces to **relative paths into a deepseek-harness checkout**
+(`../../../packages/…`, `../../../vendor/cordis/…`), so the local `typecheck`
+gate sees the harness's freshest type faces. The npm-resolved gate
+(`typecheck:ci`, `tsconfig.ci.json` with the `paths` cleared) compiles the same
+sources against the published `0.1.0-rc.6` faces and is what CI runs, so a PR
+cannot drift from the published type line. Consequences:
 
 - `pnpm run typecheck` works only when this repository sits at
   `<checkout>/Project/Plugins/dsh-mcp-panel` (the shipped layout).
-- Everything else — tests, build, and both verify scripts — resolves from
-  `node_modules` and needs no checkout; CI therefore does not run `tsc`, and
-  that is a documented decision, not an omission (vendoring the transitive
-  type closure spans ~6 packages and would drift faster than it helps; see
-  `docs/optimization-plan.zh.md` §5.1).
+- Everything else — `typecheck:ci`, tests, build, and both verify scripts —
+  resolves from `node_modules` and needs no checkout.
 
 ## Style
 

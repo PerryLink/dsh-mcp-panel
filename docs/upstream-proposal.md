@@ -4,7 +4,15 @@
 > `deepseek-ai/deepseek-harness` 仓库的 `docs/upstream-proposal.md`；若二者不一致，
 > 以本插件仓库版本为插件实现所依据的契约，PR 内容以提交到上游仓库的版本为准。
 
-**Status:** proposal (not yet implemented upstream). Target repository: `deepseek-ai/deepseek-harness`, package `packages/mcp/mcp-client`.
+**Status:** proposal (not yet merged upstream). Implementation exists in the fork branch
+`PerryLink/deepseek-harness:feat/mcp-client-status-observability-seam` (commit `e1611e9`,
+rebase of `deepseek-ai/deepseek-harness:master`) with tests, bilingual docs, and an Agent
+Note; a ready-to-open PR is described in the handoff at
+[deepseek-harness Discussions #1300](https://github.com/deepseek-ai/deepseek-harness/discussions/1300)
+(compare link: `deepseek-ai/deepseek-harness/compare/master...PerryLink:feat/mcp-client-status-observability-seam`).
+The upstream repository currently does not accept external pull requests; whoever holds merge
+access can open the PR from that branch. Target repository: `deepseek-ai/deepseek-harness`,
+package `packages/mcp/mcp-client`.
 **Author:** `dsh-mcp-panel` (runtime management panel for the official MCP client).
 **Scope:** status events + a status query service only. No transport, OAuth, protocol, or reconnect-policy changes.
 
@@ -19,11 +27,11 @@ the logger: "reconnecting (warn, with attempt count and delay)", "recovered
 package's own invariant companion states the gap explicitly:
 
 > "the bridge exposes no independent server-to-tool snapshot after an
-> asynchronous resync" 鈥?`src/invariant.ts`
+> asynchronous resync" — `src/invariant.ts`
 
 A read-only runtime management surface (a `/mcp` command, a web settings card)
 therefore cannot show connection status, recent errors, or reconnect counts
-without either reimplementing the client or guessing from the tool registry 鈥?and guessing from `ctx.tools` misreports a failed-but-tools-still-registered
+without either reimplementing the client or guessing from the tool registry — and guessing from `ctx.tools` misreports a failed-but-tools-still-registered
 server as healthy. This proposal adds the minimal seam that lets any consumer
 observe the supervisor without touching its transport or reconnect logic.
 
@@ -90,7 +98,7 @@ export class McpStatusService extends Service {
 ```
 
 One service per app root, created by the first live mcp-client instance and
-shared by the rest 鈥?the same `WeakMap<Context, 鈥?` singleton pattern the file
+shared by the rest — the same `WeakMap<Context, …>` singleton pattern the file
 already uses for `activeServerNames` (`src/index.ts` lines ~45, 148). Each
 instance's supervisor calls `report()` at the six sites above. `dispose()`
 reports `disposed` before unregistering tools so `toolCount` is still accurate
@@ -101,40 +109,40 @@ in the terminal payload.
 - Event: `declare module '@deepseek-ai/cordis' { interface Events { 'mcp/status'(payload: McpStatusPayload): void } }` with `@mode emit` JSDoc.
 - Service: `declare module '@deepseek-ai/cordis' { interface Context { mcpStatus: McpStatusService } }`.
 - Both live in a new `src/status.ts`, re-exported from the package root; a new
-  `mcp-client-invariant` companion can assert `report` 鉄?tool-registry
+  `mcp-client-invariant` companion can assert `report` — tool-registry
   generation if desired (optional, not required for this proposal).
 
 ## Deliberate non-goals
 
-- **No transport / OAuth / protocol changes** 鈥?the supervisor's reconnect
+- **No transport / OAuth / protocol changes** — the supervisor's reconnect
   loop, transport factory, and tool bridge stay byte-for-byte; this only adds
   notifications around them.
-- **No sanitization in the event** 鈥?the payload is trusted same-process data;
+- **No sanitization in the event** — the payload is trusted same-process data;
   `error` carries the real text. Display consumers redact before rendering
   (reference implementation: `dsh-mcp-panel` `src/sanitize.ts`).
-- **No Typert remote export from mcp-client itself** 鈥?which host services
+- **No Typert remote export from mcp-client itself** — which host services
   reach the browser is an app-composition choice (gateway selection), not a
   client-package concern. Panels compose their own remote service over this
   seam, as `dsh-mcp-panel` does.
-- **No per-session projection** 鈥?app-level runtime-varying state does not
+- **No per-session projection** — app-level runtime-varying state does not
   belong in session logs.
 
 ## PR contents (when implemented)
 
-1. `src/status.ts` 鈥?payload type, service, event declaration.
-2. `src/connection.ts` 鈥?six `report()` call sites (no behavior change).
-3. `src/index.ts` 鈥?mount the shared `McpStatusService` singleton; export the types.
-4. `README.md` 鈥?"Observability" section documenting the event and the service.
-5. Tests 鈥?`status.spec.ts` (report/list/get, singleton across two instances),
+1. `src/status.ts` — payload type, service, event declaration.
+2. `src/connection.ts` — six `report()` call sites (no behavior change).
+3. `src/index.ts` — mount the shared `McpStatusService` singleton; export the types.
+4. `README.md` — "Observability" section documenting the event and the service.
+5. Tests — `status.spec.ts` (report/list/get, singleton across two instances),
    `reconnect.spec.ts` additions asserting the emitted phase sequence for a
-   crash loop (connecting 鈫?connected 鈫?waiting 鈫?鈥?鈫?exhausted) and for
+   crash loop (connecting → connected → waiting → … → exhausted) and for
    `reconnect.enabled: false`.
 6. Agent Note per repository convention (non-trivial change).
 
 ## Consumer behavior (dsh-mcp-panel, implemented against this proposal)
 
-The panel subscribes `ctx.on('mcp/status', 鈥?` and optionally queries
-`ctx.get('mcpStatus')` on start (feature detection 鈥?the service is absent
+The panel subscribes `ctx.on('mcp/status', …)` and optionally queries
+`ctx.get('mcpStatus')` on start (feature detection — the service is absent
 until this PR lands). When neither produces data, the panel reports status as
 `unknown` with `statusSource: 'derived'` (from loader entries + tool registry
 only) instead of fabricating a connection state. That keeps the panel honest

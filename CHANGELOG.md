@@ -2,6 +2,32 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.2.1] - 2026-08-14
+
+### Fixed
+
+- CI never passed: `pnpm/action-setup` had no pnpm version to install (no `packageManager` field and no `version` input). Added `packageManager: pnpm@11.7.0`, upgraded the actions (checkout@v7, setup-node@v7, pnpm/action-setup@v6), and pinned the pnpm version explicitly in `compat.yml` (its subdirectory checkout has no workspace-root `package.json` to auto-detect from).
+- Probe targeting for rows nested under loader groups: `rawEndpoint` compared the group-composed `entry.id` (`include:…`) against the snapshot namespace derived from `entry.options.id`, so group-nested rows without an explicit `serverName` could never be probed.
+- Upstream `mcp/status` payloads are validated before storage — a malformed payload (unknown phase, non-numeric counts) previously flowed into the snapshot verbatim and got the whole `mcpPanel/status` response rejected by the strict Typert codec on the client.
+- Reconnect counting is idempotent per observed attempt: re-observing the same payload (HMR remount, event + query seed) no longer double counts; `connected`/`disposed` resets the counter so the next outage counts from attempt 1.
+- `/mcp <server> disable|enable` on a leftover (unconfigured) `mcp__` namespace emitted a malformed `- set: { id: , … }` suggestion — it now refuses with a localized explanation, and listings mark those rows `unconfigured` instead of `disabled`.
+- Job lifecycle states outside the panel vocabulary render as `unknown` (muted) instead of failing the wire codec or throwing at render.
+- Repaired mojibake (corrupted em-dashes/arrows) in `docs/upstream-proposal.md`; its status header now points at the implemented fork branch and the Discussions handoff.
+
+### Changed
+
+- The tab polls on a short cadence while any probe is running, so probe rows and the disabled probe button settle even when `refreshIntervalMs` is `0`.
+- The tab's error state now shows the underlying failure message instead of a generic notice.
+- Badges no longer double-announce to screen readers (dropped `role="img"`/`aria-label`; the label is visible text).
+- The `/mcp` command hint is served from the localized message dictionaries.
+
+### Engineering
+
+- tsdown config migrated off the deprecated `external`/`noExternal` options to `deps.neverBundle`/`deps.alwaysBundle`/`deps.onlyBundle`.
+- Removed `baseUrl` from the tsconfigs (dropped in TypeScript 7; `paths` resolves relative to the config file), unblocking the typescript@7 line.
+- `files` now ships `docs/`, `CHANGELOG.md`, `THIRD_PARTY_NOTICES.md`, and all five READMEs (the published tarball was missing `docs/upstream-proposal.md`, which the READMEs link to).
+- 105 tests (up from 96): observation validation and idempotent reconnect counting, nested-row probe targeting, leftover-namespace command behavior, and unknown job-state presentation.
+
 ## [0.2.0] - 2026-08-14
 
 ### Added
