@@ -92,6 +92,20 @@ const PANEL_CSS = `
   border-radius: 4px;
   padding: 4px 8px;
 }
+[data-dsh-mcp-panel] .dmcp-probe-now {
+  align-self: flex-start;
+  font: inherit;
+  cursor: pointer;
+  color: var(--dsw-alias-label-primary);
+  background: var(--dsw-alias-bg-layer-1);
+  border: 1px solid var(--dsw-alias-border-l3);
+  border-radius: 4px;
+  padding: 4px 10px;
+}
+[data-dsh-mcp-panel] .dmcp-probe-now:focus-visible {
+  outline: 2px solid var(--dsw-alias-brand-primary);
+  outline-offset: -2px;
+}
 [data-dsh-mcp-panel] .dmcp-card-title {
   min-width: 0;
   overflow: hidden;

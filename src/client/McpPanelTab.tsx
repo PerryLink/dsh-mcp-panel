@@ -3,12 +3,14 @@
 import { useEffect, useId, useState, type ReactNode } from 'react'
 import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import { presentMcpPanel, probeBadge, type BadgeTone, type PresentedServerRow } from './present.ts'
-import type { McpPanelSnapshot } from '../wire.ts'
+import type { McpPanelSnapshot, ProbeStarted } from '../wire.ts'
 
-/** Registration-side injected face: the unwrapped snapshot read. */
+/** Registration-side injected face: the unwrapped snapshot read + probe start. */
 export interface McpPanelTabInjected {
   /** Read the current Host snapshot (RemoteResult already unwrapped). */
   status: () => Promise<McpPanelSnapshot>
+  /** Start a one-shot probe of one streamable-http server (panel-only result). */
+  probe: (serverName: string) => Promise<ProbeStarted>
 }
 
 /** Full component props assembled by the Settings slot renderer. */
@@ -48,10 +50,11 @@ function probeLabel(badge: ReturnType<typeof probeBadge>['badge'], t: McpPanelTa
 }
 
 /** Render the read-only MCP management tab. */
-export function McpPanelTab({ status, t }: McpPanelTabProps): ReactNode {
+export function McpPanelTab({ status, probe, t }: McpPanelTabProps): ReactNode {
   const listId = useId()
   const [request, setRequest] = useState(0)
   const [expanded, setExpanded] = useState<string | null>(null)
+  const [probeError, setProbeError] = useState<string | null>(null)
   const [state, setState] = useState<ViewState>({ status: 'loading' })
   const [toolQuery, setToolQuery] = useState('')
 
@@ -113,6 +116,12 @@ export function McpPanelTab({ status, t }: McpPanelTabProps): ReactNode {
                       >
                         <strong className="dmcp-card-title">{row.view.serverName}</strong>
                         <span className="dmcp-card-trailing">
+                          {row.view.probeState !== null ? (
+                            <Badge
+                              tone={row.view.probeState === 'reachable' ? 'ok' : 'error'}
+                              label={row.view.probeState === 'reachable' ? t('probeReachable') : t('probeUnreachable')}
+                            />
+                          ) : null}
                           <Badge tone={row.tone} label={badgeLabel(row.badge, t)} />
                           <span className="dmcp-tool-count">
                             {row.view.toolCount} {t('tools')}
@@ -136,6 +145,21 @@ export function McpPanelTab({ status, t }: McpPanelTabProps): ReactNode {
                             {row.view.delayMs !== null ? <div><dt>{t('retryIn')}</dt><dd>{row.view.delayMs} {t('ms')}</dd></div> : null}
                           </dl>
                           <code className="dmcp-target" title={row.view.target}>{row.view.transport} {row.view.target}</code>
+                          {row.view.transport === 'streamable-http' ? (
+                            <button
+                              type="button"
+                              className="dmcp-probe-now"
+                              onClick={() => {
+                                setProbeError(null)
+                                void Promise.resolve().then(() => probe(row.view.serverName)).then(
+                                  () => { reload() },
+                                  (error: unknown) => { setProbeError(error instanceof Error ? error.message : String(error)) },
+                                )
+                              }}
+                            >
+                              {t('probeNow')}
+                            </button>
+                          ) : null}
                           {row.view.tools.length === 0 ? (
                             <p className="dmcp-status">{t('noTools')}</p>
                           ) : (
@@ -171,6 +195,7 @@ export function McpPanelTab({ status, t }: McpPanelTabProps): ReactNode {
             </>
           )}
           {!model.observed && !model.empty ? <p className="dmcp-derived-note">{t('derivedNote')}</p> : null}
+          {probeError !== null ? <p className="dmcp-error-text" role="alert">{t('probeFailedAction')}: {probeError}</p> : null}
           <h3 className="dmcp-heading">{t('probes')}</h3>
           {model.probes.length === 0 ? <p className="dmcp-status">{t('probeEmpty')}</p> : (
             <ul className="dmcp-probes">

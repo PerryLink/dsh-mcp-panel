@@ -36,6 +36,10 @@ export const zh = {
   probeFailed: '失败',
   probeKilled: '已取消',
   probeStopping: '取消中',
+  probeNow: '探测',
+  probeReachable: '可达',
+  probeUnreachable: '不可达',
+  probeFailedAction: '探测失败',
   patchHint: '启停只能通过 patch 建议（/mcp <server> disable|enable）手工应用到',
 } satisfies Record<string, string>
 
@@ -78,5 +82,9 @@ export const en = {
   probeFailed: 'Failed',
   probeKilled: 'Killed',
   probeStopping: 'Stopping',
+  probeNow: 'Probe',
+  probeReachable: 'Reachable',
+  probeUnreachable: 'Unreachable',
+  probeFailedAction: 'Probe failed',
   patchHint: 'Enable/disable is a patch suggestion only (/mcp <server> disable|enable); apply it by hand to',
 } satisfies Record<McpPanelLocaleKey, string>

@@ -31,6 +31,12 @@ export interface Config {
   maxProbes?: number
   /** Suggested panel refresh interval in ms; 0 = on demand only (default 0). */
   refreshIntervalMs?: number
+  /** Output language of the `/mcp` command (default en). */
+  outputLanguage?: 'en' | 'zh'
+  /** Periodically probe streamable-http servers in the background (default false). */
+  passiveProbeEnabled?: boolean
+  /** Passive probe interval in milliseconds (default 60000). */
+  passiveProbeIntervalMs?: number
 }
 
 /** Fully resolved configuration captured at plugin load. */
@@ -43,6 +49,12 @@ export interface ResolvedConfig {
   maxProbes: number
   /** Suggested panel refresh interval in ms (0 = on demand). */
   refreshIntervalMs: number
+  /** Output language of the `/mcp` command. */
+  outputLanguage: 'en' | 'zh'
+  /** Whether the passive probe loop runs. */
+  passiveProbeEnabled: boolean
+  /** Passive probe interval in milliseconds. */
+  passiveProbeIntervalMs: number
 }
 
 /** Schemastery schema for loader-validated configuration. */
@@ -51,6 +63,9 @@ export const Config: z<Config> = z.object({
   probeTimeoutMs: z.number().min(1).max(MAX_PROBE_TIMEOUT_MS).default(DEFAULT_PROBE_TIMEOUT_MS),
   maxProbes: z.number().min(1).max(100).default(DEFAULT_MAX_PROBES),
   refreshIntervalMs: z.number().min(0).max(MAX_REFRESH_INTERVAL_MS).default(0),
+  outputLanguage: z.union(['en', 'zh'] as const).default('en'),
+  passiveProbeEnabled: z.boolean().default(false),
+  passiveProbeIntervalMs: z.number().min(1_000).max(MAX_REFRESH_INTERVAL_MS).default(60_000),
 })
 
 /**
@@ -76,5 +91,17 @@ export function resolveConfig(config: Config | undefined): ResolvedConfig {
   if (!Number.isFinite(refreshIntervalMs) || refreshIntervalMs < 0 || refreshIntervalMs > MAX_REFRESH_INTERVAL_MS) {
     throw new Error(`dsh-mcp-panel: config.refreshIntervalMs must be a finite number between 0 and ${MAX_REFRESH_INTERVAL_MS}`)
   }
-  return Object.freeze({ probeEnabled, probeTimeoutMs, maxProbes, refreshIntervalMs })
+  const outputLanguage = config?.outputLanguage ?? 'en'
+  if (outputLanguage !== 'en' && outputLanguage !== 'zh') {
+    throw new Error(`dsh-mcp-panel: config.outputLanguage must be "en" or "zh", got ${JSON.stringify(outputLanguage)}`)
+  }
+  const passiveProbeEnabled = config?.passiveProbeEnabled ?? false
+  if (typeof passiveProbeEnabled !== 'boolean') {
+    throw new TypeError('dsh-mcp-panel: config.passiveProbeEnabled must be a boolean')
+  }
+  const passiveProbeIntervalMs = config?.passiveProbeIntervalMs ?? 60_000
+  if (!Number.isFinite(passiveProbeIntervalMs) || passiveProbeIntervalMs < 1_000 || passiveProbeIntervalMs > MAX_REFRESH_INTERVAL_MS) {
+    throw new Error(`dsh-mcp-panel: config.passiveProbeIntervalMs must be a finite number between 1000 and ${MAX_REFRESH_INTERVAL_MS}`)
+  }
+  return Object.freeze({ probeEnabled, probeTimeoutMs, maxProbes, refreshIntervalMs, outputLanguage, passiveProbeEnabled, passiveProbeIntervalMs })
 }

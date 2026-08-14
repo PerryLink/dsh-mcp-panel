@@ -1,0 +1,3 @@
+# Stabilize line endings across platforms: every text file checks out as LF,
+# so the Windows CRLF round-trip never shows up as diff noise.
+* text=auto eol=lf

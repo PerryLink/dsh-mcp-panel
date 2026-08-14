@@ -58,6 +58,8 @@ export async function apply(ctx: Context, config: Config): Promise<void> {
     probeTimeoutMs: resolved.probeTimeoutMs,
     maxProbes: resolved.maxProbes,
     refreshIntervalMs: resolved.refreshIntervalMs,
+    passiveProbeEnabled: resolved.passiveProbeEnabled,
+    passiveProbeIntervalMs: resolved.passiveProbeIntervalMs,
   })
   const service = ctx.get('mcpPanel') as McpPanelService
 
@@ -71,16 +73,14 @@ export async function apply(ctx: Context, config: Config): Promise<void> {
 
   // The /mcp command: only where a human-command registry is composed.
   ctx.inject(['commands'], (scope) => {
-    scope.effect(() => scope.commands.register(mcpCommand(service)), 'dsh-mcp-panel: /mcp command')
+    scope.effect(() => scope.commands.register(mcpCommand(service, resolved.outputLanguage)), 'dsh-mcp-panel: /mcp command')
   })
 
-  // The optional probe tool: only when enabled and a job registry is composed.
-  if (resolved.probeEnabled) {
-    ctx.inject(['jobs'], (scope) => {
-      scope.effect(function* () {
-        yield scope.jobs.attachController('dsh-mcp-panel')
-        yield scope.tools.register(mcpProbeTool(service, scope.jobs, resolved.probeTimeoutMs))
-      }, 'dsh-mcp-panel: probe tool')
-    })
-  }
+  // The jobs controller serves the panel probe action AND the optional tool.
+  ctx.inject(['jobs'], (scope) => {
+    scope.effect(() => scope.jobs.attachController('dsh-mcp-panel'), 'dsh-mcp-panel: jobs controller')
+    if (resolved.probeEnabled) {
+      scope.effect(() => scope.tools.register(mcpProbeTool(service, scope.jobs, resolved.probeTimeoutMs)), 'dsh-mcp-panel: probe tool')
+    }
+  })
 }

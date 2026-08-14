@@ -31,9 +31,10 @@ import {
   type McpLoaderRow,
 } from './aggregate.ts'
 import { groupMcpTools } from './grouping.ts'
+import { probeEndpoint, probeJob, PROBE_KIND } from './probe.ts'
 import { sanitizeText } from './sanitize.ts'
 import type { McpServerStatus } from './upstream.ts'
-import type { McpFiberPhase, McpPanelSnapshot, McpProbeView } from './wire.ts'
+import type { McpFiberPhase, McpPanelSnapshot, McpProbeView, ProbeStarted } from './wire.ts'
 
 declare module '@deepseek-ai/cordis' {
   interface Context {
@@ -58,10 +59,7 @@ const FIBER_PHASE: Record<number, McpFiberPhase> = {
 /** The profile patch-layer filename the enable/disable suggestions name. */
 const PROFILE_PATCH_FILENAME = 'cordis.patch.yml'
 
-/** Job kind this panel owns and reads back as probe rows. */
-const PROBE_KIND = 'mcp-probe'
-
-/** Label prefix written by the `mcp_probe` tool. */
+/** Label prefix written by the `mcp_probe` tool and the panel probe action. */
 const PROBE_LABEL_PREFIX = 'mcp_probe '
 
 /** Service-level runtime settings; the plugin passes its resolved config in. */
@@ -72,6 +70,19 @@ export interface McpPanelServiceConfig {
   maxProbes: number
   /** Suggested panel refresh interval in ms (0 = on demand). */
   refreshIntervalMs: number
+  /** Whether the passive probe loop runs. */
+  passiveProbeEnabled: boolean
+  /** Passive probe interval in milliseconds. */
+  passiveProbeIntervalMs: number
+}
+
+/** Defaults for direct (non-Loader) service construction. */
+const DEFAULT_SERVICE_CONFIG: McpPanelServiceConfig = {
+  probeTimeoutMs: 10_000,
+  maxProbes: 10,
+  refreshIntervalMs: 0,
+  passiveProbeEnabled: false,
+  passiveProbeIntervalMs: 60_000,
 }
 
 /** Read-only MCP management snapshot service, exported over the `mcpPanel` Remote namespace. */
@@ -84,13 +95,23 @@ export class McpPanelService extends TypertRemoteService {
   private readonly reconnects = new Map<string, number>()
   /** Epoch ms of the latest upstream event receipt per server namespace. */
   private readonly observedAt = new Map<string, number>()
+  /** Latest passive-probe reachability per server namespace. */
+  private readonly probeStates = new Map<string, { state: 'reachable' | 'unreachable'; checkedAt: number }>()
+  /** Passive-probe loop guard: one sweep at a time. */
+  private passiveRunning = false
 
   /**
    * @param ctx - context carrying the loader and tool registry.
    * @param config - resolved runtime settings; defaults apply for direct construction.
    */
-  constructor(ctx: Context, private readonly config: McpPanelServiceConfig = { probeTimeoutMs: 10_000, maxProbes: 10, refreshIntervalMs: 0 }) {
+  constructor(ctx: Context, private readonly config: McpPanelServiceConfig = DEFAULT_SERVICE_CONFIG) {
     super(ctx, 'mcpPanel')
+    if (config.passiveProbeEnabled) {
+      const timer = setInterval(() => { void this.runPassiveProbes() }, config.passiveProbeIntervalMs)
+      // An armed probe timer must never hold the process open on its own.
+      timer.unref?.()
+      ctx.effect(() => () => { clearInterval(timer) }, 'dsh-mcp-panel: passive probe loop')
+    }
   }
 
   /**
@@ -136,11 +157,64 @@ export class McpPanelService extends TypertRemoteService {
     return aggregateSnapshot({
       rows,
       groups,
-      facts: { statuses: this.statuses, reconnects: this.reconnects, observedAt: this.observedAt },
+      facts: {
+        statuses: this.statuses,
+        reconnects: this.reconnects,
+        observedAt: this.observedAt,
+        probeStates: this.probeStates,
+      },
       probes: this.probeViews(),
       patchFile: this.patchFile(),
       refreshIntervalMs: this.config.refreshIntervalMs,
     })
+  }
+
+  /**
+   * Start a one-shot connectivity probe of one configured streamable-http
+   * server as an UNOWNED background job — panel-only, like the `mcp_probe`
+   * tool, but callable from the settings tab. Exported on the wire by the
+   * `mcpPanel/probe` invocation descriptor.
+   *
+   * @param serverName - configured namespace.
+   * @returns the started job id and where the result lands.
+   */
+  probe(serverName: string): ProbeStarted {
+    const target = this.rawEndpoint(serverName)
+    if (target === undefined) {
+      throw new Error(`dsh-mcp-panel: "${serverName}" is not a configured streamable-http MCP server`)
+    }
+    const jobs = this.ctx.get('jobs')
+    if (jobs === undefined) {
+      throw new Error('dsh-mcp-panel: ctx.jobs is not composed — the panel probe action needs a background-job registry')
+    }
+    const jobId = jobs.start({
+      kind: PROBE_KIND,
+      label: `mcp_probe ${serverName}`,
+      // Unowned: no model completion notice, readable by the panel only.
+      run: () => probeJob(target.url, target.headers, this.config.probeTimeoutMs),
+    })
+    return {
+      jobId,
+      note: 'Probe results are panel-only: Settings → Plugins → MCP.',
+    }
+  }
+
+  /** One passive-probe sweep over every configured streamable-http server. */
+  private async runPassiveProbes(): Promise<void> {
+    if (this.passiveRunning) return
+    this.passiveRunning = true
+    try {
+      for (const entry of this.ctx.loader.entries()) {
+        if (entry.options.name !== MCP_CLIENT_MODULE) continue
+        const serverName = serverNameOf(entry.options.config, `entry:${entry.options.id}`)
+        const target = this.rawEndpoint(serverName)
+        if (target === undefined) continue
+        const outcome = await probeEndpoint(target.url, target.headers, this.config.probeTimeoutMs, AbortSignal.timeout(this.config.probeTimeoutMs))
+        this.probeStates.set(serverName, { state: outcome.status === 'completed' ? 'reachable' : 'unreachable', checkedAt: Date.now() })
+      }
+    } finally {
+      this.passiveRunning = false
+    }
   }
 
   /**

@@ -23,7 +23,7 @@ function row(entryId: string, config: unknown, disabled = false, fiberPhase: Mcp
   return { entryId, disabled, fiberPhase, config }
 }
 
-const NO_FACTS = { statuses: new Map(), reconnects: new Map(), observedAt: new Map() }
+const NO_FACTS = { statuses: new Map(), reconnects: new Map(), observedAt: new Map(), probeStates: new Map() }
 
 describe('deriveTarget', () => {
   it('derives stdio command lines with quoted args', () => {
@@ -100,6 +100,7 @@ describe('aggregateServerView', () => {
       statuses: new Map([['github', status]]),
       reconnects: new Map([['github', 5]]),
       observedAt: new Map([['github', 123_000]]),
+      probeStates: new Map<string, { state: 'reachable' | 'unreachable'; checkedAt: number }>(),
     }
     const view = aggregateServerView(row('mcp-github', {}), 'github', undefined, facts)
     expect(view).toMatchObject({

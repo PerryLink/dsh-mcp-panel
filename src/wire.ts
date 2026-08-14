@@ -66,6 +66,10 @@ export interface McpServerView {
   connectedAt: number | null
   /** Epoch ms when this process last received an upstream status event; `null` without one. */
   observedAt: number | null
+  /** Passive-probe reachability (`null` = probing disabled or never run). */
+  probeState: 'reachable' | 'unreachable' | null
+  /** Epoch ms of the latest passive-probe settlement; `null` without one. */
+  probeCheckedAt: number | null
   /** Where the connection fields came from. */
   statusSource: McpStatusSource
 }
@@ -125,6 +129,8 @@ export const MCP_PANEL_SNAPSHOT_SCHEMA = z.object({
     lastError: z.string().nullable(),
     connectedAt: z.number().int().nullable(),
     observedAt: z.number().int().nullable(),
+    probeState: z.union([z.literal('reachable'), z.literal('unreachable'), z.null()]),
+    probeCheckedAt: z.number().int().nullable(),
     statusSource: z.union([z.literal('upstream-event'), z.literal('derived')]),
   })),
   probes: z.array(z.object({
@@ -138,8 +144,8 @@ export const MCP_PANEL_SNAPSHOT_SCHEMA = z.object({
 })
 
 /**
- * The single `mcpPanel/status` invocation descriptor, shared verbatim by the
- * host `TYPERT` manifest (`src/typert.host.ts`) and the client
+ * The `mcpPanel/status` invocation descriptor, shared verbatim by the host
+ * `TYPERT` manifest (`src/typert.host.ts`) and the client
  * `TypertRemoteContribution` (`src/client/remote.ts`). Hand-written in the
  * exact shape the Typert generator emits; validated by the typert loader and
  * the client registry at mount time.
@@ -156,5 +162,57 @@ export const MCP_PANEL_STATUS_DESCRIPTOR = Object.freeze({
     typeSymbol: 'dsh-mcp-panel/types#McpPanelSnapshot',
     schema: MCP_PANEL_SNAPSHOT_SCHEMA,
   }),
-  sourceLocation: Object.freeze({ file: 'src/service.ts', line: 1, column: 1 }),
+  sourceLocation: Object.freeze({ file: 'src/wire.ts', line: 1, column: 1 }),
 } as const) satisfies InvocationDescriptor
+
+/** Result of the `mcpPanel/probe` invocation: a started panel-only probe. */
+export interface ProbeStarted {
+  /** Background-job id (`mcp-probe-N`). */
+  jobId: string
+  /** Where the result lands: the settings tab, never model context. */
+  note: string
+}
+
+/** Strict wire schema for {@link ProbeStarted}. */
+export const PROBE_STARTED_SCHEMA = z.object({
+  jobId: z.string(),
+  note: z.string(),
+})
+
+/**
+ * The `mcpPanel/probe` invocation descriptor: start a one-shot probe from the
+ * settings panel (same background-job mechanics as the `mcp_probe` tool).
+ */
+export const MCP_PANEL_PROBE_DESCRIPTOR = Object.freeze({
+  id: 'dsh-mcp-panel#mcpPanel/probe',
+  service: 'mcpPanel',
+  namespace: 'mcpPanel',
+  method: 'probe',
+  invocation: Object.freeze({ kind: 'direct' }),
+  parameters: Object.freeze([Object.freeze({
+    name: 'serverName',
+    wire: 'serverName',
+    source: 'json',
+    codec: Object.freeze({
+      mode: 'strict',
+      typeSymbol: 'dsh-mcp-panel/types#ProbeRequestServerName',
+      schema: z.string(),
+    }),
+  } satisfies InvocationDescriptor['parameters'][number])]),
+  result: Object.freeze({
+    mode: 'strict',
+    typeSymbol: 'dsh-mcp-panel/types#ProbeStarted',
+    schema: PROBE_STARTED_SCHEMA,
+  }),
+  sourceLocation: Object.freeze({ file: 'src/wire.ts', line: 1, column: 1 }),
+} as const) satisfies InvocationDescriptor
+
+/**
+ * The canonical invocation list both Typert faces register — the host
+ * manifest and the client contribution share these exact descriptor objects,
+ * so the two wire codecs can never drift apart.
+ */
+export const MCP_PANEL_INVOCATIONS = Object.freeze([
+  MCP_PANEL_STATUS_DESCRIPTOR,
+  MCP_PANEL_PROBE_DESCRIPTOR,
+])

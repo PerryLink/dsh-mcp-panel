@@ -64,13 +64,20 @@ export async function apply(ctx: ClientContext): Promise<void> {
       }
       return result.value
     }
+    const probe: McpPanelTabInjected['probe'] = async (serverName) => {
+      const result = await scope.remote.mcpPanel.probe(serverName)
+      if (!result.ok) {
+        throw new Error(`mcpPanel.probe failed: ${result.error.code}: ${result.error.message}`)
+      }
+      return result.value
+    }
     scope.slots.inject('settings.plugins.tab', () => scope.slots.register({
       name: 'settings.plugins.tab',
       id: 'mcp',
       order: 30,
       label: () => t('tab'),
       locale: NS,
-      inject: (): McpPanelTabInjected => ({ status }),
+      inject: (): McpPanelTabInjected => ({ status, probe }),
     }, McpPanelTab))
   })
 }

@@ -29,6 +29,8 @@ function server(overrides: Partial<McpServerView> = {}): McpServerView {
     lastError: null,
     connectedAt: null,
     observedAt: null,
+    probeState: null,
+    probeCheckedAt: null,
     statusSource: 'derived',
     ...overrides,
   }

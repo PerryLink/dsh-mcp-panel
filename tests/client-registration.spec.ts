@@ -15,7 +15,7 @@ import { MCP_PANEL_REMOTE } from '../src/client/remote.ts'
 import { TYPERT } from '../src/typert.host.ts'
 
 /** Fake client root recording every registration the plugin makes. */
-function makeCtx(remoteStatus: () => Promise<unknown>) {
+function makeCtx(remoteStatus: () => Promise<unknown>, remoteProbe: (name: string) => Promise<unknown> = async () => ({ ok: true, value: { jobId: 'mcp-probe-1', note: 'x' } })) {
   const registered: Array<{ options: Record<string, unknown>; component: unknown }> = []
   const mounted: unknown[] = []
   const ctx = {
@@ -28,7 +28,7 @@ function makeCtx(remoteStatus: () => Promise<unknown>) {
         mounted.push(contribution)
         return () => undefined
       }),
-      mcpPanel: { status: remoteStatus },
+      mcpPanel: { status: remoteStatus, probe: remoteProbe },
     },
     slots: {
       inject: vi.fn((_name: string, register: () => void) => { register() }),
@@ -87,6 +87,18 @@ describe('client apply', () => {
     await apply(ctx)
     const injected = (registered[0]!.options['inject'] as () => { status: () => Promise<unknown> })()
     await expect(injected.status()).rejects.toThrow('mcpPanel.status failed: service-unavailable: host down')
+  })
+
+  it('unwraps a successful probe RemoteResult and forwards failures', async () => {
+    type ProbeFace = { ok: true; value: { jobId: string; note: string } } | { ok: false; error: { code: string; message: string } }
+    const probe = vi.fn(async (_serverName: string): Promise<ProbeFace> => ({ ok: true, value: { jobId: 'mcp-probe-9', note: 'panel-only' } }))
+    const { ctx, registered } = makeCtx(async () => ({ ok: true, value: null }), probe)
+    await apply(ctx)
+    const injected = (registered[0]!.options['inject'] as () => { probe: (name: string) => Promise<unknown> })()
+    await expect(injected.probe('web')).resolves.toEqual({ jobId: 'mcp-probe-9', note: 'panel-only' })
+    expect(probe).toHaveBeenCalledWith('web')
+    probe.mockResolvedValueOnce({ ok: false, error: { code: 'business', message: 'nope' } })
+    await expect(injected.probe('web')).rejects.toThrow('mcpPanel.probe failed: business: nope')
   })
 
   it('installs the scoped stylesheet once', async () => {

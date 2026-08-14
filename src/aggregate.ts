@@ -55,6 +55,8 @@ export interface McpStatusFacts {
   reconnects: ReadonlyMap<string, number>
   /** Epoch ms of the latest upstream event receipt per server. */
   observedAt: ReadonlyMap<string, number>
+  /** Passive-probe reachability facts per server (empty when probing is off). */
+  probeStates: ReadonlyMap<string, { state: 'reachable' | 'unreachable'; checkedAt: number }>
 }
 
 /**
@@ -151,6 +153,7 @@ export function aggregateServerView(
   const connectedAt = status?.connectedAt ?? null
   const delayMs = status?.delayMs ?? null
   const observedAt = facts.observedAt.get(serverName) ?? null
+  const probe = facts.probeStates.get(serverName)
   return {
     serverName,
     entryId: row?.entryId ?? '',
@@ -168,6 +171,8 @@ export function aggregateServerView(
     lastError,
     connectedAt,
     observedAt,
+    probeState: probe?.state ?? null,
+    probeCheckedAt: probe?.checkedAt ?? null,
     statusSource: status === undefined ? 'derived' : 'upstream-event',
   }
 }
