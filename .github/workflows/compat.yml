@@ -15,11 +15,16 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           path: plugin
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      # Explicit version: the plugin checkout sits in a subdirectory, where
+      # the action's packageManager auto-detection (workspace root) finds
+      # nothing. Keep in sync with the packageManager field in package.json.
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11.7.0
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
       - name: Install plugin toolchain and pack the tarball
@@ -28,7 +33,7 @@ jobs:
           pnpm install --frozen-lockfile
           pnpm run build
           pnpm pack --pack-destination .
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           repository: deepseek-ai/deepseek-harness
           ref: 8c690c7cf885eeca723bbe46bd0502ecaddb3b12
