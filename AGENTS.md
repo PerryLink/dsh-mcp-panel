@@ -25,7 +25,7 @@ Standalone DeepSeek Harness plugin repository (`dsh-mcp-panel`). Development fol
 
 ## Config
 
-Schema in `src/config.ts` (Schemastery, fail-loud bounds, explicit `resolveConfig`): `probeEnabled` (default true), `probeTimeoutMs` (10000), `maxProbes` (10), `refreshIntervalMs` (0 = on demand), `outputLanguage` (`'en' | 'zh'`), `passiveProbeEnabled` (false), `passiveProbeIntervalMs` (60000). `cordis.patch.yml` comments document the same keys; the five-language READMEs carry the user-facing table.
+Schema in `src/config.ts` (Schemastery, fail-loud bounds, explicit `resolveConfig`): `probeEnabled` (default true), `probeTimeoutMs` (10000), `maxProbes` (10), `refreshIntervalMs` (0 = on demand), `outputLanguage` (`'en' | 'zh' | 'es' | 'pt' | 'hi'`), `passiveProbeEnabled` (false), `passiveProbeIntervalMs` (60000). `cordis.patch.yml` comments document the same keys; the five-language READMEs carry the user-facing table.
 
 ## Build
 
@@ -33,7 +33,7 @@ Schema in `src/config.ts` (Schemastery, fail-loud bounds, explicit `resolveConfi
 
 ## Checks
 
-`pnpm run typecheck && pnpm test && pnpm run build && pnpm run verify:self-contained && pnpm pack`.
+`pnpm run typecheck && pnpm run typecheck:ci && pnpm test && pnpm run build && pnpm run verify:self-contained && pnpm run verify:artifacts && pnpm pack`. The plain `typecheck` resolves the local harness checkout's fresh type faces through tsconfig `paths`; `typecheck:ci` resolves the npm-published `0.1.0-rc.6` faces (no paths) and is what CI runs — keep both green.
 
 ## Docs
 
