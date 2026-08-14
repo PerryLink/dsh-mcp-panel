@@ -1,0 +1,13 @@
+# dsh-mcp-panel bundle patch: mount the read-only MCP management panel. `name`
+# is the package name, resolved through the profile's node_modules. An
+# id-targeted override replaces the whole config row — restate every key when
+# overriding. The panel never edits any config file itself.
+- insert:
+    - id: mcp-panel
+      name: dsh-mcp-panel
+      config:
+        # One-shot Streamable HTTP connectivity probe tool (background job;
+        # results are panel-only). Set false to omit the mcp_probe tool.
+        probeEnabled: true
+        # Per-probe timeout in milliseconds.
+        probeTimeoutMs: 10000

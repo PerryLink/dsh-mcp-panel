@@ -1,0 +1,91 @@
+# dsh-mcp-panel
+
+**Read-only runtime management panel for the official DeepSeek Harness MCP client — see every MCP server's status, tools, errors, and reconnect counts, without touching your config.**
+
+[English](README.md) · [简体中文](README.zh.md) · [Español](README.es.md) · [Português](README.pt.md) · [हिन्दी](README.hi.md)
+
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
+[![dsh-plugin](https://img.shields.io/badge/ecosystem-dsh--plugin-8b5cf6)](https://github.com/topics/dsh-plugin)
+[![deepseek-harness](https://img.shields.io/badge/runtime-deepseek--harness-4f46e5)](https://github.com/deepseek-ai/deepseek-harness)
+
+> 🔭 **Observability-first.** [`@deepseek-ai/dsh-mcp-client`](https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/mcp/mcp-client) keeps its connection state private — logs only. This plugin shows everything it *can* observe (config, tool registry, loader state) and says **"unknown"** for what it cannot, instead of guessing. It also proposes the minimal upstream seam that would make status real: see the [upstream proposal](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/upstream-proposal.md).
+
+## What you get
+
+| Surface | What it shows |
+|---|---|
+| **`/mcp` command** | transport, target, tool count, connection status, last error, reconnect count — model-readable, session-log reconstructable |
+| **Settings → Plugins → MCP tab** | the same snapshot read-only, with status badges, expandable tool lists, sanitized errors, probe results |
+| **`/mcp <server> disable\|enable`** | the exact `cordis.patch.yml` line to apply — a *suggestion*, never a write |
+| **`mcp_probe` tool** | one-shot Streamable HTTP connectivity probe as a background job; results are **panel-only** |
+
+## Quick start
+
+```sh
+dsh plugin --profile web add github:PerryLink/dsh-mcp-panel#main
+```
+
+Then restart (or let the web surface hot-reload its `cordis.patch.yml`) and:
+
+```text
+/mcp
+/mcp everything tools
+/mcp everything disable
+```
+
+```text
+MCP servers (1):
+- everything [include:mcp-everything] stdio node …/server-everything/dist/index.js
+  | 13 tools | enabled | status: unknown (source: derived) | reconnects: — | last error: —
+```
+
+Manual install: put `dsh-mcp-panel` into the profile's `node_modules` (or the shared
+`$DSH_HOME/profiles/node_modules` fallback) and add the row to `cordis.patch.yml`:
+
+```yaml
+- insert:
+    - id: mcp-panel
+      name: dsh-mcp-panel
+      config:
+        probeEnabled: true
+        probeTimeoutMs: 10000
+```
+
+## Honest by contract
+
+- **Read-only.** No configuration file is ever written. `disable`/`enable` prints a suggestion you apply yourself.
+- **No fake status.** Connection fields without upstream data read `unknown` / `—`, with `statusSource: derived`.
+- **Sanitized display.** URL query credentials, userinfo passwords, header values, bearer tokens, and JWTs are redacted before rendering; configured `headers` never enter any snapshot.
+- **Panel-only results.** Probe details live in the settings tab, never in model context; `/mcp` output is the model-readable surface and is fully reconstructable from the session log.
+- **No mcp-client changes.** Transport, OAuth, and protocol stay untouched — the observability gap is covered by the [upstream proposal](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/upstream-proposal.md), which this plugin already consumes (typed `mcp/status` event + `mcpStatus` query service, feature-detected at runtime).
+
+## Configuration
+
+| Field | Default | Description |
+|---|---|---|
+| `probeEnabled` | `true` | Register the `mcp_probe` tool (needs `ctx.jobs` in the composition) |
+| `probeTimeoutMs` | `10000` | Per-probe timeout |
+
+## How it works
+
+- **Host half** — a `mcpPanel` Typert Remote service assembles the snapshot from three read-only sources: loader rows (`@deepseek-ai/dsh-mcp-client` entries), `ctx.tools.schemas()` grouped by the `mcp__<server>__` namespace, and upstream `mcp/status` observations. The hand-written `./typert` manifest registers `mcpPanel/status` with the gateway; `zod` is bundled, so the host bundle is self-contained.
+- **Browser half** — a `dsh.client` bundle (served at `/plugins/dsh-mcp-panel/client.js`) mounts the same descriptor via `ctx.remote.$mount` and registers a read-only `settings.plugins.tab` entry (`id: mcp`). The presenter is a pure function; styles are scoped and token-driven.
+- **The `/mcp` command** goes through the standard command registry — every line lands in `command/run` + `command/done` session events.
+
+## Development
+
+```sh
+pnpm install
+pnpm run typecheck
+pnpm test          # 58 tests: sanitizer extremes, grouping, aggregation tolerance, command output, presenter
+pnpm run build     # tsc declarations → lib/types; tsdown → lib/index.js + lib/typert.host.js + lib/client.js
+pnpm run verify:self-contained
+pnpm pack
+```
+
+Verification against a real harness checkout:
+`node --import tsx/esm scripts/verify-headless.mjs` boots the full web profile in process (ephemeral port) and prints the exact `/mcp`, `/mcp <server> tools`, and `/mcp <server> disable` output.
+
+## License
+
+[Apache License 2.0](LICENSE) © 2026 dsh-mcp-panel contributors

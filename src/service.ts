@@ -1,0 +1,185 @@
+/**
+ * The panel's host service: assembles the read-only MCP snapshot and serves
+ * it under the `mcpPanel` Typert Remote namespace (`mcpPanel/status`).
+ *
+ * Data sources, all read-only:
+ * - `ctx.loader` — mcp-client rows (raw config, effective disabled, fiber phase).
+ * - `ctx.tools.schemas()` — registered `mcp__<server>__` tool names + descriptions.
+ * - the proposed upstream `mcp/status` seam — observed via {@link observe}.
+ * - `ctx.jobs` — unowned `mcp-probe` background jobs (panel-only results).
+ *
+ * Connection status is reported honestly: without upstream observations the
+ * view reads `unknown` with `statusSource: 'derived'`; the panel never infers
+ * a connection state from tool-registry presence.
+ *
+ * @module dsh-mcp-panel/service
+ */
+
+import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import type { Context } from '@deepseek-ai/cordis'
+import { TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol'
+import type {} from '@deepseek-ai/cordis-plugin-loader'
+// Type-only: activates the `ctx.jobs` Context merge.
+import type {} from '@deepseek-ai/dsh-jobs'
+// Type-only: activates the `mcp-probe` JobKindMap extension.
+import type {} from './probe.ts'
+import {
+  aggregateSnapshot,
+  MCP_CLIENT_MODULE,
+  serverNameOf,
+  type McpLoaderRow,
+} from './aggregate.ts'
+import { groupMcpTools } from './grouping.ts'
+import { sanitizeText } from './sanitize.ts'
+import type { McpServerStatus } from './upstream.ts'
+import type { McpFiberPhase, McpPanelSnapshot, McpProbeView } from './wire.ts'
+
+declare module '@deepseek-ai/cordis' {
+  interface Context {
+    /** Read-only MCP management snapshot service (this package). */
+    mcpPanel: McpPanelService
+  }
+}
+
+/**
+ * Runtime mirror of the Cordis `FiberState` const enum (numeric cross-package
+ * const enums have no runtime import), projected to the wire phases.
+ */
+const FIBER_PHASE: Record<number, McpFiberPhase> = {
+  0: 'pending',
+  1: 'loading',
+  2: 'active',
+  3: 'failed',
+  4: null,
+  5: 'unloading',
+}
+
+/** The profile patch-layer filename the enable/disable suggestions name. */
+const PROFILE_PATCH_FILENAME = 'cordis.patch.yml'
+
+/** Job kind this panel owns and reads back as probe rows. */
+const PROBE_KIND = 'mcp-probe'
+
+/** Label prefix written by the `mcp_probe` tool. */
+const PROBE_LABEL_PREFIX = 'mcp_probe '
+
+/** Read-only MCP management snapshot service, exported over the `mcpPanel` Remote namespace. */
+export class McpPanelService extends TypertRemoteService {
+  static inject = ['loader', 'tools']
+
+  /** Latest upstream payload per server namespace. */
+  private readonly statuses = new Map<string, McpServerStatus>()
+  /** Cumulative reconnect attempts observed per server namespace. */
+  private readonly reconnects = new Map<string, number>()
+
+  /** @param ctx - context carrying the loader and tool registry. */
+  constructor(ctx: Context) {
+    super(ctx, 'mcpPanel')
+  }
+
+  /**
+   * Record one upstream `mcp/status` payload (event or query-seed). A
+   * `connecting` payload with a positive attempt counts one reconnect.
+   *
+   * @param payload - post-transition status facts.
+   */
+  observe(payload: McpServerStatus): void {
+    if (typeof payload.serverName !== 'string' || payload.serverName === '') return
+    this.statuses.set(payload.serverName, payload)
+    if (payload.phase === 'connecting' && payload.attempt > 0) {
+      this.reconnects.set(payload.serverName, (this.reconnects.get(payload.serverName) ?? 0) + 1)
+    }
+  }
+
+  /**
+   * Assemble the current snapshot. Read-only: touches no configuration file
+   * and mutates no registry. Exported on the wire by the `mcpPanel/status`
+   * invocation descriptor in `./wire.ts` (registered through the package's
+   * `./typert` manifest) — no method decorator, so the built bundle stays
+   * plain ESM.
+   *
+   * @returns the wire snapshot (validated by the strict Typert codec on both faces).
+   */
+  status(): McpPanelSnapshot {
+    const rows: McpLoaderRow[] = []
+    for (const entry of this.ctx.loader.entries()) {
+      if (entry.options.name !== MCP_CLIENT_MODULE) continue
+      rows.push({
+        entryId: entry.id,
+        disabled: entry.disabled,
+        fiberPhase: entry.fiber === undefined ? null : FIBER_PHASE[entry.fiber.state] ?? null,
+        config: entry.options.config,
+      })
+    }
+    const schemas = this.ctx.tools.schemas()
+    const configuredNames = rows.map(row => serverNameOf(row.config, `entry:${row.entryId}`))
+    const groups = groupMcpTools(schemas, configuredNames)
+    return aggregateSnapshot(
+      rows,
+      groups,
+      { statuses: this.statuses, reconnects: this.reconnects },
+      this.probeViews(),
+      this.patchFile(),
+    )
+  }
+
+  /**
+   * Resolve one server's raw endpoint for the probe tool. Credentials stay
+   * inside this return value and are used for the request only — they never
+   * reach a snapshot, a log, or a display.
+   *
+   * @param serverName - configured namespace.
+   * @returns the raw URL + configured headers, or `undefined` when the server
+   *   is not a configured streamable-http row.
+   */
+  rawEndpoint(serverName: string): { url: string; headers: Record<string, string> } | undefined {
+    for (const entry of this.ctx.loader.entries()) {
+      if (entry.options.name !== MCP_CLIENT_MODULE) continue
+      const config = entry.options.config
+      if (serverNameOf(config, `entry:${entry.id}`) !== serverName) continue
+      if (typeof config !== 'object' || config === null || Array.isArray(config)) return undefined
+      const row = config as Record<string, unknown>
+      if (row['transport'] !== 'streamable-http') return undefined
+      const url = row['url']
+      if (typeof url !== 'string' || url === '') return undefined
+      const headersValue = row['headers']
+      const headers: Record<string, string> = {}
+      if (typeof headersValue === 'object' && headersValue !== null && !Array.isArray(headersValue)) {
+        for (const [name, value] of Object.entries(headersValue as Record<string, unknown>)) {
+          if (typeof value === 'string') headers[name] = value
+        }
+      }
+      return { url, headers }
+    }
+    return undefined
+  }
+
+  /** Unowned `mcp-probe` background jobs, newest first, sanitized for display. */
+  private probeViews(): McpProbeView[] {
+    const jobs = this.ctx.get('jobs')
+    if (jobs === undefined) return []
+    return jobs
+      .list()
+      .filter(job => job.kind === PROBE_KIND)
+      .map(job => ({
+        id: job.id,
+        serverName: job.label.startsWith(PROBE_LABEL_PREFIX) ? job.label.slice(PROBE_LABEL_PREFIX.length) : job.label,
+        status: job.status,
+        startedAt: job.startedAt,
+        finishedAt: job.finishedAt ?? null,
+        detail: job.detail === undefined ? null : sanitizeText(job.detail),
+      }))
+      .reverse()
+  }
+
+  /** Absolute path of the profile patch layer the suggestions name, or null. */
+  private patchFile(): string | null {
+    const base = this.ctx.baseUrl
+    if (typeof base !== 'string' || base === '') return null
+    const dir = base.startsWith('file://') ? fileURLToPath(base) : base
+    return join(dir, PROFILE_PATCH_FILENAME)
+  }
+}
+
+export default McpPanelService

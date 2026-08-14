@@ -1,0 +1,91 @@
+# dsh-mcp-panel
+
+**DeepSeek Harness के आधिकारिक MCP क्लाइंट के लिए रीड-ओनली रनटाइम प्रबंधन पैनल — हर MCP सर्वर का स्टेटस, टूल, एरर और रीकनेक्ट काउंट देखें, बिना अपनी कॉन्फ़िगरेशन छुए।**
+
+[English](README.md) · [简体中文](README.zh.md) · [Español](README.es.md) · [Português](README.pt.md) · [हिन्दी](README.hi.md)
+
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
+[![dsh-plugin](https://img.shields.io/badge/ecosystem-dsh--plugin-8b5cf6)](https://github.com/topics/dsh-plugin)
+[![deepseek-harness](https://img.shields.io/badge/runtime-deepseek--harness-4f46e5)](https://github.com/deepseek-ai/deepseek-harness)
+
+> 🔭 **ऑब्ज़र्वेबिलिटी सबसे पहले।** [`@deepseek-ai/dsh-mcp-client`](https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/mcp/mcp-client) अपना कनेक्शन स्टेट निजी रखता है — सिर्फ़ लॉग। यह प्लगइन वह सब दिखाता है जो *देखा जा सकता है* (कॉन्फ़िगरेशन, टूल रजिस्ट्री, Loader स्टेट) और जो नहीं देखा जा सकता उसके लिए अनुमान लगाने की बजाय साफ़-साफ़ **"unknown"** कहता है। यह वह न्यूनतम अपस्ट्रीम सीम भी प्रस्तावित करता है जिससे स्टेटस वास्तविक बनेगा: देखें [upstream proposal](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/upstream-proposal.md)।
+
+## आपको क्या मिलता है
+
+| सतह | क्या दिखाती है |
+|---|---|
+| **`/mcp` कमांड** | ट्रांसपोर्ट, टार्गेट, टूल काउंट, कनेक्शन स्टेटस, अंतिम एरर, रीकनेक्ट काउंट — मॉडल-रीडेबल और लॉग से रीकंस्ट्रक्टेबल |
+| **सेटिंग्स → प्लगइन्स → MCP टैब** | वही स्नैपशॉट रीड-ओनली: स्टेटस बैज, विस्तार योग्य टूल सूचियाँ, सैनिटाइज़्ड एरर, प्रोब परिणाम |
+| **`/mcp <server> disable\|enable`** | लागू करने के लिए सटीक `cordis.patch.yml` लाइन — एक *सुझाव*, कभी लिखावट नहीं |
+| **`mcp_probe` टूल** | Streamable HTTP एंडपॉइंट की एक-बार कनेक्टिविटी प्रोब (बैकग्राउंड जॉब); परिणाम **केवल पैनल में** |
+
+## त्वरित शुरुआत
+
+```sh
+dsh plugin --profile web add github:PerryLink/dsh-mcp-panel#main
+```
+
+फिर रीस्टार्ट करें (या वेब सतह को अपनी `cordis.patch.yml` हॉट-रीलोड करने दें) और चलाएँ:
+
+```text
+/mcp
+/mcp everything tools
+/mcp everything disable
+```
+
+```text
+MCP servers (1):
+- everything [include:mcp-everything] stdio node …/server-everything/dist/index.js
+  | 13 tools | enabled | status: unknown (source: derived) | reconnects: — | last error: —
+```
+
+मैन्युअल इंस्टॉल: `dsh-mcp-panel` को प्रोफ़ाइल के `node_modules` (या साझा
+`$DSH_HOME/profiles/node_modules` फ़ॉलबैक) में रखें और `cordis.patch.yml` में यह लाइन जोड़ें:
+
+```yaml
+- insert:
+    - id: mcp-panel
+      name: dsh-mcp-panel
+      config:
+        probeEnabled: true
+        probeTimeoutMs: 10000
+```
+
+## अनुबंध द्वारा ईमानदारी
+
+- **रीड-ओनली।** कोई कॉन्फ़िगरेशन फ़ाइल कभी नहीं लिखी जाती। `disable`/`enable` एक सुझाव छापता है जिसे आप स्वयं लागू करते हैं।
+- **नकली स्टेटस नहीं।** अपस्ट्रीम डेटा के बिना कनेक्शन फ़ील्ड `unknown` / `—` दिखाते हैं, साथ में `statusSource: derived`।
+- **सैनिटाइज़्ड प्रदर्शन।** URL क्वेरी क्रेडेंशियल, userinfo पासवर्ड, हेडर मान, बियरर टोकन और JWT रेंडरिंग से पहले हटा दिए जाते हैं; कॉन्फ़िगर किए गए `headers` किसी भी स्नैपशॉट में नहीं जाते।
+- **केवल-पैनल परिणाम।** प्रोब विवरण सेटिंग्स टैब में रहते हैं, मॉडल संदर्भ में कभी नहीं; `/mcp` आउटपुट मॉडल-रीडेबल सतह है और सेशन लॉग से पूरी तरह रीकंस्ट्रक्टेबल है।
+- **mcp-client में कोई बदलाव नहीं।** ट्रांसपोर्ट, OAuth और प्रोटोकॉल अछूते रहते हैं — ऑब्ज़र्वेबिलिटी का अंतर [upstream proposal](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/upstream-proposal.md) से ढका जाता है, जिसे यह प्लगइन पहले से उपभोग करता है (टाइप्ड `mcp/status` इवेंट + `mcpStatus` क्वेरी सेवा, रनटाइम फ़ीचर-डिटेक्शन)।
+
+## कॉन्फ़िगरेशन
+
+| फ़ील्ड | डिफ़ॉल्ट | विवरण |
+|---|---|---|
+| `probeEnabled` | `true` | `mcp_probe` टूल पंजीकृत करें (रचना में `ctx.jobs` चाहिए) |
+| `probeTimeoutMs` | `10000` | प्रति प्रोब समय-सीमा |
+
+## यह कैसे काम करता है
+
+- **होस्ट आधा** — एक `mcpPanel` Typert Remote सेवा तीन रीड-ओनली स्रोतों से स्नैपशॉट बनाती है: Loader पंक्तियाँ (`@deepseek-ai/dsh-mcp-client` एंट्री), `mcp__<server>__` नेमस्पेस से समूहित `ctx.tools.schemas()`, और अपस्ट्रीम `mcp/status` ऑब्ज़र्वेशन। हाथ से लिखा `./typert` मैनिफ़ेस्ट `mcpPanel/status` को गेटवे में पंजीकृत करता है; `zod` बंडल में शामिल है, इसलिए होस्ट आधा स्व-निहित है।
+- **ब्राउज़र आधा** — एक `dsh.client` बंडल (`/plugins/dsh-mcp-panel/client.js` पर सर्व किया गया) उसी डिस्क्रिप्टर को `ctx.remote.$mount` से माउंट करता है और रीड-ओनली `settings.plugins.tab` एंट्री (`id: mcp`) पंजीकृत करता है। प्रेज़ेंटर एक शुद्ध फ़ंक्शन है; स्टाइल स्कोप्ड हैं और थीम टोकन का उपयोग करते हैं।
+- **`/mcp` कमांड** मानक कमांड रजिस्ट्री से गुज़रता है — हर पंक्ति `command/run` + `command/done` सेशन इवेंट में दर्ज होती है।
+
+## विकास
+
+```sh
+pnpm install
+pnpm run typecheck
+pnpm test          # 58 टेस्ट: सैनिटाइज़र चरम मामले, समूहन, एग्रीगेशन सहनशीलता, कमांड आउटपुट, प्रेज़ेंटर
+pnpm run build     # tsc डिक्लेरेशन → lib/types; tsdown → lib/index.js + lib/typert.host.js + lib/client.js
+pnpm run verify:self-contained
+pnpm pack
+```
+
+असली harness checkout के विरुद्ध सत्यापन:
+`node --import tsx/esm scripts/verify-headless.mjs` पूरे वेब प्रोफ़ाइल को प्रोसेस में बूट करता है (क्षणिक पोर्ट) और `/mcp`, `/mcp <server> tools`, `/mcp <server> disable` का सटीक आउटपुट छापता है।
+
+## लाइसेंस
+
+[Apache License 2.0](LICENSE) © 2026 dsh-mcp-panel योगदानकर्ता
