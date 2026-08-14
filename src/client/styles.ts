@@ -80,6 +80,18 @@ const PANEL_CSS = `
   padding: 10px 12px;
   cursor: pointer;
 }
+[data-dsh-mcp-panel] .dmcp-card-content:focus-visible {
+  outline: 2px solid var(--dsw-alias-brand-primary);
+  outline-offset: -2px;
+}
+[data-dsh-mcp-panel] .dmcp-tool-filter {
+  font: inherit;
+  color: var(--dsw-alias-label-primary);
+  background: var(--dsw-alias-bg-layer-1);
+  border: 1px solid var(--dsw-alias-border-l3);
+  border-radius: 4px;
+  padding: 4px 8px;
+}
 [data-dsh-mcp-panel] .dmcp-card-title {
   min-width: 0;
   overflow: hidden;

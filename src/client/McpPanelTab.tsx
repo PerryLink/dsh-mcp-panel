@@ -53,6 +53,11 @@ export function McpPanelTab({ status, t }: McpPanelTabProps): ReactNode {
   const [request, setRequest] = useState(0)
   const [expanded, setExpanded] = useState<string | null>(null)
   const [state, setState] = useState<ViewState>({ status: 'loading' })
+  const [toolQuery, setToolQuery] = useState('')
+
+  const reload = (): void => {
+    setRequest(value => value + 1)
+  }
 
   useEffect(() => {
     let current = true
@@ -63,9 +68,18 @@ export function McpPanelTab({ status, t }: McpPanelTabProps): ReactNode {
     return () => { current = false }
   }, [status, request])
 
+  // Optional polling: the host suggests an interval through the snapshot
+  // (0 = on demand only). Errors during polling keep the last good snapshot.
+  const intervalMs = state.status === 'ready' ? state.snapshot.refreshIntervalMs : 0
+  useEffect(() => {
+    if (intervalMs <= 0) return undefined
+    const timer = setInterval(() => { reload() }, intervalMs)
+    return () => { clearInterval(timer) }
+  }, [intervalMs])
+
   const retry = (): void => {
     setState({ status: 'loading' })
-    setRequest(value => value + 1)
+    reload()
   }
 
   const model = state.status === 'ready' ? presentMcpPanel(state.snapshot) : undefined
@@ -109,23 +123,44 @@ export function McpPanelTab({ status, t }: McpPanelTabProps): ReactNode {
                         <div className="dmcp-card-details" id={detailId}>
                           <dl className="dmcp-details">
                             <div><dt>{t('status')}</dt><dd>{badgeLabel(row.badge, t)}</dd></div>
+                            {row.hasAttemptBudget ? (
+                              <div>
+                                <dt>{t('attempt')}</dt>
+                                <dd>{row.view.attempt < 0 ? t('none') : row.view.attempt}/{row.view.maxAttempts < 0 ? t('none') : row.view.maxAttempts}</dd>
+                              </div>
+                            ) : null}
                             <div><dt>{t('reconnects')}</dt><dd>{row.reconnects ?? t('none')}</dd></div>
                             <div><dt>{t('lastError')}</dt><dd className={row.hasError ? 'dmcp-error-text' : undefined}>{row.view.lastError ?? t('none')}</dd></div>
                             <div><dt>{t('fiber')}</dt><dd>{row.view.fiberPhase ?? t('none')}</dd></div>
+                            {row.ageSeconds !== null ? <div><dt>{t('lastEvent')}</dt><dd>{row.ageSeconds}s</dd></div> : null}
                             {row.view.delayMs !== null ? <div><dt>{t('retryIn')}</dt><dd>{row.view.delayMs} {t('ms')}</dd></div> : null}
                           </dl>
                           <code className="dmcp-target" title={row.view.target}>{row.view.transport} {row.view.target}</code>
                           {row.view.tools.length === 0 ? (
                             <p className="dmcp-status">{t('noTools')}</p>
                           ) : (
-                            <ul className="dmcp-tools">
-                              {row.view.tools.map(tool => (
-                                <li key={tool.name}>
-                                  <code>{tool.name}</code>
-                                  {tool.description !== '' ? <span className="dmcp-tool-description">{tool.description}</span> : null}
-                                </li>
-                              ))}
-                            </ul>
+                            <>
+                              <input
+                                type="search"
+                                className="dmcp-tool-filter"
+                                value={toolQuery}
+                                placeholder={t('filterTools')}
+                                aria-label={t('filterTools')}
+                                onChange={(event) => { setToolQuery(event.currentTarget.value) }}
+                              />
+                              <ul className="dmcp-tools">
+                                {row.view.tools
+                                  .filter(tool => toolQuery.trim() === ''
+                                    || tool.name.toLocaleLowerCase().includes(toolQuery.trim().toLocaleLowerCase())
+                                    || tool.description.toLocaleLowerCase().includes(toolQuery.trim().toLocaleLowerCase()))
+                                  .map(tool => (
+                                    <li key={tool.name}>
+                                      <code>{tool.name}</code>
+                                      {tool.description !== '' ? <span className="dmcp-tool-description">{tool.description}</span> : null}
+                                    </li>
+                                  ))}
+                              </ul>
+                            </>
                           )}
                         </div>
                       ) : null}

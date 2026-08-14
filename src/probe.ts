@@ -39,6 +39,14 @@ export interface ProbeOutcome {
   detail: string
 }
 
+/** Display cap for server-reported name/version fields in probe details. */
+const DISPLAY_LIMIT = 80
+
+/** Bound one display string so hostile server metadata cannot blow up layouts. */
+function boundedDisplay(value: string): string {
+  return value.length <= DISPLAY_LIMIT ? value : `${value.slice(0, DISPLAY_LIMIT - 1)}…`
+}
+
 /**
  * POST one MCP `initialize` request and describe the outcome in one sanitized
  * line. Never sends or echoes credentials: the configured headers are used
@@ -88,8 +96,12 @@ export async function probeEndpoint(
     } catch {
       // A 2xx without a JSON body: connectivity itself succeeded.
     }
-    const name = typeof serverInfo.name === 'string' && serverInfo.name !== '' ? sanitizeText(serverInfo.name) : 'unnamed'
-    const version = typeof serverInfo.version === 'string' && serverInfo.version !== '' ? sanitizeText(serverInfo.version) : 'unknown version'
+    const name = typeof serverInfo.name === 'string' && serverInfo.name !== ''
+      ? boundedDisplay(sanitizeText(serverInfo.name))
+      : 'unnamed'
+    const version = typeof serverInfo.version === 'string' && serverInfo.version !== ''
+      ? boundedDisplay(sanitizeText(serverInfo.version))
+      : 'unknown version'
     return { status: 'completed', detail: `HTTP ${response.status}, MCP initialize ok (server ${name} ${version}) in ${ms}ms` }
   } catch (error) {
     if (signal.aborted) return { status: 'failed', detail: `timeout after ${timeoutMs}ms or cancelled` }

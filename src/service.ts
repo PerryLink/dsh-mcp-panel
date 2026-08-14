@@ -64,6 +64,16 @@ const PROBE_KIND = 'mcp-probe'
 /** Label prefix written by the `mcp_probe` tool. */
 const PROBE_LABEL_PREFIX = 'mcp_probe '
 
+/** Service-level runtime settings; the plugin passes its resolved config in. */
+export interface McpPanelServiceConfig {
+  /** Per-probe timeout in milliseconds. */
+  probeTimeoutMs: number
+  /** Cap on probe records shown in the panel. */
+  maxProbes: number
+  /** Suggested panel refresh interval in ms (0 = on demand). */
+  refreshIntervalMs: number
+}
+
 /** Read-only MCP management snapshot service, exported over the `mcpPanel` Remote namespace. */
 export class McpPanelService extends TypertRemoteService {
   static inject = ['loader', 'tools']
@@ -72,9 +82,14 @@ export class McpPanelService extends TypertRemoteService {
   private readonly statuses = new Map<string, McpServerStatus>()
   /** Cumulative reconnect attempts observed per server namespace. */
   private readonly reconnects = new Map<string, number>()
+  /** Epoch ms of the latest upstream event receipt per server namespace. */
+  private readonly observedAt = new Map<string, number>()
 
-  /** @param ctx - context carrying the loader and tool registry. */
-  constructor(ctx: Context) {
+  /**
+   * @param ctx - context carrying the loader and tool registry.
+   * @param config - resolved runtime settings; defaults apply for direct construction.
+   */
+  constructor(ctx: Context, private readonly config: McpPanelServiceConfig = { probeTimeoutMs: 10_000, maxProbes: 10, refreshIntervalMs: 0 }) {
     super(ctx, 'mcpPanel')
   }
 
@@ -87,6 +102,7 @@ export class McpPanelService extends TypertRemoteService {
   observe(payload: McpServerStatus): void {
     if (typeof payload.serverName !== 'string' || payload.serverName === '') return
     this.statuses.set(payload.serverName, payload)
+    this.observedAt.set(payload.serverName, Date.now())
     if (payload.phase === 'connecting' && payload.attempt > 0) {
       this.reconnects.set(payload.serverName, (this.reconnects.get(payload.serverName) ?? 0) + 1)
     }
@@ -117,13 +133,14 @@ export class McpPanelService extends TypertRemoteService {
     const schemas = this.ctx.tools.schemas()
     const configuredNames = rows.map(row => serverNameOf(row.config, `entry:${row.entryId}`))
     const groups = groupMcpTools(schemas, configuredNames)
-    return aggregateSnapshot(
+    return aggregateSnapshot({
       rows,
       groups,
-      { statuses: this.statuses, reconnects: this.reconnects },
-      this.probeViews(),
-      this.patchFile(),
-    )
+      facts: { statuses: this.statuses, reconnects: this.reconnects, observedAt: this.observedAt },
+      probes: this.probeViews(),
+      patchFile: this.patchFile(),
+      refreshIntervalMs: this.config.refreshIntervalMs,
+    })
   }
 
   /**
@@ -173,6 +190,7 @@ export class McpPanelService extends TypertRemoteService {
         detail: job.detail === undefined ? null : sanitizeText(job.detail),
       }))
       .reverse()
+      .slice(0, this.config.maxProbes)
   }
 
   /** Absolute path of the profile patch layer the suggestions name, or null. */

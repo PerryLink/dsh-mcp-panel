@@ -54,7 +54,11 @@ export async function apply(ctx: Context, config: Config): Promise<void> {
 
   // The service has injects, so its fiber activates asynchronously — await it
   // before reading the instance the command and probe closures capture.
-  await ctx.plugin(McpPanelService)
+  await ctx.plugin(McpPanelService, {
+    probeTimeoutMs: resolved.probeTimeoutMs,
+    maxProbes: resolved.maxProbes,
+    refreshIntervalMs: resolved.refreshIntervalMs,
+  })
   const service = ctx.get('mcpPanel') as McpPanelService
 
   // Consume the proposed upstream seam: live events plus a one-shot query

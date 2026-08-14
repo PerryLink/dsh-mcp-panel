@@ -25,6 +25,10 @@ export interface PresentedServerRow {
   readonly hasError: boolean
   /** Display form of the reconnect count (`-1` → null = dash). */
   readonly reconnects: number | null
+  /** Whole seconds since the last upstream event; `null` = never observed. */
+  readonly ageSeconds: number | null
+  /** Whether the attempt/maxAttempts pair is displayable (either is known). */
+  readonly hasAttemptBudget: boolean
 }
 
 /** Render-ready probe row. */
@@ -49,6 +53,8 @@ export interface PresentedMcpPanel {
   readonly observed: boolean
   /** Absolute profile patch-layer path for the hint line, or null. */
   readonly patchFile: string | null
+  /** Suggested refresh interval in ms (`0` = on demand only). */
+  readonly refreshIntervalMs: number
 }
 
 /**
@@ -87,9 +93,10 @@ export function probeBadge(status: McpProbeView['status']): { badge: PresentedPr
  * Project the wire snapshot onto render-ready rows.
  *
  * @param snapshot - the `mcpPanel/status` value.
+ * @param now - epoch ms anchor for age computations (keeps the fold pure).
  * @returns the tab model.
  */
-export function presentMcpPanel(snapshot: McpPanelSnapshot): PresentedMcpPanel {
+export function presentMcpPanel(snapshot: McpPanelSnapshot, now = Date.now()): PresentedMcpPanel {
   const servers = snapshot.servers.map((view): PresentedServerRow => {
     const { badge, tone } = connectionBadge(view)
     return {
@@ -98,6 +105,8 @@ export function presentMcpPanel(snapshot: McpPanelSnapshot): PresentedMcpPanel {
       tone,
       hasError: view.lastError !== null && view.lastError !== '',
       reconnects: view.reconnectCount < 0 ? null : view.reconnectCount,
+      ageSeconds: view.observedAt === null ? null : Math.max(0, Math.floor((now - view.observedAt) / 1000)),
+      hasAttemptBudget: view.attempt >= 0 || view.maxAttempts > 0,
     }
   })
   const probes = snapshot.probes.map((view): PresentedProbeRow => {
@@ -110,5 +119,6 @@ export function presentMcpPanel(snapshot: McpPanelSnapshot): PresentedMcpPanel {
     empty: snapshot.servers.length === 0,
     observed: snapshot.observed,
     patchFile: snapshot.patchFile,
+    refreshIntervalMs: snapshot.refreshIntervalMs,
   }
 }

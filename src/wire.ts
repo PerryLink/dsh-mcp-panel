@@ -64,6 +64,8 @@ export interface McpServerView {
   lastError: string | null
   /** Epoch ms of the last successful connect (upstream); `null` otherwise or unknown. */
   connectedAt: number | null
+  /** Epoch ms when this process last received an upstream status event; `null` without one. */
+  observedAt: number | null
   /** Where the connection fields came from. */
   statusSource: McpStatusSource
 }
@@ -90,6 +92,8 @@ export interface McpPanelSnapshot {
   observed: boolean
   /** Absolute path of the profile patch layer that disable/enable suggestions name. */
   patchFile: string | null
+  /** Suggested panel refresh interval in ms; `0` = the tab refreshes on demand only. */
+  refreshIntervalMs: number
   /** One row per server namespace (configured rows first, leftover namespaces last). */
   servers: readonly McpServerView[]
   /** Connectivity probes this process, newest first. */
@@ -100,6 +104,7 @@ export interface McpPanelSnapshot {
 export const MCP_PANEL_SNAPSHOT_SCHEMA = z.object({
   observed: z.boolean(),
   patchFile: z.string().nullable(),
+  refreshIntervalMs: z.number().int(),
   servers: z.array(z.object({
     serverName: z.string(),
     entryId: z.string(),
@@ -119,6 +124,7 @@ export const MCP_PANEL_SNAPSHOT_SCHEMA = z.object({
     reconnectCount: z.number().int(),
     lastError: z.string().nullable(),
     connectedAt: z.number().int().nullable(),
+    observedAt: z.number().int().nullable(),
     statusSource: z.union([z.literal('upstream-event'), z.literal('derived')]),
   })),
   probes: z.array(z.object({

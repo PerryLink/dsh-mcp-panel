@@ -28,6 +28,7 @@ function server(overrides: Partial<McpServerView> = {}): McpServerView {
     reconnectCount: -1,
     lastError: null,
     connectedAt: null,
+    observedAt: null,
     statusSource: 'derived',
     ...overrides,
   }
@@ -64,6 +65,7 @@ describe('presentMcpPanel', () => {
     const snapshot: McpPanelSnapshot = {
       observed: true,
       patchFile: '/p/cordis.patch.yml',
+      refreshIntervalMs: 15000,
       servers: [
         server({ phase: 'connected', reconnectCount: 3, lastError: 'spawn failed' }),
         server({ serverName: 't', reconnectCount: -1, lastError: null }),
@@ -74,14 +76,33 @@ describe('presentMcpPanel', () => {
     expect(model.empty).toBe(false)
     expect(model.observed).toBe(true)
     expect(model.patchFile).toBe('/p/cordis.patch.yml')
+    expect(model.refreshIntervalMs).toBe(15000)
     expect(model.servers.map(row => row.reconnects)).toEqual([3, null])
     expect(model.servers.map(row => row.hasError)).toEqual([true, false])
     expect(model.servers[0]!.badge).toBe('connected')
     expect(model.probes[0]!.badge).toBe('completed')
   })
 
+  it('computes event age and attempt-budget visibility from a fixed clock', () => {
+    const snapshot: McpPanelSnapshot = {
+      observed: true,
+      patchFile: null,
+      refreshIntervalMs: 0,
+      servers: [
+        server({ serverName: 'fresh', phase: 'waiting', attempt: 2, maxAttempts: 10, observedAt: 995_000 }),
+        server({ serverName: 'quiet' }),
+      ],
+      probes: [],
+    }
+    const model = presentMcpPanel(snapshot, 1_000_000)
+    expect(model.servers[0]!.ageSeconds).toBe(5)
+    expect(model.servers[0]!.hasAttemptBudget).toBe(true)
+    expect(model.servers[1]!.ageSeconds).toBeNull()
+    expect(model.servers[1]!.hasAttemptBudget).toBe(false)
+  })
+
   it('flags the empty composition', () => {
-    const model = presentMcpPanel({ observed: false, patchFile: null, servers: [], probes: [] })
+    const model = presentMcpPanel({ observed: false, patchFile: null, refreshIntervalMs: 0, servers: [], probes: [] })
     expect(model.empty).toBe(true)
     expect(model.observed).toBe(false)
   })

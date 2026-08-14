@@ -47,12 +47,14 @@ export const JS_EXPRESSION_MARKER = '<expression>'
 /** Sentinel values for "not observed" numeric fields. */
 export const UNKNOWN_COUNT = -1
 
-/** One server namespace → its upstream observation and derived reconnect total. */
+/** One server namespace → its upstream observation and derived totals. */
 export interface McpStatusFacts {
   /** Latest upstream payload per server; absent = not observed. */
   statuses: ReadonlyMap<string, McpServerStatus>
   /** Cumulative reconnect attempts observed per server. */
   reconnects: ReadonlyMap<string, number>
+  /** Epoch ms of the latest upstream event receipt per server. */
+  observedAt: ReadonlyMap<string, number>
 }
 
 /**
@@ -148,6 +150,7 @@ export function aggregateServerView(
   const reconnect = facts.reconnects.get(serverName) ?? UNKNOWN_COUNT
   const connectedAt = status?.connectedAt ?? null
   const delayMs = status?.delayMs ?? null
+  const observedAt = facts.observedAt.get(serverName) ?? null
   return {
     serverName,
     entryId: row?.entryId ?? '',
@@ -164,28 +167,36 @@ export function aggregateServerView(
     reconnectCount: reconnect,
     lastError,
     connectedAt,
+    observedAt,
     statusSource: status === undefined ? 'derived' : 'upstream-event',
   }
+}
+
+/** Inputs for {@link aggregateSnapshot}; grouped so callers never mix them up. */
+export interface McpAggregateInput {
+  /** Loader mcp-client rows (raw config included). */
+  rows: readonly McpLoaderRow[]
+  /** Tool groups from {@link groupMcpTools}. */
+  groups: readonly McpToolGroup[]
+  /** Upstream status facts (may be empty). */
+  facts: McpStatusFacts
+  /** Background probe views (may be empty). */
+  probes: McpPanelSnapshot['probes']
+  /** Absolute profile patch-layer path, or null. */
+  patchFile: string | null
+  /** Suggested panel refresh interval in ms (`0` = on demand). */
+  refreshIntervalMs: number
 }
 
 /**
  * Assemble the complete snapshot from loader rows, tool groups, upstream
  * facts, and probe rows. Tolerates missing fields anywhere in the inputs.
  *
- * @param rows - loader mcp-client rows (raw config included).
- * @param groups - tool groups from {@link groupMcpTools}.
- * @param facts - upstream status facts (may be empty).
- * @param probes - background probe views (may be empty).
- * @param patchFile - absolute profile patch-layer path, or null.
+ * @param input - the snapshot inputs (see {@link McpAggregateInput}).
  * @returns the wire snapshot.
  */
-export function aggregateSnapshot(
-  rows: readonly McpLoaderRow[],
-  groups: readonly McpToolGroup[],
-  facts: McpStatusFacts,
-  probes: McpPanelSnapshot['probes'],
-  patchFile: string | null,
-): McpPanelSnapshot {
+export function aggregateSnapshot(input: McpAggregateInput): McpPanelSnapshot {
+  const { rows, groups, facts, probes, patchFile, refreshIntervalMs } = input
   // One view per namespace: the enabled row wins; otherwise the first row.
   const rowsByName = new Map<string, McpLoaderRow>()
   for (const row of rows) {
@@ -201,6 +212,7 @@ export function aggregateSnapshot(
   return {
     observed: facts.statuses.size > 0,
     patchFile,
+    refreshIntervalMs,
     servers,
     probes,
   }
