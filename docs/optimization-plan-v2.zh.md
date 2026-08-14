@@ -304,7 +304,8 @@ Phase 3 / Phase 4（可选，各自独立可插队）
 分支已推送至 fork：`PerryLink/deepseek-harness:feat/mcp-client-status-observability-seam`（rebase 于上游 master `47f9438`，单提交）。PR 创建被 GitHub 拒绝，证据（2026-08-14 实测）：
 
 - GraphQL `createPullRequest`：`PerryLink does not have the correct permissions to execute CreatePullRequest`。
-- REST `GET /repos/deepseek-ai/deepseek-harness/pulls`：HTTP 404（`gh api` 与裸 curl 一致；无 `X-GitHub-SSO` 头，排除 SSO 授权问题；同 token 对 fork 的 /pulls 正常返回）。
-- GraphQL 查询：仓库 `open` PR 0 条、`merged` PR 0 条（与 master 历史中 `Merge pull request #2519` 矛盾——PR 历史已被清空/关闭）。
+- REST `GET/POST /repos/deepseek-ai/deepseek-harness/pulls`：HTTP 404（`gh api` 与裸 curl 一致；无 `X-GitHub-SSO` 头，排除 SSO 授权问题；同 token 对 fork 的 /pulls 正常返回）。
+- GraphQL 查询：仓库 `open`/`merged`/`closed` PR 均为 0 条（与 master 历史中 `Merge pull request #2519` 矛盾——PR 历史已被清空/关闭）。
+- 三轮重试（共 7 次创建尝试 + 双通道探测）结果一致，条件未变化；fork 分支 tip 已钉死在 seam 提交 `e1611e9`（共享 checkout 上其他会话的后续提交不会进入该分支）。
 
-结论：上游仓库当前不向外部账号开放 Pull Requests 通道。手头交付物已就绪：fork 分支 + PR 正文（`Project/Plugins/pr-body-mcp-status-seam.md`）+ 对比链接 `https://github.com/deepseek-ai/deepseek-harness/compare/master...PerryLink:feat/mcp-client-status-observability-seam`——具备权限者可从网页一键开 PR，或上游恢复 PR 通道后重跑 `gh pr create --repo deepseek-ai/deepseek-harness --head PerryLink:feat/mcp-client-status-observability-seam --base master`。
+结论：上游仓库当前不向外部账号开放 Pull Requests 通道。手头交付物已就绪：fork 分支 + PR 正文（`Project/Plugins/pr-body-mcp-status-seam.md`）+ 交接说明（`Project/Plugins/pr-handoff.md`，含对比链接 `https://github.com/deepseek-ai/deepseek-harness/compare/master...PerryLink:feat/mcp-client-status-observability-seam`）——具备权限者可从网页一键开 PR；上游恢复 PR 通道后重跑 `gh pr create --repo deepseek-ai/deepseek-harness --head PerryLink:feat/mcp-client-status-observability-seam --base master`。备选公开通道：上游 Discussions（活跃，1228 条）——如需代为发帖移交，请明确授权。
