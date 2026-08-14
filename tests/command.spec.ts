@@ -154,6 +154,37 @@ describe('/mcp command', () => {
     expect(text(usage)).toContain('Usage: /mcp')
   })
 
+  it('marks leftover mcp__ namespaces as unconfigured, not disabled', async () => {
+    const harness = await mountHarness([])
+    harness.ctx.tools.register({
+      name: 'mcp__foreign__thing',
+      description: 'A tool from another plugin',
+      parameters: {},
+      output: { schema: { type: 'null' }, render: () => [] },
+      execute: () => Promise.resolve(null),
+    })
+    const output = text(await runCommand(harness, '/mcp'))
+    expect(output).toContain('MCP servers (1):')
+    expect(output).toContain('unconfigured')
+    expect(output).not.toContain('| disabled')
+  })
+
+  it('refuses a patch suggestion for a leftover namespace instead of emitting an empty id', async () => {
+    const harness = await mountHarness([])
+    harness.ctx.tools.register({
+      name: 'mcp__foreign__thing',
+      description: 'A tool from another plugin',
+      parameters: {},
+      output: { schema: { type: 'null' }, render: () => [] },
+      execute: () => Promise.resolve(null),
+    })
+    const result = await runCommand(harness, '/mcp foreign disable')
+    expect(result?.result.kind).toBe('error')
+    const output = text(result)
+    expect(output).toContain('not a configured server')
+    expect(output).not.toContain('id:')
+  })
+
   it('consumes upstream mcp/status events: phase, reconnects, errors', async () => {
     const harness = await mountHarness([mcpRow('mcp-github', GITHUB_CONFIG)])
     harness.ctx.emit('mcp/status', {

@@ -34,6 +34,8 @@ export type CommandLanguage = 'en' | 'zh' | 'es' | 'pt' | 'hi'
 export interface CommandMessages {
   enabled: string
   disabled: string
+  /** State marker for leftover `mcp__` namespaces with no configured row. */
+  unconfigured: string
   status: string
   reconnects: string
   lastError: string
@@ -50,7 +52,11 @@ export interface CommandMessages {
   patchIntro: (action: string, server: string, entryId: string, patchFile: string | null) => string
   patchNoRuntimeToggle: string
   patchReloadPath: string
+  /** Rejection for disable/enable on an unconfigured leftover namespace. */
+  noPatchForLeftover: (server: string) => string
   usage: string
+  /** Command input hint shown in the command UI. */
+  hint: string
   probeStarted: (server: string, jobId: string) => string
   unknownServer: (server: string, known: string) => string
 }
@@ -59,6 +65,7 @@ export interface CommandMessages {
 export const EN_MESSAGES: CommandMessages = {
   enabled: 'enabled',
   disabled: 'disabled',
+  unconfigured: 'unconfigured',
   status: 'status',
   reconnects: 'reconnects',
   lastError: 'last error',
@@ -76,7 +83,10 @@ export const EN_MESSAGES: CommandMessages = {
     `To ${action} "${server}" (entry ${entryId}), add this line to the profile patch layer${patchFile === null ? '' : ` (${patchFile})`}:`,
   patchNoRuntimeToggle: '@deepseek-ai/dsh-mcp-client has no runtime toggle; the Loader applies the patch on reload.',
   patchReloadPath: 'The web surface hot-reloads cordis.patch.yml edits; other surfaces restart. This command never edits your config.',
+  noPatchForLeftover: server =>
+    `"${server}" is not a configured server — its tools come from another plugin's mcp__ namespace, so there is no row to disable or enable.`,
   usage: 'Usage: /mcp | /mcp <server> | /mcp <server> tools | /mcp <server> disable | /mcp <server> enable | /mcp <server> probe',
+  hint: '[server] [tools|disable|enable|probe]',
   probeStarted: (server, jobId) =>
     `Probe started for "${server}" (background job ${jobId}). Read the result in the MCP panel: Settings → Plugins → MCP.`,
   unknownServer: (server, known) =>
@@ -87,6 +97,7 @@ export const EN_MESSAGES: CommandMessages = {
 export const ZH_MESSAGES: CommandMessages = {
   enabled: '已启用',
   disabled: '已停用',
+  unconfigured: '未配置',
   status: '状态',
   reconnects: '重连',
   lastError: '最近错误',
@@ -106,7 +117,10 @@ export const ZH_MESSAGES: CommandMessages = {
   },
   patchNoRuntimeToggle: '@deepseek-ai/dsh-mcp-client 没有运行时开关；Loader 在重载时应用该 patch。',
   patchReloadPath: 'web 面板会热重载 cordis.patch.yml 的修改；其他面板重启生效。本命令绝不修改你的配置。',
+  noPatchForLeftover: server =>
+    `"${server}" 不是已配置的服务器——其工具来自其他插件的 mcp__ 命名空间，没有可停用/启用的条目。`,
   usage: '用法：/mcp | /mcp <server> | /mcp <server> tools | /mcp <server> disable | /mcp <server> enable | /mcp <server> probe',
+  hint: '[server] [tools|disable|enable|probe]',
   probeStarted: (server, jobId) =>
     `已对 "${server}" 启动探测（后台任务 ${jobId}）。结果仅面板可见：设置 → 插件 → MCP。`,
   unknownServer: (server, known) =>
@@ -117,6 +131,7 @@ export const ZH_MESSAGES: CommandMessages = {
 export const ES_MESSAGES: CommandMessages = {
   enabled: 'habilitado',
   disabled: 'deshabilitado',
+  unconfigured: 'sin configurar',
   status: 'estado',
   reconnects: 'reconexiones',
   lastError: 'último error',
@@ -136,7 +151,10 @@ export const ES_MESSAGES: CommandMessages = {
   },
   patchNoRuntimeToggle: '@deepseek-ai/dsh-mcp-client no tiene conmutador en tiempo de ejecución; el Loader aplica el parche al recargar.',
   patchReloadPath: 'La superficie web recarga en caliente los cambios de cordis.patch.yml; otras superficies se reinician. Este comando nunca edita tu configuración.',
+  noPatchForLeftover: server =>
+    `"${server}" no es un servidor configurado — sus herramientas provienen del espacio mcp__ de otro plugin, así que no hay fila que deshabilitar o habilitar.`,
   usage: 'Uso: /mcp | /mcp <server> | /mcp <server> tools | /mcp <server> disable | /mcp <server> enable | /mcp <server> probe',
+  hint: '[server] [tools|disable|enable|probe]',
   probeStarted: (server, jobId) =>
     `Sonda iniciada para "${server}" (tarea en segundo plano ${jobId}). Lee el resultado en el panel MCP: Ajustes → Plugins → MCP.`,
   unknownServer: (server, known) =>
@@ -147,6 +165,7 @@ export const ES_MESSAGES: CommandMessages = {
 export const PT_MESSAGES: CommandMessages = {
   enabled: 'habilitado',
   disabled: 'desabilitado',
+  unconfigured: 'não configurado',
   status: 'status',
   reconnects: 'reconexões',
   lastError: 'último erro',
@@ -166,7 +185,10 @@ export const PT_MESSAGES: CommandMessages = {
   },
   patchNoRuntimeToggle: '@deepseek-ai/dsh-mcp-client não tem alternância em tempo de execução; o Loader aplica o patch ao recarregar.',
   patchReloadPath: 'A superfície web recarrega em quente as edições de cordis.patch.yml; outras superfícies reiniciam. Este comando nunca edita sua configuração.',
+  noPatchForLeftover: server =>
+    `"${server}" não é um servidor configurado — suas ferramentas vêm do namespace mcp__ de outro plugin, então não há linha para desabilitar ou habilitar.`,
   usage: 'Uso: /mcp | /mcp <server> | /mcp <server> tools | /mcp <server> disable | /mcp <server> enable | /mcp <server> probe',
+  hint: '[server] [tools|disable|enable|probe]',
   probeStarted: (server, jobId) =>
     `Sonda iniciada para "${server}" (tarefa em segundo plano ${jobId}). Leia o resultado no painel MCP: Configurações → Plugins → MCP.`,
   unknownServer: (server, known) =>
@@ -177,6 +199,7 @@ export const PT_MESSAGES: CommandMessages = {
 export const HI_MESSAGES: CommandMessages = {
   enabled: 'सक्षम',
   disabled: 'अक्षम',
+  unconfigured: 'अकॉन्फ़िगर',
   status: 'स्थिति',
   reconnects: 'रीकनेक्ट',
   lastError: 'अंतिम त्रुटि',
@@ -196,7 +219,10 @@ export const HI_MESSAGES: CommandMessages = {
   },
   patchNoRuntimeToggle: '@deepseek-ai/dsh-mcp-client के पास रनटाइम टॉगल नहीं है; Loader रीलोड पर पैच लागू करता है।',
   patchReloadPath: 'वेब सतह cordis.patch.yml के बदलाव हॉट-रीलोड करती है; अन्य सतहें रीस्टार्ट करें। यह कमांड आपका कॉन्फ़िगरेशन कभी नहीं बदलती।',
+  noPatchForLeftover: server =>
+    `"${server}" कॉन्फ़िगर किया गया सर्वर नहीं है — इसके टूल दूसरे प्लगइन के mcp__ नेमस्पेस से आते हैं, इसलिए अक्षम/सक्षम करने के लिए कोई पंक्ति नहीं है।`,
   usage: 'उपयोग: /mcp | /mcp <server> | /mcp <server> tools | /mcp <server> disable | /mcp <server> enable | /mcp <server> probe',
+  hint: '[server] [tools|disable|enable|probe]',
   probeStarted: (server, jobId) =>
     `"${server}" के लिए प्रोब शुरू (बैकग्राउंड जॉब ${jobId})। परिणाम MCP पैनल में पढ़ें: सेटिंग्स → प्लगइन्स → MCP।`,
   unknownServer: (server, known) =>
@@ -236,7 +262,10 @@ function statusText(view: McpServerView): string {
  * @returns the single display line.
  */
 export function renderServer(view: McpServerView, messages: CommandMessages = EN_MESSAGES): string {
-  const state = view.enabled ? messages.enabled : messages.disabled
+  // A leftover namespace (foreign mcp__ tools, no loader row) is unconfigured,
+  // not disabled — its config facts do not exist. Keep this in sync with the
+  // tab's `connectionBadge`.
+  const state = view.entryId === '' ? messages.unconfigured : view.enabled ? messages.enabled : messages.disabled
   const details = [
     `${messages.status}: ${statusText(view)}`,
     `${messages.reconnects}: ${reconnectText(view)}`,
@@ -352,7 +381,7 @@ export function mcpCommand(service: McpPanelService, language: CommandLanguage =
   return {
     name: 'mcp',
     description: 'Show MCP server status, tools, and enable/disable patch suggestions (read-only)',
-    input: { hint: '[server] [tools|disable|enable|probe]' },
+    input: { hint: messages.hint },
     handler: ({ rawInput }) => {
       const parsed = parseMcpArgs(rawInput)
       if (parsed.kind === 'usage') return { kind: 'error', text: messages.usage }
@@ -368,8 +397,14 @@ export function mcpCommand(service: McpPanelService, language: CommandLanguage =
       }
       switch (parsed.action) {
         case 'tools': return { kind: 'success', text: renderTools(view, messages) }
-        case 'disable': return { kind: 'success', text: renderPatchSuggestion(view, 'disable', snapshot.patchFile, messages) }
-        case 'enable': return { kind: 'success', text: renderPatchSuggestion(view, 'enable', snapshot.patchFile, messages) }
+        case 'disable':
+        case 'enable': {
+          // Leftover namespaces have no loader row: a patch suggestion with an
+          // empty entry id would be malformed, so refuse instead of emitting
+          // `- set: { id: , … }`.
+          if (view.entryId === '') return { kind: 'error', text: messages.noPatchForLeftover(parsed.server) }
+          return { kind: 'success', text: renderPatchSuggestion(view, parsed.action, snapshot.patchFile, messages) }
+        }
         case 'probe': {
           // The service throws for stdio rows and for a missing job registry;
           // the command reports those as errors without touching any config.
