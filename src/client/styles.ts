@@ -41,6 +41,11 @@ const PANEL_CSS = `
   font: inherit;
   cursor: pointer;
 }
+[data-dsh-mcp-panel] .dmcp-failure-detail {
+  margin: 0;
+  color: var(--dsw-alias-label-secondary);
+  overflow-wrap: anywhere;
+}
 [data-dsh-mcp-panel] .dmcp-panel {
   display: flex;
   flex-direction: column;

@@ -64,6 +64,11 @@ describe('probeBadge', () => {
     expect(probeBadge('stopping')).toEqual({ badge: 'stopping', tone: 'warn' })
     expect(probeBadge('failed')).toEqual({ badge: 'failed', tone: 'error' })
     expect(probeBadge('killed')).toEqual({ badge: 'killed', tone: 'muted' })
+    expect(probeBadge('unknown')).toEqual({ badge: 'unknown', tone: 'muted' })
+  })
+
+  it('never throws on registry states outside the vocabulary', () => {
+    expect(probeBadge('queued' as never)).toEqual({ badge: 'unknown', tone: 'muted' })
   })
 })
 

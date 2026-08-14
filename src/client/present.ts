@@ -38,7 +38,7 @@ export interface PresentedProbeRow {
   /** Badge tone for the probe state. */
   readonly tone: BadgeTone
   /** Badge code for the probe state. */
-  readonly badge: 'running' | 'completed' | 'failed' | 'killed' | 'stopping'
+  readonly badge: 'running' | 'completed' | 'failed' | 'killed' | 'stopping' | 'unknown'
 }
 
 /** The complete render-ready tab model. */
@@ -89,6 +89,8 @@ export function probeBadge(status: McpProbeView['status']): { badge: PresentedPr
     case 'stopping': return { badge: 'stopping', tone: 'warn' }
     case 'failed': return { badge: 'failed', tone: 'error' }
     case 'killed': return { badge: 'killed', tone: 'muted' }
+    // Registry states outside the panel vocabulary: never throw on render.
+    default: return { badge: 'unknown', tone: 'muted' }
   }
 }
 

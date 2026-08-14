@@ -21,7 +21,7 @@ export type McpPanelTabProps =
 
 type ViewState =
   | { readonly status: 'loading' }
-  | { readonly status: 'error' }
+  | { readonly status: 'error'; readonly message: string }
   | { readonly status: 'ready'; readonly snapshot: McpPanelSnapshot }
 
 /** Localized label for one server badge code. */
@@ -46,6 +46,7 @@ function probeLabel(badge: ReturnType<typeof probeBadge>['badge'], t: McpPanelTa
     case 'failed': return t('probeFailed')
     case 'killed': return t('probeKilled')
     case 'stopping': return t('probeStopping')
+    default: return t('probeUnknown')
   }
 }
 
@@ -75,7 +76,11 @@ export function McpPanelTab({ status, probe, t }: McpPanelTabProps): ReactNode {
     let current = true
     void Promise.resolve().then(() => status()).then(
       (snapshot) => { if (current) setState({ status: 'ready', snapshot }) },
-      () => { if (current) setState({ status: 'error' }) },
+      (error: unknown) => {
+        if (current) {
+          setState({ status: 'error', message: error instanceof Error ? error.message : String(error) })
+        }
+      },
     )
     return () => { current = false }
   }, [status, request])
@@ -97,12 +102,20 @@ export function McpPanelTab({ status, probe, t }: McpPanelTabProps): ReactNode {
     }
   }, [intervalMs])
 
+  const model = state.status === 'ready' ? presentMcpPanel(state.snapshot) : undefined
+  const probeRunning = model !== undefined && model.probes.some(probe => probe.view.status === 'running')
+  // While a probe runs, poll on a short fixed cadence so the probe row (and
+  // the disabled probe button) settles even when refreshIntervalMs is 0.
+  useEffect(() => {
+    if (!probeRunning) return undefined
+    const timer = setInterval(() => { if (!document.hidden) reload() }, 1500)
+    return () => { clearInterval(timer) }
+  }, [probeRunning])
+
   const retry = (): void => {
     setState({ status: 'loading' })
     reload()
   }
-
-  const model = state.status === 'ready' ? presentMcpPanel(state.snapshot) : undefined
 
   return (
     <div className="dmcp-section" data-dsh-mcp-panel="" aria-busy={state.status === 'loading'}>
@@ -110,6 +123,7 @@ export function McpPanelTab({ status, probe, t }: McpPanelTabProps): ReactNode {
       {state.status === 'error' ? (
         <div className="dmcp-failure">
           <p role="alert">{t('error')}</p>
+          <p className="dmcp-failure-detail">{state.message}</p>
           <button type="button" onClick={retry}>{t('retry')}</button>
         </div>
       ) : null}
@@ -123,7 +137,7 @@ export function McpPanelTab({ status, probe, t }: McpPanelTabProps): ReactNode {
                   const open = expanded === row.view.serverName
                   const detailId = `${listId}-${encodeURIComponent(row.view.serverName)}`
                   const toolQuery = toolQueries[row.view.serverName] ?? ''
-                  const probeRunning = model.probes.some(
+                  const rowProbeRunning = model.probes.some(
                     probe => probe.view.status === 'running' && probe.view.serverName === row.view.serverName,
                   )
                   return (
@@ -171,7 +185,7 @@ export function McpPanelTab({ status, probe, t }: McpPanelTabProps): ReactNode {
                             <button
                               type="button"
                               className="dmcp-probe-now"
-                              disabled={probeRunning}
+                              disabled={rowProbeRunning}
                               onClick={() => {
                                 setProbeError(null)
                                 void Promise.resolve().then(() => probe(row.view.serverName)).then(
@@ -180,7 +194,7 @@ export function McpPanelTab({ status, probe, t }: McpPanelTabProps): ReactNode {
                                 )
                               }}
                             >
-                              {probeRunning ? t('probeRunning') : t('probeNow')}
+                              {rowProbeRunning ? t('probeRunning') : t('probeNow')}
                             </button>
                           ) : null}
                           {row.view.tools.length === 0 ? (
@@ -246,10 +260,11 @@ export function McpPanelTab({ status, probe, t }: McpPanelTabProps): ReactNode {
   )
 }
 
-/** One tone-colored badge chip. */
+/** One tone-colored badge chip. The label is visible text, so no `role="img"`
+ * or `aria-label`: screen readers announce it exactly once. */
 function Badge({ tone, label }: { readonly tone: BadgeTone; readonly label: string }): ReactNode {
   return (
-    <span className="dmcp-badge" data-tone={tone} role="img" aria-label={label} title={label}>
+    <span className="dmcp-badge" data-tone={tone} title={label}>
       <span className="dmcp-dot" aria-hidden="true" />
       {label}
     </span>
