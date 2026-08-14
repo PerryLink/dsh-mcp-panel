@@ -135,6 +135,20 @@ describe('aggregateServerView', () => {
     const failed = aggregateServerView(row('mcp-b', {}, false, 'failed'), 'b', undefined, NO_FACTS)
     expect(failed.fiberPhase).toBe('failed')
   })
+
+  it('derives config-declared policy facts for the panel detail row', () => {
+    const view = aggregateServerView(row('mcp-a', {
+      serverName: 'a',
+      transport: 'stdio',
+      command: 'x',
+      reconnect: { enabled: false },
+      failOnStartupError: true,
+      toolCallTimeoutMs: 30_000,
+    }), 'a', undefined, NO_FACTS)
+    expect(view.configuredNote).toBe('reconnect off; fail on startup error; tool timeout 30s')
+    const defaults = aggregateServerView(row('mcp-b', { serverName: 'b' }), 'b', undefined, NO_FACTS)
+    expect(defaults.configuredNote).toBeNull()
+  })
 })
 
 describe('aggregateSnapshot', () => {

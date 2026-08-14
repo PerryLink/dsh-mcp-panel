@@ -122,6 +122,29 @@ export function serverNameOf(config: unknown, fallback: string): string {
   return name === '' ? fallback : name
 }
 
+/**
+ * Derive the config-declared policy facts in one display line. Reads only
+ * boolean and number fields (never strings from raw config), so nothing
+ * user-supplied or secret can leak; `null` = nothing noteworthy configured.
+ */
+function configuredNote(config: unknown): string | null {
+  const parts: string[] = []
+  const reconnectValue = plainField(config, 'reconnect')
+  if (typeof reconnectValue === 'object' && reconnectValue !== null && !Array.isArray(reconnectValue)) {
+    const enabled = plainField(reconnectValue, 'enabled')
+    const maxAttempts = plainField(reconnectValue, 'maxAttempts')
+    if (typeof enabled === 'boolean' && !enabled) {
+      parts.push('reconnect off')
+    } else if (typeof maxAttempts === 'number' && Number.isFinite(maxAttempts)) {
+      parts.push(`reconnect max ${maxAttempts}`)
+    }
+  }
+  if (plainField(config, 'failOnStartupError') === true) parts.push('fail on startup error')
+  const toolTimeout = plainField(config, 'toolCallTimeoutMs')
+  if (typeof toolTimeout === 'number' && Number.isFinite(toolTimeout)) parts.push(`tool timeout ${Math.round(toolTimeout / 1000)}s`)
+  return parts.length === 0 ? null : parts.join('; ')
+}
+
 /** Upstream phase projected onto the wire vocabulary (unknown when unobserved). */
 function connectionPhase(status: McpServerStatus | undefined): McpConnectionPhase {
   if (status === undefined) return 'unknown'
@@ -161,6 +184,7 @@ export function aggregateServerView(
     target,
     enabled: row?.disabled === false,
     fiberPhase: row?.fiberPhase ?? null,
+    configuredNote: row === undefined ? null : configuredNote(row.config),
     toolCount: group?.tools.length ?? 0,
     tools: group?.tools ?? [],
     phase: connectionPhase(status),

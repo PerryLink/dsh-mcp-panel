@@ -30,12 +30,26 @@ const WEB_CONFIG = {
   headers: { Authorization: 'Bearer header-secret' },
 }
 
+/** Fake job registry recording every start; the panel's probe paths read it. */
+function fakeJobs() {
+  const started: Array<{ kind: string; label: string; owner: unknown }> = []
+  return {
+    started,
+    attachController: () => () => undefined,
+    start: (spec: { kind: string; label: string; owner?: unknown }) => {
+      started.push({ kind: spec.kind, label: spec.label, owner: spec.owner })
+      return 'mcp-probe-1'
+    },
+    list: () => [],
+  }
+}
+
 describe('/mcp command', () => {
   it('registers with its usage hint', async () => {
     const harness = await mountHarness()
     expect(harness.ctx.commands.list(harness.agent).map(command => command.name)).toContain('mcp')
     expect(harness.ctx.commands.find(harness.agent, 'mcp')).toMatchObject({
-      input: { hint: '[server] [tools|disable|enable]' },
+      input: { hint: '[server] [tools|disable|enable|probe]' },
     })
   })
 
@@ -173,19 +187,6 @@ describe('/mcp command', () => {
 })
 
 describe('mcp_probe tool (optional)', () => {
-  function fakeJobs() {
-    const started: Array<{ kind: string; label: string; owner: unknown }> = []
-    return {
-      started,
-      attachController: () => () => undefined,
-      start: (spec: { kind: string; label: string; owner?: unknown }) => {
-        started.push({ kind: spec.kind, label: spec.label, owner: spec.owner })
-        return 'mcp-probe-1'
-      },
-      list: () => [],
-    }
-  }
-
   it('is not registered when the jobs service is absent', async () => {
     const harness = await mountHarness([mcpRow('mcp-web', WEB_CONFIG)])
     expect(harness.ctx.tools.get('mcp_probe')).toBeUndefined()
@@ -221,5 +222,31 @@ describe('mcp_probe tool (optional)', () => {
   it('can be disabled by config', async () => {
     const harness = await mountHarness([mcpRow('mcp-web', WEB_CONFIG)], { probeEnabled: false }, fakeJobs() as never)
     expect(harness.ctx.tools.get('mcp_probe')).toBeUndefined()
+  })
+})
+
+describe('/mcp <server> probe command action', () => {
+  it('starts an unowned panel-only probe and returns its job id', async () => {
+    const jobs = fakeJobs()
+    const harness = await mountHarness([mcpRow('mcp-web', WEB_CONFIG)], {}, jobs as never)
+    const result = await runCommand(harness, '/mcp web probe')
+    expect(result?.result.kind).toBe('success')
+    expect(text(result)).toContain('Probe started for "web" (background job mcp-probe-1)')
+    expect(text(result)).toContain('Settings → Plugins → MCP')
+    expect(jobs.started).toEqual([{ kind: 'mcp-probe', label: 'mcp_probe web', owner: undefined }])
+  })
+
+  it('reports stdio servers as an error result', async () => {
+    const harness = await mountHarness([mcpRow('mcp-github', GITHUB_CONFIG)], {}, fakeJobs() as never)
+    const result = await runCommand(harness, '/mcp github probe')
+    expect(result?.result.kind).toBe('error')
+    expect(text(result)).toContain('not a configured streamable-http MCP server')
+  })
+
+  it('reports a missing job registry as an error result', async () => {
+    const harness = await mountHarness([mcpRow('mcp-web', WEB_CONFIG)])
+    const result = await runCommand(harness, '/mcp web probe')
+    expect(result?.result.kind).toBe('error')
+    expect(text(result)).toContain('ctx.jobs is not composed')
   })
 })

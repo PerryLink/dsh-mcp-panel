@@ -218,9 +218,9 @@ tests/aggregate.spec.ts > projects upstream status facts
 ### P3-1 · 面板/命令扩展到 es/pt/hi
 
 - 现状：README 五语言，但面板字典只有 zh/en（`client/locales.ts`）、命令只有 en/zh（`outputLanguage` 联合类型）。
-- 改动：① `outputLanguage` 联合类型加 `'es' | 'pt' | 'hi'` + 三套 `CommandMessages`；② client locale 注册三套新字典（面板自动跟随宿主 UI 语言，无需组件改动）。
-- 前置：翻译需母语校对；建议 es/pt/hi 的 README 翻译者复责。
-- 验收：`resolveConfig` 新值通过；`command-i18n.spec.ts` 各语言快照断言。
+- 改动：`outputLanguage` 联合类型加 `'es' | 'pt' | 'hi'` + 三套 `CommandMessages`（命令侧已完成并测试通过）。
+- **面板字典受宿主限制**：`ctx.locale.register` 的类型面只接受 `'en' | 'zh'` 两个 UI 语言码（harness 的 `LocaleDictOf` face，实测 TS2353），标签页字典扩展需等宿主 locale 注册面支持更多语言码后再做——当前标签页随宿主 UI 语言在 en/zh 间切换，命令侧五语言独立生效。
+- 验收：`resolveConfig` 新值通过；`command-i18n.spec.ts` 各语言快照断言（es/pt/hi 已加）。
 
 ---
 

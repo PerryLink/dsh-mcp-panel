@@ -14,6 +14,10 @@ import type {} from '@deepseek-ai/dsh-client-locale/client'
 // program so the tab registration typechecks against the real declaration.
 import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
 import { McpPanelTab, type McpPanelTabInjected } from './McpPanelTab.tsx'
+// The harness locale registry accepts only the 'en' | 'zh' UI language codes
+// today (its LocaleDictOf face), so the tab ships those two dictionaries and
+// follows the app's UI language. The `/mcp` command language is a separate
+// plugin config (`outputLanguage`) with its own five-language dictionaries.
 import { en, zh, type McpPanelLocaleKey } from './locales.ts'
 import { MCP_PANEL_REMOTE } from './remote.ts'
 import { installPanelStyles } from './styles.ts'

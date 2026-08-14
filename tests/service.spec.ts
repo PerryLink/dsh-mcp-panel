@@ -95,4 +95,10 @@ describe('config bounds', () => {
   it('defaults the passive probe loop off', () => {
     expect(resolveConfig(undefined)).toMatchObject({ passiveProbeEnabled: false, outputLanguage: 'en' })
   })
+
+  it('accepts every documented output language', () => {
+    expect(resolveConfig({ outputLanguage: 'es' }).outputLanguage).toBe('es')
+    expect(resolveConfig({ outputLanguage: 'pt' }).outputLanguage).toBe('pt')
+    expect(resolveConfig({ outputLanguage: 'hi' }).outputLanguage).toBe('hi')
+  })
 })

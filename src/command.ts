@@ -28,7 +28,7 @@ import type { McpPanelSnapshot, McpServerView } from './wire.ts'
 const UNKNOWN = '—'
 
 /** Display language for the `/mcp` output. */
-export type CommandLanguage = 'en' | 'zh'
+export type CommandLanguage = 'en' | 'zh' | 'es' | 'pt' | 'hi'
 
 /** Every display string the renderers emit, per language. */
 export interface CommandMessages {
@@ -51,6 +51,8 @@ export interface CommandMessages {
   patchNoRuntimeToggle: string
   patchReloadPath: string
   usage: string
+  probeStarted: (server: string, jobId: string) => string
+  unknownServer: (server: string, known: string) => string
 }
 
 /** English output dictionary (default). */
@@ -74,7 +76,11 @@ export const EN_MESSAGES: CommandMessages = {
     `To ${action} "${server}" (entry ${entryId}), add this line to the profile patch layer${patchFile === null ? '' : ` (${patchFile})`}:`,
   patchNoRuntimeToggle: '@deepseek-ai/dsh-mcp-client has no runtime toggle; the Loader applies the patch on reload.',
   patchReloadPath: 'The web surface hot-reloads cordis.patch.yml edits; other surfaces restart. This command never edits your config.',
-  usage: 'Usage: /mcp | /mcp <server> | /mcp <server> tools | /mcp <server> disable | /mcp <server> enable',
+  usage: 'Usage: /mcp | /mcp <server> | /mcp <server> tools | /mcp <server> disable | /mcp <server> enable | /mcp <server> probe',
+  probeStarted: (server, jobId) =>
+    `Probe started for "${server}" (background job ${jobId}). Read the result in the MCP panel: Settings → Plugins → MCP.`,
+  unknownServer: (server, known) =>
+    `Unknown MCP server "${server}" (configured: ${known === '' ? 'none' : known})`,
 }
 
 /** Simplified Chinese output dictionary. */
@@ -100,7 +106,110 @@ export const ZH_MESSAGES: CommandMessages = {
   },
   patchNoRuntimeToggle: '@deepseek-ai/dsh-mcp-client 没有运行时开关；Loader 在重载时应用该 patch。',
   patchReloadPath: 'web 面板会热重载 cordis.patch.yml 的修改；其他面板重启生效。本命令绝不修改你的配置。',
-  usage: '用法：/mcp | /mcp <server> | /mcp <server> tools | /mcp <server> disable | /mcp <server> enable',
+  usage: '用法：/mcp | /mcp <server> | /mcp <server> tools | /mcp <server> disable | /mcp <server> enable | /mcp <server> probe',
+  probeStarted: (server, jobId) =>
+    `已对 "${server}" 启动探测（后台任务 ${jobId}）。结果仅面板可见：设置 → 插件 → MCP。`,
+  unknownServer: (server, known) =>
+    `未知 MCP 服务器 "${server}"（已配置：${known === '' ? '无' : known}）`,
+}
+
+/** Spanish output dictionary. */
+export const ES_MESSAGES: CommandMessages = {
+  enabled: 'habilitado',
+  disabled: 'deshabilitado',
+  status: 'estado',
+  reconnects: 'reconexiones',
+  lastError: 'último error',
+  retryIn: 'reintento en',
+  cordisFiberFailed: 'cordis fiber: falló',
+  tools: 'herramientas',
+  serversHeader: count => `Servidores MCP (${count}):`,
+  noServers: 'No hay servidores MCP configurados (sin filas @deepseek-ai/dsh-mcp-client en este perfil).',
+  noteNoSeam: 'Nota: el estado de conexión y los conteos de reconexión aún no son observables — @deepseek-ai/dsh-mcp-client no expone una costura de estado.',
+  noteProposal: 'Propuesta upstream: docs/upstream-proposal.md (deepseek-harness). Los datos de arriba derivan de la configuración y del registro de herramientas.',
+  noTools: server => `Sin herramientas registradas para "${server}" (servidor caído, sincronización fallida o presupuesto de reconexión agotado).`,
+  toolsHeader: (server, count) => `Herramientas de "${server}" (${count}, nombres públicos visibles al modelo):`,
+  noDescription: '(sin descripción)',
+  patchIntro: (action, server, entryId, patchFile) => {
+    const verb = action === 'disable' ? 'deshabilitar' : 'habilitar'
+    return `Para ${verb} "${server}" (entrada ${entryId}), añade esta línea a la capa de parches del perfil${patchFile === null ? '' : ` (${patchFile})`}:`
+  },
+  patchNoRuntimeToggle: '@deepseek-ai/dsh-mcp-client no tiene conmutador en tiempo de ejecución; el Loader aplica el parche al recargar.',
+  patchReloadPath: 'La superficie web recarga en caliente los cambios de cordis.patch.yml; otras superficies se reinician. Este comando nunca edita tu configuración.',
+  usage: 'Uso: /mcp | /mcp <server> | /mcp <server> tools | /mcp <server> disable | /mcp <server> enable | /mcp <server> probe',
+  probeStarted: (server, jobId) =>
+    `Sonda iniciada para "${server}" (tarea en segundo plano ${jobId}). Lee el resultado en el panel MCP: Ajustes → Plugins → MCP.`,
+  unknownServer: (server, known) =>
+    `Servidor MCP desconocido "${server}" (configurados: ${known === '' ? 'ninguno' : known})`,
+}
+
+/** Portuguese output dictionary. */
+export const PT_MESSAGES: CommandMessages = {
+  enabled: 'habilitado',
+  disabled: 'desabilitado',
+  status: 'status',
+  reconnects: 'reconexões',
+  lastError: 'último erro',
+  retryIn: 'nova tentativa em',
+  cordisFiberFailed: 'cordis fiber: falhou',
+  tools: 'ferramentas',
+  serversHeader: count => `Servidores MCP (${count}):`,
+  noServers: 'Nenhum servidor MCP configurado (nenhuma linha @deepseek-ai/dsh-mcp-client neste perfil).',
+  noteNoSeam: 'Nota: o status de conexão e as contagens de reconexão ainda não são observáveis — @deepseek-ai/dsh-mcp-client não expõe uma costura de status.',
+  noteProposal: 'Proposta upstream: docs/upstream-proposal.md (deepseek-harness). Os fatos acima derivam da configuração e do registro de ferramentas.',
+  noTools: server => `Nenhuma ferramenta registrada para "${server}" (servidor fora do ar, sincronização falhou ou orçamento de reconexão esgotado).`,
+  toolsHeader: (server, count) => `Ferramentas de "${server}" (${count}, nomes públicos visíveis ao modelo):`,
+  noDescription: '(sem descrição)',
+  patchIntro: (action, server, entryId, patchFile) => {
+    const verb = action === 'disable' ? 'desabilitar' : 'habilitar'
+    return `Para ${verb} "${server}" (entrada ${entryId}), adicione esta linha à camada de patches do perfil${patchFile === null ? '' : ` (${patchFile})`}:`
+  },
+  patchNoRuntimeToggle: '@deepseek-ai/dsh-mcp-client não tem alternância em tempo de execução; o Loader aplica o patch ao recarregar.',
+  patchReloadPath: 'A superfície web recarrega em quente as edições de cordis.patch.yml; outras superfícies reiniciam. Este comando nunca edita sua configuração.',
+  usage: 'Uso: /mcp | /mcp <server> | /mcp <server> tools | /mcp <server> disable | /mcp <server> enable | /mcp <server> probe',
+  probeStarted: (server, jobId) =>
+    `Sonda iniciada para "${server}" (tarefa em segundo plano ${jobId}). Leia o resultado no painel MCP: Configurações → Plugins → MCP.`,
+  unknownServer: (server, known) =>
+    `Servidor MCP desconhecido "${server}" (configurados: ${known === '' ? 'nenhum' : known})`,
+}
+
+/** Hindi output dictionary. */
+export const HI_MESSAGES: CommandMessages = {
+  enabled: 'सक्षम',
+  disabled: 'अक्षम',
+  status: 'स्थिति',
+  reconnects: 'रीकनेक्ट',
+  lastError: 'अंतिम त्रुटि',
+  retryIn: 'पुनः प्रयास',
+  cordisFiberFailed: 'cordis fiber: विफल',
+  tools: 'टूल',
+  serversHeader: count => `MCP सर्वर (${count}):`,
+  noServers: 'कोई MCP सर्वर कॉन्फ़िगर नहीं (इस प्रोफ़ाइल में कोई @deepseek-ai/dsh-mcp-client पंक्ति नहीं)।',
+  noteNoSeam: 'नोट: कनेक्शन स्थिति/रीकनेक्ट गणना अभी देखने योग्य नहीं — @deepseek-ai/dsh-mcp-client कोई स्थिति सीम उजागर नहीं करता।',
+  noteProposal: 'अपस्ट्रीम प्रस्ताव: docs/upstream-proposal.md (deepseek-harness)। ऊपर के तथ्य कॉन्फ़िगरेशन और टूल रजिस्ट्री से प्राप्त हैं।',
+  noTools: server => `"${server}" के लिए कोई टूल पंजीकृत नहीं (सर्वर डाउन, सिंक विफल या रीकनेक्ट बजट समाप्त)।`,
+  toolsHeader: (server, count) => `"${server}" के टूल (${count}, मॉडल-दृश्य सार्वजनिक नाम):`,
+  noDescription: '(कोई विवरण नहीं)',
+  patchIntro: (action, server, entryId, patchFile) => {
+    const verb = action === 'disable' ? 'अक्षम' : 'सक्षम'
+    return `"${server}" (एंट्री ${entryId}) को ${verb} करने के लिए प्रोफ़ाइल पैच परत${patchFile === null ? '' : ` (${patchFile})`} में यह पंक्ति जोड़ें:`
+  },
+  patchNoRuntimeToggle: '@deepseek-ai/dsh-mcp-client के पास रनटाइम टॉगल नहीं है; Loader रीलोड पर पैच लागू करता है।',
+  patchReloadPath: 'वेब सतह cordis.patch.yml के बदलाव हॉट-रीलोड करती है; अन्य सतहें रीस्टार्ट करें। यह कमांड आपका कॉन्फ़िगरेशन कभी नहीं बदलती।',
+  usage: 'उपयोग: /mcp | /mcp <server> | /mcp <server> tools | /mcp <server> disable | /mcp <server> enable | /mcp <server> probe',
+  probeStarted: (server, jobId) =>
+    `"${server}" के लिए प्रोब शुरू (बैकग्राउंड जॉब ${jobId})। परिणाम MCP पैनल में पढ़ें: सेटिंग्स → प्लगइन्स → MCP।`,
+  unknownServer: (server, known) =>
+    `अज्ञात MCP सर्वर "${server}" (कॉन्फ़िगर: ${known === '' ? 'कोई नहीं' : known})`,
+}
+
+/** Every output dictionary indexed by the configured language. */
+const MESSAGES: Record<CommandLanguage, CommandMessages> = {
+  en: EN_MESSAGES,
+  zh: ZH_MESSAGES,
+  es: ES_MESSAGES,
+  pt: PT_MESSAGES,
+  hi: HI_MESSAGES,
 }
 
 /** One-line count of the reconnection attempts observed this process. */
@@ -209,7 +318,7 @@ export function renderPatchSuggestion(
 /** Parsed `/mcp` arguments. */
 export type McpCommandArgs =
   | { readonly kind: 'list' }
-  | { readonly kind: 'server'; readonly server: string; readonly action: 'detail' | 'tools' | 'disable' | 'enable' }
+  | { readonly kind: 'server'; readonly server: string; readonly action: 'detail' | 'tools' | 'disable' | 'enable' | 'probe' }
   | { readonly kind: 'usage' }
 
 /**
@@ -225,7 +334,7 @@ export function parseMcpArgs(rawInput: string): McpCommandArgs {
   const action = tokens[1]
   if (action === undefined) return { kind: 'server', server: server ?? '', action: 'detail' }
   if (tokens.length !== 2) return { kind: 'usage' }
-  if (action === 'tools' || action === 'disable' || action === 'enable') {
+  if (action === 'tools' || action === 'disable' || action === 'enable' || action === 'probe') {
     return { kind: 'server', server: server ?? '', action }
   }
   return { kind: 'usage' }
@@ -239,11 +348,11 @@ export function parseMcpArgs(rawInput: string): McpCommandArgs {
  * @returns the registration-ready definition.
  */
 export function mcpCommand(service: McpPanelService, language: CommandLanguage = 'en'): CommandDefinition {
-  const messages = language === 'zh' ? ZH_MESSAGES : EN_MESSAGES
+  const messages = MESSAGES[language] ?? EN_MESSAGES
   return {
     name: 'mcp',
     description: 'Show MCP server status, tools, and enable/disable patch suggestions (read-only)',
-    input: { hint: '[server] [tools|disable|enable]' },
+    input: { hint: '[server] [tools|disable|enable|probe]' },
     handler: ({ rawInput }) => {
       const parsed = parseMcpArgs(rawInput)
       if (parsed.kind === 'usage') return { kind: 'error', text: messages.usage }
@@ -254,13 +363,23 @@ export function mcpCommand(service: McpPanelService, language: CommandLanguage =
         const known = snapshot.servers.map(candidate => candidate.serverName).join(', ')
         return {
           kind: 'error',
-          text: `Unknown MCP server "${parsed.server}" (configured: ${known === '' ? 'none' : known})`,
+          text: messages.unknownServer(parsed.server, known),
         }
       }
       switch (parsed.action) {
         case 'tools': return { kind: 'success', text: renderTools(view, messages) }
         case 'disable': return { kind: 'success', text: renderPatchSuggestion(view, 'disable', snapshot.patchFile, messages) }
         case 'enable': return { kind: 'success', text: renderPatchSuggestion(view, 'enable', snapshot.patchFile, messages) }
+        case 'probe': {
+          // The service throws for stdio rows and for a missing job registry;
+          // the command reports those as errors without touching any config.
+          try {
+            const started = service.probe(parsed.server)
+            return { kind: 'success', text: messages.probeStarted(parsed.server, started.jobId) }
+          } catch (error) {
+            return { kind: 'error', text: error instanceof Error ? error.message : String(error) }
+          }
+        }
         default: return { kind: 'success', text: renderServer(view, messages) }
       }
     },

@@ -46,6 +46,8 @@ export interface McpServerView {
   enabled: boolean
   /** Cordis fiber phase of the row; `null` when no fiber exists. */
   fiberPhase: McpFiberPhase
+  /** Config-declared policy facts (reconnect budget, fail-fast, tool timeout); `null` = defaults. */
+  configuredNote: string | null
   /** Registered tools from `ctx.tools.schemas()` under `mcp__<server>__`. */
   toolCount: number
   /** The model-visible tools; empty for a server with none registered. */
@@ -116,6 +118,7 @@ export const MCP_PANEL_SNAPSHOT_SCHEMA = z.object({
     target: z.string(),
     enabled: z.boolean(),
     fiberPhase: z.union([z.literal('pending'), z.literal('loading'), z.literal('active'), z.literal('failed'), z.literal('unloading'), z.null()]),
+    configuredNote: z.string().nullable(),
     toolCount: z.number().int(),
     tools: z.array(z.object({
       name: z.string(),

@@ -35,6 +35,10 @@ describe('/mcp output language', () => {
 
     const usage = text(await runCommand(harness, '/mcp github tools extra'))
     expect(usage).toContain('用法：/mcp')
+
+    const unknown = text(await runCommand(harness, '/mcp nope'))
+    expect(unknown).toContain('未知 MCP 服务器 "nope"')
+    expect(unknown).toContain('已配置：github')
   })
 
   it('keeps the patch suggestion line machine-identical across languages', async () => {
@@ -51,5 +55,17 @@ describe('/mcp output language', () => {
     const harness = await mountHarness([mcpRow('mcp-github', GITHUB_CONFIG)])
     const list = text(await runCommand(harness, '/mcp'))
     expect(list).toContain('MCP servers (1):')
+  })
+
+  it('renders Spanish, Portuguese, and Hindi when configured', async () => {
+    const cases: Array<{ lang: 'es' | 'pt' | 'hi'; header: string }> = [
+      { lang: 'es', header: 'Servidores MCP (1):' },
+      { lang: 'pt', header: 'Servidores MCP (1):' },
+      { lang: 'hi', header: 'MCP सर्वर (1):' },
+    ]
+    for (const { lang, header } of cases) {
+      const harness = await mountHarness([mcpRow('mcp-github', GITHUB_CONFIG)], { outputLanguage: lang })
+      expect(text(await runCommand(harness, '/mcp'))).toContain(header)
+    }
   })
 })

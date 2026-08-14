@@ -106,6 +106,10 @@ const PANEL_CSS = `
   outline: 2px solid var(--dsw-alias-brand-primary);
   outline-offset: -2px;
 }
+[data-dsh-mcp-panel] .dmcp-probe-now:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
 [data-dsh-mcp-panel] .dmcp-card-title {
   min-width: 0;
   overflow: hidden;
@@ -190,6 +194,10 @@ const PANEL_CSS = `
   align-items: baseline;
   gap: 8px;
   flex-wrap: wrap;
+}
+[data-dsh-mcp-panel] .dmcp-probe-time {
+  color: var(--dsw-alias-label-tertiary);
+  white-space: nowrap;
 }
 [data-dsh-mcp-panel] .dmcp-probe-detail {
   color: var(--dsw-alias-label-secondary);

@@ -37,6 +37,15 @@ describe('sanitizeUrl', () => {
     expect(sanitizeUrl('http://user:secret@host/path?key=value&ok=1')).toBe('http://user:***@host/path?key=***&ok=1')
   })
 
+  it('redacts credential pairs in URL fragments', () => {
+    expect(sanitizeUrl('https://example.com/mcp#token=SECRET&ok=1')).toBe('https://example.com/mcp#token=***&ok=1')
+    expect(sanitizeUrl('https://example.com/?ACCESS_TOKEN=ABC#access_token=DEF')).toBe('https://example.com/?ACCESS_TOKEN=***#access_token=***')
+  })
+
+  it('redacts fragment credentials on unparseable inputs', () => {
+    expect(sanitizeUrl('bad url #api_key=SECRET')).not.toContain('SECRET')
+  })
+
   it('tolerates empty and credential-free URLs', () => {
     expect(sanitizeUrl('')).toBe('')
     expect(sanitizeUrl('https://example.com/')).toBe('https://example.com/')
@@ -66,6 +75,12 @@ describe('sanitizeText', () => {
     const result = sanitizeText('fetch failed for http://x/?token=SECRET&ok=1 while connecting')
     expect(result).not.toContain('SECRET')
     expect(result).toContain('token=***')
+  })
+
+  it('redacts fragment credentials embedded in text', () => {
+    const result = sanitizeText('see https://x/mcp#token=SECRET for details')
+    expect(result).not.toContain('SECRET')
+    expect(result).toContain('#token=***')
   })
 
   it('redacts quoted JSON-ish token values', () => {

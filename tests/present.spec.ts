@@ -19,6 +19,7 @@ function server(overrides: Partial<McpServerView> = {}): McpServerView {
     target: 'npx x',
     enabled: true,
     fiberPhase: 'active',
+    configuredNote: null,
     toolCount: 0,
     tools: [],
     phase: 'unknown',
@@ -40,6 +41,10 @@ describe('connectionBadge', () => {
   it('prefers disabled and failed-fiber facts over the connection phase', () => {
     expect(connectionBadge(server({ enabled: false, phase: 'connected' }))).toEqual({ badge: 'disabled', tone: 'muted' })
     expect(connectionBadge(server({ fiberPhase: 'failed', phase: 'connected' }))).toEqual({ badge: 'failed', tone: 'error' })
+  })
+
+  it('marks leftover (unconfigured) namespaces as unknown, not disabled', () => {
+    expect(connectionBadge(server({ entryId: '', enabled: false, phase: 'connected' }))).toEqual({ badge: 'unknown', tone: 'muted' })
   })
 
   it('maps every upstream phase to a badge and tone', () => {

@@ -66,6 +66,9 @@ export interface PresentedMcpPanel {
  * @returns the badge code and tone.
  */
 export function connectionBadge(view: McpServerView): { badge: PresentedServerRow['badge']; tone: BadgeTone } {
+  // A leftover namespace (foreign mcp__ tools, no loader row) is unconfigured,
+  // not disabled: its config facts do not exist, so it reads "unknown".
+  if (view.entryId === '') return { badge: 'unknown', tone: 'muted' }
   if (!view.enabled) return { badge: 'disabled', tone: 'muted' }
   if (view.fiberPhase === 'failed') return { badge: 'failed', tone: 'error' }
   switch (view.phase) {

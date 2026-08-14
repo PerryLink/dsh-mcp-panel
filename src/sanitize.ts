@@ -26,6 +26,9 @@ const USERINFO = /([a-z][a-z0-9+.-]*:\/\/)([^/@\s]+)@/giu
 /** `?key=value` / `&key=value` credential pairs inside arbitrary text. */
 const QUERY_CREDENTIAL = new RegExp(`([?&](?:[^=&#\\s]*${CREDENTIAL_KEY_SOURCE}[^=&#\\s]*)=)[^&#\\s]*`, 'giu')
 
+/** `#key=value` credential pairs in URL fragments and arbitrary text. */
+const FRAGMENT_CREDENTIAL = new RegExp(`(#[^=&#\\s]*${CREDENTIAL_KEY_SOURCE}[^=&#\\s]*=)[^&#\\s]*`, 'giu')
+
 /** `Authorization: <value>`-style header lines in arbitrary text (quoted value first). */
 const HEADER_CREDENTIAL_QUOTED = new RegExp(`(\\b${CREDENTIAL_KEY_SOURCE}\\s*[:=]\\s*["'])[^"']*(["'])`, 'giu')
 
@@ -45,10 +48,11 @@ const QUOTED_CREDENTIAL = new RegExp(`(["'](?:access[_-]?token|api[_-]?key|clien
 const JWT = /\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{5,}\b/gu
 
 /**
- * Redact a URL for display: userinfo password and credential query values.
- * Query keys are read through `URLSearchParams`, so percent-encoded key names
- * are decoded before matching. Unparseable inputs fall back to pattern
- * redaction (whole userinfo and credential query pairs) instead of throwing.
+ * Redact a URL for display: userinfo password, credential query values, and
+ * credential fragment pairs. Query keys are read through `URLSearchParams`,
+ * so percent-encoded key names are decoded before matching. Unparseable
+ * inputs fall back to pattern redaction (whole userinfo, credential query
+ * pairs, credential fragment pairs) instead of throwing.
  *
  * @param url - candidate URL text.
  * @returns display-safe URL text.
@@ -61,11 +65,13 @@ export function sanitizeUrl(url: string): string {
     return url
       .replace(USERINFO, '$1***@')
       .replace(QUERY_CREDENTIAL, `$1${REDACTED}`)
+      .replace(FRAGMENT_CREDENTIAL, `$1${REDACTED}`)
   }
   if (parsed.password !== '') parsed.password = REDACTED
   for (const key of [...parsed.searchParams.keys()]) {
     if (CREDENTIAL_KEY.test(key)) parsed.searchParams.set(key, REDACTED)
   }
+  if (parsed.hash !== '') parsed.hash = parsed.hash.replace(FRAGMENT_CREDENTIAL, `$1${REDACTED}`)
   return parsed.toString()
 }
 
@@ -87,6 +93,7 @@ export function sanitizeText(text: string): string {
     })
     .replace(QUOTED_CREDENTIAL, `$1${REDACTED}$2`)
     .replace(QUERY_CREDENTIAL, `$1${REDACTED}`)
+    .replace(FRAGMENT_CREDENTIAL, `$1${REDACTED}`)
     .replace(JWT, REDACTED)
 }
 

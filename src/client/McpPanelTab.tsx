@@ -3,7 +3,7 @@
 import { useEffect, useId, useState, type ReactNode } from 'react'
 import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import { presentMcpPanel, probeBadge, type BadgeTone, type PresentedServerRow } from './present.ts'
-import type { McpPanelSnapshot, ProbeStarted } from '../wire.ts'
+import type { McpPanelSnapshot, McpProbeView, ProbeStarted } from '../wire.ts'
 
 /** Registration-side injected face: the unwrapped snapshot read + probe start. */
 export interface McpPanelTabInjected {
@@ -49,6 +49,13 @@ function probeLabel(badge: ReturnType<typeof probeBadge>['badge'], t: McpPanelTa
   }
 }
 
+/** Local wall-clock range for one probe row; component-layer formatting only. */
+function formatProbeTime(view: McpProbeView): string {
+  const format = (ms: number): string => new Date(ms).toLocaleTimeString(undefined, { hour12: false })
+  const start = format(view.startedAt)
+  return view.finishedAt === null ? start : `${start}–${format(view.finishedAt)}`
+}
+
 /** Render the read-only MCP management tab. */
 export function McpPanelTab({ status, probe, t }: McpPanelTabProps): ReactNode {
   const listId = useId()
@@ -56,7 +63,9 @@ export function McpPanelTab({ status, probe, t }: McpPanelTabProps): ReactNode {
   const [expanded, setExpanded] = useState<string | null>(null)
   const [probeError, setProbeError] = useState<string | null>(null)
   const [state, setState] = useState<ViewState>({ status: 'loading' })
-  const [toolQuery, setToolQuery] = useState('')
+  // Per-card tool filter: one query per server so expanding two cards at once
+  // never filters one card by the other card's search text.
+  const [toolQueries, setToolQueries] = useState<Record<string, string>>({})
 
   const reload = (): void => {
     setRequest(value => value + 1)
@@ -73,11 +82,19 @@ export function McpPanelTab({ status, probe, t }: McpPanelTabProps): ReactNode {
 
   // Optional polling: the host suggests an interval through the snapshot
   // (0 = on demand only). Errors during polling keep the last good snapshot.
+  // Polling pauses while the document is hidden and refreshes immediately on
+  // becoming visible again, so background tabs neither spin nor show stale data.
   const intervalMs = state.status === 'ready' ? state.snapshot.refreshIntervalMs : 0
   useEffect(() => {
     if (intervalMs <= 0) return undefined
-    const timer = setInterval(() => { reload() }, intervalMs)
-    return () => { clearInterval(timer) }
+    const tick = (): void => { if (!document.hidden) reload() }
+    const timer = setInterval(tick, intervalMs)
+    const onVisible = (): void => { if (!document.hidden) reload() }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      clearInterval(timer)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
   }, [intervalMs])
 
   const retry = (): void => {
@@ -105,6 +122,10 @@ export function McpPanelTab({ status, probe, t }: McpPanelTabProps): ReactNode {
                 {model.servers.map((row) => {
                   const open = expanded === row.view.serverName
                   const detailId = `${listId}-${encodeURIComponent(row.view.serverName)}`
+                  const toolQuery = toolQueries[row.view.serverName] ?? ''
+                  const probeRunning = model.probes.some(
+                    probe => probe.view.status === 'running' && probe.view.serverName === row.view.serverName,
+                  )
                   return (
                     <li className="dmcp-card" key={row.view.serverName} data-mcp-server={row.view.serverName} data-open={open ? 'true' : undefined}>
                       <button
@@ -141,6 +162,7 @@ export function McpPanelTab({ status, probe, t }: McpPanelTabProps): ReactNode {
                             <div><dt>{t('reconnects')}</dt><dd>{row.reconnects ?? t('none')}</dd></div>
                             <div><dt>{t('lastError')}</dt><dd className={row.hasError ? 'dmcp-error-text' : undefined}>{row.view.lastError ?? t('none')}</dd></div>
                             <div><dt>{t('fiber')}</dt><dd>{row.view.fiberPhase ?? t('none')}</dd></div>
+                            {row.view.configuredNote !== null ? <div><dt>{t('configured')}</dt><dd>{row.view.configuredNote}</dd></div> : null}
                             {row.ageSeconds !== null ? <div><dt>{t('lastEvent')}</dt><dd>{row.ageSeconds}s</dd></div> : null}
                             {row.view.delayMs !== null ? <div><dt>{t('retryIn')}</dt><dd>{row.view.delayMs} {t('ms')}</dd></div> : null}
                           </dl>
@@ -149,6 +171,7 @@ export function McpPanelTab({ status, probe, t }: McpPanelTabProps): ReactNode {
                             <button
                               type="button"
                               className="dmcp-probe-now"
+                              disabled={probeRunning}
                               onClick={() => {
                                 setProbeError(null)
                                 void Promise.resolve().then(() => probe(row.view.serverName)).then(
@@ -157,7 +180,7 @@ export function McpPanelTab({ status, probe, t }: McpPanelTabProps): ReactNode {
                                 )
                               }}
                             >
-                              {t('probeNow')}
+                              {probeRunning ? t('probeRunning') : t('probeNow')}
                             </button>
                           ) : null}
                           {row.view.tools.length === 0 ? (
@@ -170,7 +193,9 @@ export function McpPanelTab({ status, probe, t }: McpPanelTabProps): ReactNode {
                                 value={toolQuery}
                                 placeholder={t('filterTools')}
                                 aria-label={t('filterTools')}
-                                onChange={(event) => { setToolQuery(event.currentTarget.value) }}
+                                onChange={(event) => {
+                                  setToolQueries(current => ({ ...current, [row.view.serverName]: event.currentTarget.value }))
+                                }}
                               />
                               <ul className="dmcp-tools">
                                 {row.view.tools
@@ -205,6 +230,7 @@ export function McpPanelTab({ status, probe, t }: McpPanelTabProps): ReactNode {
                   <li key={probe.view.id} className="dmcp-probe" data-mcp-probe={probe.view.id}>
                     <Badge tone={badge.tone} label={probeLabel(badge.badge, t)} />
                     <code>{probe.view.serverName}</code>
+                    <span className="dmcp-probe-time">{formatProbeTime(probe.view)}</span>
                     <span className="dmcp-probe-detail">{probe.view.detail ?? t('none')}</span>
                   </li>
                 )
