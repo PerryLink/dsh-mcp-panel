@@ -19,8 +19,11 @@
 
 | Superfície | O que mostra |
 |---|---|
-| **Comando `/mcp`** | transporte, alvo, contagem de ferramentas, status de conexão, último erro, contador de reconexões — legível pelo modelo e reconstruível pelo log |
+| **Comando `/mcp`** | transporte, alvo, contagem de ferramentas, status de conexão, último erro, contador de reconexões — legível pelo modelo e reconstruível pelo log, bilíngue (`outputLanguage: en\|zh`) |
 | **Configurações → Plugins → aba MCP** | o mesmo snapshot somente leitura, com selos de status, listas expansíveis de ferramentas, erros sanitizados e resultados de sondas |
+| **Botão de sonda do painel** | sonda de conectividade em um clique para um servidor streamable-http a partir da aba; os resultados continuam somente do painel |
+| **Sondas passivas** | selos de alcançabilidade opcionais em segundo plano por servidor, separados do status de conexão |
+| **Atualização automática** | o host sugere um intervalo de atualização (`refreshIntervalMs`); a aba consulta e pausa enquanto oculta |
 | **`/mcp <server> disable\|enable`** | a linha exata de `cordis.patch.yml` a aplicar — uma *sugestão*, nunca uma escrita |
 | **Ferramenta `mcp_probe`** | sonda de conectividade de uso único para Streamable HTTP como tarefa em segundo plano; resultados são **somente do painel** |
 
@@ -76,6 +79,11 @@ respaldo compartilhado `$DSH_HOME/profiles/node_modules`) e adicione a linha a `
 |---|---|---|
 | `probeEnabled` | `true` | Registra a ferramenta `mcp_probe` (requer `ctx.jobs` na composição) |
 | `probeTimeoutMs` | `10000` | Tempo limite por sonda |
+| `maxProbes` | `10` | Limite de registros de sonda exibidos no painel |
+| `refreshIntervalMs` | `0` | Intervalo de atualização sugerido para o painel em ms (`0` = somente sob demanda) |
+| `outputLanguage` | `en` | Idioma de saída do comando `/mcp` (`en` \| `zh`) |
+| `passiveProbeEnabled` | `false` | Sondear periodicamente servidores streamable-http em segundo plano |
+| `passiveProbeIntervalMs` | `60000` | Intervalo da sonda passiva em milissegundos |
 
 ## Permissões e dados
 
@@ -88,6 +96,7 @@ respaldo compartilhado `$DSH_HOME/profiles/node_modules`) e adicione a linha a `
 
 - A linha não aparece? Rode `dsh web --dump-config` e confira se o insert `mcp-panel` foi aplicado com um id único.
 - O painel mostra `status: unknown (source: derived)` — esperado até a costura upstream aterrissar; veja [docs/upstream-proposal.md](docs/upstream-proposal.md).
+- O painel parece desatualizado? Defina `refreshIntervalMs` com um valor positivo (ex.: `5000`) na linha de configuração `mcp-panel` para consultar automaticamente.
 - O log de boot mostra um fiber `mcp-panel` FAILED — o pacote precisa resolver a partir do perfil (o `name: dsh-mcp-panel` simples resolve via o `node_modules` do perfil ou o respaldo compartilhado).
 - Rollback: remova a linha (ver Desinstalação).
 
@@ -106,7 +115,7 @@ Encontrou um problema de segurança? Abra uma issue no GitHub **sem** colar segr
 ```sh
 pnpm install
 pnpm run typecheck
-pnpm test          # 58 testes: extremos do sanitizador, agrupamento, tolerância de agregação, saída do comando, apresentador
+pnpm test          # 84 testes: extremos do sanitizador, agrupamento, tolerância de agregação, saída do comando (en/zh), controle de sondas, fiação do cliente, apresentador
 pnpm run build     # declarações tsc → lib/types; tsdown → lib/index.js + lib/typert.host.js + lib/client.js
 pnpm run verify:self-contained
 pnpm pack

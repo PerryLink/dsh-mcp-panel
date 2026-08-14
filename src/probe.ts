@@ -28,8 +28,10 @@ declare module '@deepseek-ai/dsh-jobs' {
 /** JSON-RPC MCP initialize request used by the probe (protocol constant). */
 const INITIALIZE_PROTOCOL_VERSION = '2024-11-05'
 
-/** MCP clientInfo facts; protocol constants, not configuration. */
-const PROBE_CLIENT_INFO = { name: 'dsh-mcp-panel', version: '0.1.0' }
+/** MCP clientInfo facts; protocol constants, not configuration. Exported so the
+ * version-consistency tripwire (`tests/version.spec.ts`) can assert the
+ * advertised version tracks the package version. */
+export const PROBE_CLIENT_INFO = { name: 'dsh-mcp-panel', version: '0.1.0' }
 
 /** One settled probe: outcome status plus a sanitized one-line detail. */
 export interface ProbeOutcome {

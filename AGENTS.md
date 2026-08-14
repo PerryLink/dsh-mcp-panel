@@ -5,7 +5,7 @@ Standalone DeepSeek Harness plugin repository (`dsh-mcp-panel`). Development fol
 ## Layout
 
 - `src/index.ts` — function-plugin contract (`name`/`inject`/`Config`/`apply`; NO default export — the Loader unwraps `exports.default ?? exports`).
-- `src/service.ts` — `McpPanelService` (`TypertRemoteService`, namespace `mcpPanel`): read-only snapshot assembly from loader rows + tool registry + upstream status observations.
+- `src/service.ts` — `McpPanelService` (`TypertRemoteService`, namespace `mcpPanel`): read-only snapshot assembly from loader rows + tool registry + upstream status observations. Serves `mcpPanel/status` and starts panel-only probes through `mcpPanel/probe` (`probe(serverName)`; needs `ctx.jobs`, streamable-http rows only).
 - `src/wire.ts` — the snapshot vocabulary, its zod v4 wire schema, and the single `mcpPanel/status` invocation descriptor shared verbatim by the host `./typert` manifest (`src/typert.host.ts`) and the client Remote contribution (`src/client/remote.ts`) — one canonical source so the two codecs can never drift.
 - `src/upstream.ts` — the proposed upstream `mcp/status` seam (event + query service face), declared here via cordis declaration merging and consumed with feature detection; when upstream ships it, its identical declarations merge cleanly and a conflicting signature fails this compile (intended tripwire). Proposal text: `docs/upstream-proposal.md` in the deepseek-harness repo.
 - `src/sanitize.ts` — display redaction (URL query credentials, userinfo passwords, header values, bearer tokens, JWTs). Pure; extreme-case tests in `tests/sanitize.spec.ts`.
@@ -22,6 +22,10 @@ Standalone DeepSeek Harness plugin repository (`dsh-mcp-panel`). Development fol
 - Everything displayed is sanitized; configured `headers` never enter any snapshot.
 - No mcp-client changes: transport/OAuth/protocol stay untouched (upstream proposal only).
 - Host-side data channel is the `mcpPanel` Typert Remote namespace (the ui-settings-plugin-inventory precedent), not session projections — MCP status is app-level, runtime-varying state, and the session-projection `view`-reads-live-service pattern is sanctioned only for boot-constant units.
+
+## Config
+
+Schema in `src/config.ts` (Schemastery, fail-loud bounds, explicit `resolveConfig`): `probeEnabled` (default true), `probeTimeoutMs` (10000), `maxProbes` (10), `refreshIntervalMs` (0 = on demand), `outputLanguage` (`'en' | 'zh'`), `passiveProbeEnabled` (false), `passiveProbeIntervalMs` (60000). `cordis.patch.yml` comments document the same keys; the five-language READMEs carry the user-facing table.
 
 ## Build
 

@@ -19,8 +19,11 @@
 
 | Surface | What it shows |
 |---|---|
-| **`/mcp` command** | transport, target, tool count, connection status, last error, reconnect count — model-readable, session-log reconstructable |
+| **`/mcp` command** | transport, target, tool count, connection status, last error, reconnect count — model-readable, session-log reconstructable, bilingual (`outputLanguage: en\|zh`) |
 | **Settings → Plugins → MCP tab** | the same snapshot read-only, with status badges, expandable tool lists, sanitized errors, probe results |
+| **Panel probe button** | one-click connectivity probe of one streamable-http server from the tab; results stay panel-only |
+| **Passive probes** | optional background reachability badges per server, kept separate from connection status |
+| **Auto refresh** | the host suggests a refresh interval (`refreshIntervalMs`); the tab polls and pauses while hidden |
 | **`/mcp <server> disable\|enable`** | the exact `cordis.patch.yml` line to apply — a *suggestion*, never a write |
 | **`mcp_probe` tool** | one-shot Streamable HTTP connectivity probe as a background job; results are **panel-only** |
 
@@ -76,6 +79,11 @@ Manual install: put `dsh-mcp-panel` into the profile's `node_modules` (or the sh
 |---|---|---|
 | `probeEnabled` | `true` | Register the `mcp_probe` tool (needs `ctx.jobs` in the composition) |
 | `probeTimeoutMs` | `10000` | Per-probe timeout |
+| `maxProbes` | `10` | Cap on probe records shown in the panel |
+| `refreshIntervalMs` | `0` | Suggested panel refresh interval in ms (`0` = on demand only) |
+| `outputLanguage` | `en` | Output language of the `/mcp` command (`en` \| `zh`) |
+| `passiveProbeEnabled` | `false` | Periodically probe streamable-http servers in the background |
+| `passiveProbeIntervalMs` | `60000` | Passive probe interval in milliseconds |
 
 ## Permissions & data
 
@@ -88,6 +96,7 @@ Manual install: put `dsh-mcp-panel` into the profile's `node_modules` (or the sh
 
 - Row not visible? Run `dsh web --dump-config` and check that the `mcp-panel` insert landed with a unique id.
 - Panel shows `status: unknown (source: derived)` — expected until the upstream seam lands; see [docs/upstream-proposal.md](docs/upstream-proposal.md).
+- Panel looks stale? Set `refreshIntervalMs` to a positive value (e.g. `5000`) in the `mcp-panel` config row to poll automatically.
 - Boot log shows a FAILED `mcp-panel` fiber — the package must resolve from the profile (bare `name: dsh-mcp-panel` resolves via the profile's `node_modules` or the shared fallback).
 - Rollback: remove the row (see Uninstall).
 
@@ -106,7 +115,7 @@ Found a security issue? Open a GitHub issue **without** pasting secrets, keys, o
 ```sh
 pnpm install
 pnpm run typecheck
-pnpm test          # 58 tests: sanitizer extremes, grouping, aggregation tolerance, command output, presenter
+pnpm test          # 84 tests: sanitizer extremes, grouping, aggregation tolerance, command output (en/zh), probe gating, client wiring, presenter
 pnpm run build     # tsc declarations → lib/types; tsdown → lib/index.js + lib/typert.host.js + lib/client.js
 pnpm run verify:self-contained
 pnpm pack

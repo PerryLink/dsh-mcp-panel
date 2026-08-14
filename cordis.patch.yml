@@ -11,3 +11,13 @@
         probeEnabled: true
         # Per-probe timeout in milliseconds.
         probeTimeoutMs: 10000
+        # Cap on probe records shown in the panel (default 10).
+        # maxProbes: 10
+        # Suggested panel refresh interval in ms; 0 = on demand only.
+        # refreshIntervalMs: 0
+        # Output language of the /mcp command (en | zh).
+        # outputLanguage: en
+        # Periodically probe streamable-http servers in the background.
+        # passiveProbeEnabled: false
+        # Passive probe interval in milliseconds.
+        # passiveProbeIntervalMs: 60000

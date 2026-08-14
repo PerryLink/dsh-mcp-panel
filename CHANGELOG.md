@@ -4,7 +4,19 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
-- Engineering & product improvements per `docs/optimization-plan.zh.md`.
+### Added
+
+- Panel probe action (`mcpPanel/probe`): one-click connectivity probe of one streamable-http server from the settings tab; results stay panel-only.
+- Passive background probes (`passiveProbeEnabled` / `passiveProbeIntervalMs`) with per-server reachability badges kept separate from connection status.
+- Suggested panel polling (`refreshIntervalMs`); the tab refreshes automatically on the suggested interval.
+- `/mcp` output language (`outputLanguage: 'en' | 'zh'`); renderers parameterized on a message dictionary, patch lines stay machine-identical.
+- Probe record cap (`maxProbes`) and upstream event freshness (`observedAt` → "last event Ns ago").
+- Panel polish: focus-visible rings, attempt x/y budget row, bounded server-info display in probe details.
+
+### Engineering
+
+- `.gitattributes` pins LF line endings so Windows checkouts stop producing CRLF diff noise.
+- Version-consistency tripwire: the probe's MCP `clientInfo.version` must equal the package version.
 
 ## [0.1.0] - 2026-08-14
 

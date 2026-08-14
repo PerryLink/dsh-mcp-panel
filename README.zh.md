@@ -19,8 +19,11 @@
 
 | 界面 | 展示内容 |
 |---|---|
-| **`/mcp` 命令** | transport、目标、工具数、连接状态、最近错误、重连计数——模型可读、可日志重建 |
+| **`/mcp` 命令** | transport、目标、工具数、连接状态、最近错误、重连计数——模型可读、可日志重建，支持双语（`outputLanguage: en\|zh`） |
 | **设置 → 插件 → MCP 页签** | 同一快照的只读视图：状态徽标、可展开工具清单、脱敏错误、探测结果 |
+| **面板探测按钮** | 从页签对单个 streamable-http 服务器一键发起连通性探测；结果仍仅面板可见 |
+| **被动探测** | 可选的每服务器后台可达性徽标，与连接状态严格分离展示 |
+| **自动刷新** | 宿主建议刷新间隔（`refreshIntervalMs`）；页签轮询并在后台隐藏时暂停 |
 | **`/mcp <server> disable\|enable`** | 应应用的 `cordis.patch.yml` 确切行——只是**建议**，绝不写文件 |
 | **`mcp_probe` 工具** | 对 Streamable HTTP 端点的一次性连通性探测（后台 job），结果**仅面板可见** |
 
@@ -76,6 +79,11 @@ MCP servers (1):
 |---|---|---|
 | `probeEnabled` | `true` | 是否注册 `mcp_probe` 工具（需要组合里有 `ctx.jobs`） |
 | `probeTimeoutMs` | `10000` | 单次探测超时 |
+| `maxProbes` | `10` | 面板展示的探测记录上限 |
+| `refreshIntervalMs` | `0` | 建议的面板刷新间隔（毫秒；`0` = 仅手动刷新） |
+| `outputLanguage` | `en` | `/mcp` 命令输出语言（`en` \| `zh`） |
+| `passiveProbeEnabled` | `false` | 是否周期性后台探测 streamable-http 服务器 |
+| `passiveProbeIntervalMs` | `60000` | 被动探测间隔（毫秒） |
 
 ## 权限与数据
 
@@ -88,6 +96,7 @@ MCP servers (1):
 
 - 行不见了？运行 `dsh web --dump-config`，检查 `mcp-panel` insert 是否生效且 id 唯一。
 - 面板显示 `status: unknown (source: derived)`——在上游 seam 落地前属预期；见 [docs/upstream-proposal.md](docs/upstream-proposal.md)。
+- 面板数据不更新？把 `mcp-panel` 配置行的 `refreshIntervalMs` 设为正值（如 `5000`）自动轮询。
 - 启动日志出现 FAILED 的 `mcp-panel` fiber——确认包能从 profile 解析（裸 `name: dsh-mcp-panel` 经 profile 的 `node_modules` 或共享回退目录解析）。
 - 回滚：移除该行（见「卸载」）。
 
@@ -106,7 +115,7 @@ MCP servers (1):
 ```sh
 pnpm install
 pnpm run typecheck
-pnpm test          # 58 个测试：脱敏极端用例、分组、聚合容错、命令输出、presenter
+pnpm test          # 84 个测试：脱敏极端用例、分组、聚合容错、命令输出（中英）、探测门控、客户端接线、presenter
 pnpm run build     # tsc 声明 → lib/types；tsdown → lib/index.js + lib/typert.host.js + lib/client.js
 pnpm run verify:self-contained
 pnpm pack
