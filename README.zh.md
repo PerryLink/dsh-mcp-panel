@@ -13,7 +13,7 @@
 ## 兼容性
 
 - **运行时**：DeepSeek Harness ≥ `0.1.0-rc.5`（peerDependencies 固定 `0.1.0-rc.6` 包线）。
-- **最后验证**：2026-08-14，针对 deepseek-harness 源码 checkout（workspace 包 `0.1.0-rc.5`，mainline `7b9644f`）——headless `/mcp` 端到端 + 实时 web profile；证据见 [docs/research-notes.zh.md](docs/research-notes.zh.md)。
+- **最后验证**：2026-08-14，针对 deepseek-harness 源码 checkout（workspace 包 `0.1.0-rc.5`，mainline `7b9644f`）——headless `/mcp` 端到端 + 实时 web profile；证据见 [docs/research-notes.zh.md](docs/research-notes.zh.md)。同日对 mainline `47f9438` + `mcp/status` seam 分支（`feat/mcp-client-status-observability-seam`）复验：真实 `server-everything` 行经打包插件渲染 `status: connected (source: upstream-event)`，并跑通与启动器一致的全流程；记录见 [docs/optimization-plan-v2.zh.md](docs/optimization-plan-v2.zh.md)。
 
 ## 你能得到什么
 

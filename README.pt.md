@@ -13,7 +13,7 @@
 ## Compatibilidade
 
 - **Runtime**: DeepSeek Harness ≥ `0.1.0-rc.5` (as peerDependencies fixam a linha `0.1.0-rc.6`).
-- **Última verificação**: 2026-08-14 contra um checkout do código-fonte do deepseek-harness (pacotes do workspace em `0.1.0-rc.5`, mainline `7b9644f`) — `/mcp` headless de ponta a ponta mais um perfil web ao vivo; evidências em [docs/research-notes.zh.md](docs/research-notes.zh.md).
+- **Última verificação**: 2026-08-14 contra um checkout do código-fonte do deepseek-harness (pacotes do workspace em `0.1.0-rc.5`, mainline `7b9644f`) — `/mcp` headless de ponta a ponta mais um perfil web ao vivo; evidências em [docs/research-notes.zh.md](docs/research-notes.zh.md). Reverificado no mesmo dia contra mainline `47f9438` com o ramo da costura `mcp/status` (`feat/mcp-client-status-observability-seam`): uma linha real de `server-everything` mostra `status: connected (source: upstream-event)` através do plugin empacotado, além do fluxo de compatibilidade fiel ao lançador; registro em [docs/optimization-plan-v2.zh.md](docs/optimization-plan-v2.zh.md).
 
 ## O que você ganha
 

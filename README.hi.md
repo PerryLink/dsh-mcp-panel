@@ -13,7 +13,7 @@
 ## संगतता
 
 - **रनटाइम**: DeepSeek Harness ≥ `0.1.0-rc.5` (peerDependencies `0.1.0-rc.6` पैकेज लाइन पिन करती हैं)।
-- **अंतिम सत्यापन**: 2026-08-14, deepseek-harness के सोर्स checkout के विरुद्ध (workspace पैकेज `0.1.0-rc.5`, mainline `7b9644f`) — headless `/mcp` एंड-टू-एंड + लाइव वेब प्रोफ़ाइल; प्रमाण [docs/research-notes.zh.md](docs/research-notes.zh.md) में।
+- **अंतिम सत्यापन**: 2026-08-14, deepseek-harness के सोर्स checkout के विरुद्ध (workspace पैकेज `0.1.0-rc.5`, mainline `7b9644f`) — headless `/mcp` एंड-टू-एंड + लाइव वेब प्रोफ़ाइल; प्रमाण [docs/research-notes.zh.md](docs/research-notes.zh.md) में। उसी दिन mainline `47f9438` + `mcp/status` सीम ब्रांच (`feat/mcp-client-status-observability-seam`) के विरुद्ध पुनः सत्यापित: असली `server-everything` पंक्ति पैक किए गए प्लगइन से `status: connected (source: upstream-event)` दिखाती है, साथ ही लॉन्चर-समतुल्य संगतता प्रवाह; रिकॉर्ड [docs/optimization-plan-v2.zh.md](docs/optimization-plan-v2.zh.md) में।
 
 ## आपको क्या मिलता है
 
