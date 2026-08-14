@@ -33,7 +33,7 @@ import {
 import { groupMcpTools } from './grouping.ts'
 import { probeEndpoint, probeJob, PROBE_KIND } from './probe.ts'
 import { sanitizeText } from './sanitize.ts'
-import type { McpServerStatus } from './upstream.ts'
+import type { McpServerStatus, McpStatusPhase } from './upstream.ts'
 import type { McpFiberPhase, McpPanelSnapshot, McpProbeView, ProbeStarted } from './wire.ts'
 
 declare module '@deepseek-ai/cordis' {
@@ -61,6 +61,18 @@ const PROFILE_PATCH_FILENAME = 'cordis.patch.yml'
 
 /** Label prefix written by the `mcp_probe` tool and the panel probe action. */
 const PROBE_LABEL_PREFIX = 'mcp_probe '
+
+/**
+ * Supervisor phases this panel understands. Upstream payloads are
+ * unvalidated runtime data (any plugin can emit `mcp/status`): a payload
+ * whose required fields do not match the wire codec would otherwise be
+ * stored verbatim and later REJECT the whole `mcpPanel/status` snapshot on
+ * the strict Typert codec, taking down the panel over one bad event.
+ */
+const KNOWN_PHASES: ReadonlySet<string> = new Set(['connecting', 'connected', 'waiting', 'exhausted', 'disposed'])
+
+/** Background-job statuses the panel displays; anything else reads `unknown`. */
+const KNOWN_JOB_STATUSES: ReadonlySet<string> = new Set(['running', 'stopping', 'completed', 'killed', 'failed'])
 
 /** Service-level runtime settings; the plugin passes its resolved config in. */
 export interface McpPanelServiceConfig {
@@ -93,6 +105,12 @@ export class McpPanelService extends TypertRemoteService {
   private readonly statuses = new Map<string, McpServerStatus>()
   /** Cumulative reconnect attempts observed per server namespace. */
   private readonly reconnects = new Map<string, number>()
+  /**
+   * Highest `attempt` already counted per server, so re-observing the same
+   * payload (HMR remount, event + query seed of one transition) never double
+   * counts a reconnect.
+   */
+  private readonly countedAttempts = new Map<string, number>()
   /** Epoch ms of the latest upstream event receipt per server namespace. */
   private readonly observedAt = new Map<string, number>()
   /** Latest passive-probe reachability per server namespace. */
@@ -115,17 +133,45 @@ export class McpPanelService extends TypertRemoteService {
   }
 
   /**
-   * Record one upstream `mcp/status` payload (event or query-seed). A
-   * `connecting` payload with a positive attempt counts one reconnect.
+   * Record one upstream `mcp/status` payload (event or query-seed). Payloads
+   * are validated before storage — they are unvalidated runtime data and a
+   * malformed one must never poison the strict wire codec downstream. A
+   * `connecting` payload with a strictly increasing attempt counts one
+   * reconnect; re-observing the same payload never double counts.
    *
    * @param payload - post-transition status facts.
    */
   observe(payload: McpServerStatus): void {
-    if (typeof payload.serverName !== 'string' || payload.serverName === '') return
-    this.statuses.set(payload.serverName, payload)
-    this.observedAt.set(payload.serverName, Date.now())
-    if (payload.phase === 'connecting' && payload.attempt > 0) {
-      this.reconnects.set(payload.serverName, (this.reconnects.get(payload.serverName) ?? 0) + 1)
+    if (typeof payload !== 'object' || payload === null) return
+    const { serverName, phase, attempt, maxAttempts, toolCount } = payload
+    if (typeof serverName !== 'string' || serverName === '') return
+    if (typeof phase !== 'string' || !KNOWN_PHASES.has(phase)) return
+    if (!Number.isFinite(attempt) || !Number.isFinite(maxAttempts) || !Number.isFinite(toolCount)) return
+    // Normalize into the exact shape the wire codec accepts; optional fields
+    // drop when they are not codec-shaped instead of rejecting the snapshot.
+    const clean: McpServerStatus = {
+      serverName,
+      phase: phase as McpStatusPhase,
+      attempt: Math.floor(attempt),
+      maxAttempts: Math.floor(maxAttempts),
+      toolCount: Math.floor(toolCount),
+      ...(Number.isFinite(payload.delayMs) ? { delayMs: Math.floor(payload.delayMs as number) } : {}),
+      ...(typeof payload.error === 'string' ? { error: payload.error } : {}),
+      ...(Number.isFinite(payload.connectedAt) ? { connectedAt: Math.floor(payload.connectedAt as number) } : {}),
+    }
+    this.statuses.set(serverName, clean)
+    this.observedAt.set(serverName, Date.now())
+    if (clean.phase === 'connecting' && clean.attempt > 0) {
+      const counted = this.countedAttempts.get(serverName) ?? 0
+      if (clean.attempt > counted) {
+        this.countedAttempts.set(serverName, clean.attempt)
+        this.reconnects.set(serverName, (this.reconnects.get(serverName) ?? 0) + 1)
+      }
+    } else if (clean.phase === 'connected' || clean.phase === 'disposed') {
+      // A recovery or teardown resets the counter so the next outage counts
+      // from attempt 1 again. `waiting`/`exhausted` keep it: those phases
+      // carry the ongoing outage's attempt and must not re-arm counting.
+      this.countedAttempts.set(serverName, 0)
     }
   }
 
@@ -230,7 +276,11 @@ export class McpPanelService extends TypertRemoteService {
     for (const entry of this.ctx.loader.entries()) {
       if (entry.options.name !== MCP_CLIENT_MODULE) continue
       const config = entry.options.config
-      if (serverNameOf(config, `entry:${entry.id}`) !== serverName) continue
+      // `entry.options.id` — not `entry.id` — keeps the namespace fallback
+      // identical to the snapshot's (`entry:<options.id>`); `entry.id` carries
+      // enclosing group prefixes (e.g. `include:`), which would silently break
+      // probe targeting for rows nested in groups.
+      if (serverNameOf(config, `entry:${entry.options.id}`) !== serverName) continue
       if (typeof config !== 'object' || config === null || Array.isArray(config)) return undefined
       const row = config as Record<string, unknown>
       if (row['transport'] !== 'streamable-http') return undefined
@@ -258,7 +308,9 @@ export class McpPanelService extends TypertRemoteService {
       .map(job => ({
         id: job.id,
         serverName: job.label.startsWith(PROBE_LABEL_PREFIX) ? job.label.slice(PROBE_LABEL_PREFIX.length) : job.label,
-        status: job.status,
+        // Job registries may grow lifecycle states; anything outside the
+        // panel's vocabulary reads `unknown` instead of failing the codec.
+        status: KNOWN_JOB_STATUSES.has(job.status) ? job.status as McpProbeView['status'] : 'unknown',
         startedAt: job.startedAt,
         finishedAt: job.finishedAt ?? null,
         detail: job.detail === undefined ? null : sanitizeText(job.detail),

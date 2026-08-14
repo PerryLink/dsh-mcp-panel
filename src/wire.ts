@@ -82,8 +82,8 @@ export interface McpProbeView {
   id: string
   /** Server the probe targeted. */
   serverName: string
-  /** Job lifecycle state. */
-  status: 'running' | 'stopping' | 'completed' | 'killed' | 'failed'
+  /** Job lifecycle state (`unknown` for registry states outside this panel's vocabulary). */
+  status: 'running' | 'stopping' | 'completed' | 'killed' | 'failed' | 'unknown'
   /** Epoch ms when the probe started. */
   startedAt: number
   /** Epoch ms when the probe settled; `null` while running. */
@@ -139,7 +139,7 @@ export const MCP_PANEL_SNAPSHOT_SCHEMA = z.object({
   probes: z.array(z.object({
     id: z.string(),
     serverName: z.string(),
-    status: z.union([z.literal('running'), z.literal('stopping'), z.literal('completed'), z.literal('killed'), z.literal('failed')]),
+    status: z.union([z.literal('running'), z.literal('stopping'), z.literal('completed'), z.literal('killed'), z.literal('failed'), z.literal('unknown')]),
     startedAt: z.number().int(),
     finishedAt: z.number().int().nullable(),
     detail: z.string().nullable(),

@@ -7,7 +7,7 @@
  */
 
 import { describe, expect, it } from 'vitest'
-import { mcpRow, mountHarness } from './harness.ts'
+import { mcpRow, mountHarness, nestedMcpRow } from './harness.ts'
 import { resolveConfig } from '../src/config.ts'
 
 const HTTP_CONFIG = {
@@ -57,6 +57,66 @@ describe('McpPanelService.probe', () => {
     const harness = await mountHarness([mcpRow('mcp-web', HTTP_CONFIG)])
     expect(() => harness.service.probe('web')).toThrow('ctx.jobs is not composed')
   })
+
+  it('targets nested rows by the bare options.id, not the group-composed entry.id', async () => {
+    // A nested row without an explicit serverName falls back to
+    // `entry:<options.id>` in the snapshot; the probe lookup must use the
+    // same namespace or the panel's own probe action cannot find the row.
+    const nestedConfig = { transport: 'streamable-http', url: 'http://localhost:3000/mcp' }
+    const jobs = fakeJobs()
+    const harness = await mountHarness([nestedMcpRow('include', 'mcp-web', nestedConfig)], {}, jobs as never)
+    expect(harness.service.status().servers[0]?.serverName).toBe('entry:mcp-web')
+    const result = harness.service.probe('entry:mcp-web')
+    expect(result.jobId).toBe('mcp-probe-1')
+  })
+})
+
+describe('upstream observation', () => {
+  const CONNECTING_2 = { serverName: 'web', phase: 'connecting', attempt: 2, maxAttempts: 5, toolCount: 0 } as const
+
+  it('stores valid payloads and flips statusSource to upstream-event', async () => {
+    const harness = await mountHarness([mcpRow('mcp-web', HTTP_CONFIG)])
+    harness.service.observe({ ...CONNECTING_2 })
+    const view = harness.service.status().servers[0]!
+    expect(view.phase).toBe('connecting')
+    expect(view.attempt).toBe(2)
+    expect(view.statusSource).toBe('upstream-event')
+  })
+
+  it('drops payloads the wire codec would reject instead of poisoning the snapshot', async () => {
+    const harness = await mountHarness([mcpRow('mcp-web', HTTP_CONFIG)])
+    harness.service.observe({ ...CONNECTING_2, phase: 'haunted' } as never)
+    harness.service.observe({ ...CONNECTING_2, attempt: Number.NaN } as never)
+    harness.service.observe({ ...CONNECTING_2, maxAttempts: 'lots' } as never)
+    harness.service.observe({ ...CONNECTING_2, serverName: 42 } as never)
+    harness.service.observe(null as never)
+    const view = harness.service.status().servers[0]!
+    expect(view.statusSource).toBe('derived')
+    expect(view.phase).toBe('unknown')
+  })
+
+  it('counts each reconnect attempt once, ignoring re-observations of the same payload', async () => {
+    const harness = await mountHarness([mcpRow('mcp-web', HTTP_CONFIG)])
+    harness.service.observe({ ...CONNECTING_2 })
+    harness.service.observe({ ...CONNECTING_2 })
+    expect(harness.service.status().servers[0]!.reconnectCount).toBe(1)
+    harness.service.observe({ ...CONNECTING_2, attempt: 3 })
+    expect(harness.service.status().servers[0]!.reconnectCount).toBe(2)
+  })
+
+  it('resets the reconnect counter after a recovery so the next outage counts from attempt 1', async () => {
+    const harness = await mountHarness([mcpRow('mcp-web', HTTP_CONFIG)])
+    harness.service.observe({ ...CONNECTING_2 })
+    harness.service.observe({ ...CONNECTING_2, attempt: 3 })
+    expect(harness.service.status().servers[0]!.reconnectCount).toBe(2)
+    harness.service.observe({ serverName: 'web', phase: 'connected', attempt: 0, maxAttempts: 5, toolCount: 1 })
+    harness.service.observe({ ...CONNECTING_2, attempt: 1 })
+    expect(harness.service.status().servers[0]!.reconnectCount).toBe(3)
+    // The stale waiting payload of the previous outage does not re-arm a
+    // double count on re-observation.
+    harness.service.observe({ ...CONNECTING_2, attempt: 1, phase: 'waiting' })
+    expect(harness.service.status().servers[0]!.reconnectCount).toBe(3)
+  })
 })
 
 describe('probe record cap', () => {
@@ -81,6 +141,24 @@ describe('probe record cap', () => {
     // Newest first: the reversed list keeps the highest ids.
     expect(snapshot.probes[0]!.id).toBe('mcp-probe-15')
     expect(snapshot.probes[4]!.id).toBe('mcp-probe-11')
+  })
+
+  it('maps job states outside the panel vocabulary to unknown instead of failing the codec', async () => {
+    const jobs = {
+      attachController: () => () => undefined,
+      start: () => 'mcp-probe-1',
+      list: () => [{
+        id: 'mcp-probe-1',
+        kind: 'mcp-probe',
+        label: 'mcp_probe web',
+        status: 'queued', // a future job-registry state this panel does not know
+        startedAt: 1,
+        finishedAt: null,
+        detail: 'queued…',
+      }],
+    }
+    const harness = await mountHarness([mcpRow('mcp-web', HTTP_CONFIG)], {}, jobs as never)
+    expect(harness.service.status().probes[0]!.status).toBe('unknown')
   })
 })
 
