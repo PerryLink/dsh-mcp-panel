@@ -35,6 +35,8 @@ Schema in `src/config.ts` (Schemastery, fail-loud bounds, explicit `resolveConfi
 
 `pnpm run typecheck && pnpm run typecheck:ci && pnpm test && pnpm run build && pnpm run verify:self-contained && pnpm run verify:artifacts && pnpm pack`. The plain `typecheck` resolves the local harness checkout's fresh type faces through tsconfig `paths`; `typecheck:ci` resolves the npm-published `0.1.0-rc.6` faces (no paths) and is what CI runs — keep both green.
 
+`scripts/verify-headless.mjs` boots the real web profile with this plugin installed (temp `DSH_HOME` + `dsh plugin --profile web add <tarball>`) and prints the exact `/mcp` output; `.github/workflows/compat.yml` runs the same flow monthly against a pinned harness SHA (set `DSH_INSTALL_ANCHOR` when plugin and harness are siblings).
+
 ## Docs
 
 - Five-language READMEs (`README.md`, `README.zh.md`, `README.es.md`, `README.pt.md`, `README.hi.md`) — keep all five in sync; the English file is the source of truth.

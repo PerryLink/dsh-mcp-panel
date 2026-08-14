@@ -5,18 +5,51 @@
 // process, binds the webserver to an ephemeral port (--port 0), executes
 // /mcp against a fake agent through the real commands service, and prints
 // the exact model-readable output plus the gateway-registered descriptor.
-import { loadProfile, loadOptionalPatches, composeEntries, boot } from '@deepseek-ai/dsh-app-boot'
+import { loadProfile, loadOptionalPatches, composeEntries, boot, healProfilesModuleFallback } from '@deepseek-ai/dsh-app-boot'
 import { provideCmdline } from '@deepseek-ai/dsh-cmdline'
 import { resolveDshHome } from '@deepseek-ai/dsh-home-paths'
 import { SessionId } from '@deepseek-ai/dsh-session'
+import { existsSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const BIN = 'dsh-verify-headless'
 const home = resolveDshHome()
-const installAnchor = fileURLToPath(new URL('../../../apps/cli/package.json', import.meta.url))
+
+// The dsh installation anchor: prefer an explicit env override, then walk up
+// from this script until a directory carrying apps/cli/package.json is found
+// (supports the plugin repo living at any depth under the harness checkout:
+// HarnessRoot/<repo>, HarnessRoot/<group>/<repo>, HarnessRoot/Project/Plugins/<repo>).
+const anchorCandidates = []
+for (let depth = 2; depth <= 6; depth += 1) {
+  anchorCandidates.push(new URL(`${'../'.repeat(depth)}apps/cli/package.json`, import.meta.url))
+}
+if (process.env.DSH_INSTALL_ANCHOR !== undefined) {
+  const value = process.env.DSH_INSTALL_ANCHOR
+  anchorCandidates.push(/^[a-z]+:/iu.test(value) ? new URL(value) : pathToFileURL(value))
+}
+const installAnchorPath = anchorCandidates.map(candidate => fileURLToPath(candidate)).find(path => existsSync(path))
+if (installAnchorPath === undefined) {
+  throw new Error('dsh-verify-headless: cannot locate apps/cli/package.json — run from inside the deepseek-harness checkout or set DSH_INSTALL_ANCHOR')
+}
+const installAnchor = installAnchorPath
+
+// The launcher's prepareProfile heals the flat module fallback before loading:
+// the profile's hoisted node_modules carries the plugin itself, and the
+// fallback symlinks resolve its peers (schemastery, cordis, dsh-*) from the
+// installation. Replicate that step here.
+healProfilesModuleFallback(installAnchor, home)
 
 const profile = loadProfile(BIN, 'web', installAnchor)
+// The launcher's prepareProfile always (re)writes the empty root config: the
+// whole composition is patch layers and the Loader needs a real include root
+// to anchor baseUrl at the profile directory. Replicate that step here.
+const PROFILE_ROOT_CONFIG = `# dsh profile root — an empty entry list. The tree is composed as patches:
+# each bundle in package.json's dsh.profile.bundles, then cordis.patch.yml, then any
+# --patch overlays. Edit cordis.patch.yml, not this file.
+[]
+`
+writeFileSync(join(profile.dir, 'cordis.yml'), PROFILE_ROOT_CONFIG)
 const homePatches = loadOptionalPatches(BIN, join(home, 'cordis.patch.yml')) ?? []
 const layers = structuredClone([
   ...profile.layers.flatMap(layer => layer.patches),

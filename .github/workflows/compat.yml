@@ -1,0 +1,55 @@
+name: harness-compat
+
+# Optional compatibility job (monthly + manual): boots the real deepseek-harness
+# web profile at a pinned mainline SHA with this plugin installed from its
+# packed tarball, then exercises the assembled /mcp command end to end.
+# Catches upstream mainline drift before users hit it; the main CI (ci.yml)
+# stays fast and offline. See scripts/verify-headless.mjs for the boot steps.
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 5 1 * *' # first day of each month, 05:00 UTC
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: plugin
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install plugin toolchain and pack the tarball
+        working-directory: plugin
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm run build
+          pnpm pack --pack-destination .
+      - uses: actions/checkout@v4
+        with:
+          repository: deepseek-ai/deepseek-harness
+          ref: 8c690c7cf885eeca723bbe46bd0502ecaddb3b12
+          path: harness
+      - name: Install harness dependencies
+        working-directory: harness
+        run: pnpm install --frozen-lockfile
+      - name: Install the plugin into a fresh web profile
+        working-directory: harness
+        env:
+          DSH_HOME: ${{ github.workspace }}/dsh-home
+        run: |
+          TARBALL=$(ls "${{ github.workspace }}"/plugin/dsh-mcp-panel-*.tgz)
+          pnpm dsh plugin --profile web add "$TARBALL"
+      - name: Boot the profile and exercise /mcp end to end
+        working-directory: harness
+        env:
+          DSH_HOME: ${{ github.workspace }}/dsh-home
+          DSH_INSTALL_ANCHOR: ${{ github.workspace }}/harness/apps/cli/package.json
+        run: |
+          node --import tsx/esm "${{ github.workspace }}/plugin/scripts/verify-headless.mjs" > verify.log 2>&1 || { cat verify.log; exit 1; }
+          grep -q 'mcpPanel/status typert descriptor: registered' verify.log
+          grep -q 'command/run present: true' verify.log
+          cat verify.log
