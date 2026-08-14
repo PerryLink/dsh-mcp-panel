@@ -115,7 +115,7 @@ MCP servers (1):
 ```sh
 pnpm install
 pnpm run typecheck
-pnpm test          # 84 个测试：脱敏极端用例、分组、聚合容错、命令输出（中英）、探测门控、客户端接线、presenter
+pnpm test          # 96 个测试：脱敏极端用例、分组、聚合容错、命令输出（五语言）、探测门控、客户端接线、presenter
 pnpm run build     # tsc 声明 → lib/types；tsdown → lib/index.js + lib/typert.host.js + lib/client.js
 pnpm run verify:self-contained
 pnpm pack

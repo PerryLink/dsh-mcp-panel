@@ -29,6 +29,9 @@ All notable changes to this project are documented in this file.
 - `.gitattributes` pins LF line endings so Windows checkouts stop producing CRLF diff noise.
 - Version-consistency tripwire: the probe's MCP `clientInfo.version` must equal the package version.
 - CI restores typecheck: `typecheck:ci` resolves the npm-published `0.1.0-rc.6` type faces (new client-* devDeps, no checkout paths); CI matrix runs Node 22 + 24 on Ubuntu + Windows.
+- Monthly harness-compat job (`.github/workflows/compat.yml`): packs the plugin, installs it into a fresh web profile of a pinned deepseek-harness SHA, and boots it end to end.
+- `scripts/verify-headless.mjs` now replicates the launcher's `prepareProfile` steps (flat module fallback heal, empty root-config write) and locates the installation anchor by walking up (plus `DSH_INSTALL_ANCHOR` override) — it works for plugin repos checked out at any depth under the harness.
+- Upstream `mcp/status` seam: implemented in a deepseek-harness branch (`feat/mcp-client-status-observability-seam`) with tests, docs, and an Agent Note; the panel consumes it unchanged — verified end to end with a real `server-everything` row reporting `status: connected (source: upstream-event)`.
 
 ## [0.1.0] - 2026-08-14
 

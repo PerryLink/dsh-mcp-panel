@@ -115,7 +115,7 @@ MCP servers (1):
 ```sh
 pnpm install
 pnpm run typecheck
-pnpm test          # 84 टेस्ट: सैनिटाइज़र चरम मामले, समूहन, एग्रीगेशन सहनशीलता, कमांड आउटपुट (en/zh), प्रोब गेटिंग, क्लाइंट वायरिंग, प्रेज़ेंटर
+pnpm test          # 96 टेस्ट: सैनिटाइज़र चरम मामले, समूहन, एग्रीगेशन सहनशीलता, कमांड आउटपुट (5 भाषाएँ), प्रोब गेटिंग, क्लाइंट वायरिंग, प्रेज़ेंटर
 pnpm run build     # tsc डिक्लेरेशन → lib/types; tsdown → lib/index.js + lib/typert.host.js + lib/client.js
 pnpm run verify:self-contained
 pnpm pack

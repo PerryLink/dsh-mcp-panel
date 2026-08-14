@@ -115,7 +115,7 @@ Found a security issue? Open a GitHub issue **without** pasting secrets, keys, o
 ```sh
 pnpm install
 pnpm run typecheck
-pnpm test          # 84 tests: sanitizer extremes, grouping, aggregation tolerance, command output (en/zh), probe gating, client wiring, presenter
+pnpm test          # 96 tests: sanitizer extremes, grouping, aggregation tolerance, command output (5 languages), probe gating, client wiring, presenter
 pnpm run build     # tsc declarations → lib/types; tsdown → lib/index.js + lib/typert.host.js + lib/client.js
 pnpm run verify:self-contained
 pnpm pack

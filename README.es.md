@@ -115,7 +115,7 @@ respaldo compartido `$DSH_HOME/profiles/node_modules`) y añade la fila a `cordi
 ```sh
 pnpm install
 pnpm run typecheck
-pnpm test          # 84 pruebas: extremos del saneador, agrupación, tolerancia de agregación, salida del comando (en/zh), control de sondas, cableado del cliente, presentador
+pnpm test          # 96 pruebas: extremos del saneador, agrupación, tolerancia de agregación, salida del comando (5 idiomas), control de sondas, cableado del cliente, presentador
 pnpm run build     # declaraciones tsc → lib/types; tsdown → lib/index.js + lib/typert.host.js + lib/client.js
 pnpm run verify:self-contained
 pnpm pack

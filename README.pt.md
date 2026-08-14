@@ -115,7 +115,7 @@ Encontrou um problema de segurança? Abra uma issue no GitHub **sem** colar segr
 ```sh
 pnpm install
 pnpm run typecheck
-pnpm test          # 84 testes: extremos do sanitizador, agrupamento, tolerância de agregação, saída do comando (en/zh), controle de sondas, fiação do cliente, apresentador
+pnpm test          # 96 testes: extremos do sanitizador, agrupamento, tolerância de agregação, saída do comando (5 idiomas), controle de sondas, fiação do cliente, apresentador
 pnpm run build     # declarações tsc → lib/types; tsdown → lib/index.js + lib/typert.host.js + lib/client.js
 pnpm run verify:self-contained
 pnpm pack

@@ -272,3 +272,39 @@ Phase 3 / Phase 4（可选，各自独立可插队）
 ## 9. 总结
 
 17 项全部可实施，无一受阻。**最关键的是 P0**：当前工作区处于"功能已写、门禁红灯、文档滞后"的半完成状态，先把 7 个类型错误与 1 个失败测试修掉、把 Phase 2 收口提交并同步五语言文档，再谈提升。之后 P1-1（CI typecheck 恢复，有 spike 证据背书）能永久堵住同类回归；P2 八项把面板/命令打磨到与功能集相称的完整度；P4-1 上游 PR 则决定插件的终极价值上限。
+
+---
+
+## 10. 实施记录（2026-08-14 完成）
+
+| 项 | 状态 | 证据 |
+|---|---|---|
+| P0-1/P0-2 修复红灯 | ✅ | `typecheck` 0 错；`pnpm test` 96/96 全绿 |
+| P0-3 收口提交 | ✅ | 6 个主题提交（feat/docs/ci）；工作区干净 |
+| P0-4 文档同步 | ✅ | 5 语言 README 配置表 7 键齐全；cordis.patch.yml 注释齐全 |
+| P0-5 CHANGELOG + tripwire | ✅ | `tests/version.spec.ts` 断言 clientInfo.version === package version |
+| P1-1 CI typecheck 恢复 | ✅ | `tsconfig.ci.json`（无 paths）+ `typecheck:ci` script + npm rc.6 devDeps；本地双轨 typecheck 均绿 |
+| P1-2 Node 24 矩阵 | ✅ | ci.yml matrix `node: [22, 24]` |
+| P1-3 `.gitattributes` | ✅ | `* text=auto eol=lf`，行尾告警消除 |
+| P1-4 兼容性 job | ✅ | `.github/workflows/compat.yml`（monthly + dispatch）；本地全流程实测通过（见下） |
+| P2-1..P2-8 产品项 | ✅ | 命令 probe 动作、错误本地化、按卡片过滤、可见性轮询、探测防重+时间戳、徽标修正、fragment 脱敏、configuredNote |
+| P3-1 多语言 | ✅ 命令侧 | `outputLanguage: en\|zh\|es\|pt\|hi` 五套字典 + 测试；面板字典受宿主 locale 面限制（仅 en/zh，已记录） |
+| P4-1 上游实现 | ✅ 本地 | harness checkout 分支 `feat/mcp-client-status-observability-seam`：`src/status.ts` + 六点 report + 测试（34/34）+ README 双语 + Agent Note 三件套；oxlint 0 错；仓库 typecheck 绿 |
+| P4-1 上游 PR 提交 | ⛔ 外部受阻 | GitHub API 拒绝（详见 §11） |
+| P4-2 落地回归 | ✅ | 端到端实测：真实 server-everything 行 → `/mcp` 输出 `status: connected (source: upstream-event)`；verify-headless 全链路绿 |
+
+**P1-4 本地验证流程**（与 compat.yml 一致，全部实测）：临时 `DSH_HOME` → `pnpm pack` 出 tarball → `dsh plugin --profile web add <tgz>` → `scripts/verify-headless.mjs`（脚本已补 launcher 的三步语义：`healProfilesModuleFallback`、空根配置写入、安装锚点向上探测 + `DSH_INSTALL_ANCHOR` 覆盖）→ web profile 启动、`mcpPanel/status` descriptor 注册、`/mcp` 走真实 commands 服务、`command/run`+`command/done` 落会话日志。
+
+**verify-headless 修复**（本仓库）：原脚本锚点写死 `../../../apps/cli`（假定仓库位于 checkout 两层之下），并漏了 launcher `prepareProfile` 的根配置写入与 fallback 愈合——在干净 profile 上分别表现为「无法定位安装」与「schemastery 解析失败」。现改为向上探测 2–6 层 + `DSH_INSTALL_ANCHOR` 覆盖。
+
+**P3-1 面板侧边界**：`ctx.locale.register` 的类型面只接受 `'en' | 'zh'`（宿主 `LocaleDictOf` face，TS2353 实测），面板页签字典保持 en/zh 并随宿主 UI 语言切换；命令侧五语言不受此限。
+
+## 11. 上游 PR 提交的阻塞条件（P4-1）
+
+分支已推送至 fork：`PerryLink/deepseek-harness:feat/mcp-client-status-observability-seam`（rebase 于上游 master `47f9438`，单提交）。PR 创建被 GitHub 拒绝，证据（2026-08-14 实测）：
+
+- GraphQL `createPullRequest`：`PerryLink does not have the correct permissions to execute CreatePullRequest`。
+- REST `GET /repos/deepseek-ai/deepseek-harness/pulls`：HTTP 404（`gh api` 与裸 curl 一致；无 `X-GitHub-SSO` 头，排除 SSO 授权问题；同 token 对 fork 的 /pulls 正常返回）。
+- GraphQL 查询：仓库 `open` PR 0 条、`merged` PR 0 条（与 master 历史中 `Merge pull request #2519` 矛盾——PR 历史已被清空/关闭）。
+
+结论：上游仓库当前不向外部账号开放 Pull Requests 通道。手头交付物已就绪：fork 分支 + PR 正文（`Project/Plugins/pr-body-mcp-status-seam.md`）+ 对比链接 `https://github.com/deepseek-ai/deepseek-harness/compare/master...PerryLink:feat/mcp-client-status-observability-seam`——具备权限者可从网页一键开 PR，或上游恢复 PR 通道后重跑 `gh pr create --repo deepseek-ai/deepseek-harness --head PerryLink:feat/mcp-client-status-observability-seam --base master`。
