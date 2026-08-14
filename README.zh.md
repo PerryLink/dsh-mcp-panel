@@ -30,7 +30,7 @@
 ## 快速上手
 
 ```sh
-dsh plugin --profile web add github:PerryLink/dsh-mcp-panel#v0.1.0
+dsh plugin --profile web add github:PerryLink/dsh-mcp-panel#v0.2.0
 ```
 
 重启（或让 web 面板热重载 `cordis.patch.yml`），然后：

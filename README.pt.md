@@ -30,7 +30,7 @@
 ## Início rápido
 
 ```sh
-dsh plugin --profile web add github:PerryLink/dsh-mcp-panel#v0.1.0
+dsh plugin --profile web add github:PerryLink/dsh-mcp-panel#v0.2.0
 ```
 
 Reinicie (ou deixe a superfície web recarregar seu `cordis.patch.yml`) e execute:
