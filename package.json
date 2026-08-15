@@ -58,6 +58,46 @@
       ]
     }
   },
+  "dshWorkshop": {
+    "schema": "omdsh-workshop-package/v1",
+    "type": "plugin",
+    "integration": {
+      "protocol": "harness-profile",
+      "artifact": "cordis.patch.yml"
+    },
+    "install": {
+      "mode": "transactional",
+      "adapter": "harness-profile",
+      "failurePolicy": "generation-rollback",
+      "touchesCurrentBeforeActivation": false
+    },
+    "lifecycle": {
+      "activation": "hot-reload",
+      "dispose": "supported"
+    },
+    "permissions": [
+      "network:outbound",
+      "native-code:none"
+    ],
+    "compatibility": {
+      "dshVersions": [
+        "0.1.0-rc.5",
+        "0.1.0-rc.6"
+      ]
+    },
+    "capability": {
+      "id": "mcp-command",
+      "kind": "command",
+      "invocation": "/mcp",
+      "expected": "lists configured MCP servers with connection status, tool counts, last errors and reconnect counts, with localized output"
+    },
+    "evidence": {
+      "install": null,
+      "failureIsolation": null,
+      "hotReload": null,
+      "remove": null
+    }
+  },
   "keywords": [
     "dsh",
     "dsh-plugin",

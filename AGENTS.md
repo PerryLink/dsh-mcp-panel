@@ -25,7 +25,7 @@ Standalone DeepSeek Harness plugin repository (`dsh-mcp-panel`). Development fol
 
 ## Config
 
-Schema in `src/config.ts` (Schemastery, fail-loud bounds, explicit `resolveConfig`): `probeEnabled` (default true), `probeTimeoutMs` (10000), `maxProbes` (10), `refreshIntervalMs` (0 = on demand), `outputLanguage` (`'en' | 'zh' | 'es' | 'pt' | 'hi'`), `passiveProbeEnabled` (false), `passiveProbeIntervalMs` (60000). `cordis.patch.yml` comments document the same keys; the five-language READMEs carry the user-facing table.
+Schema in `src/config.ts` (Schemastery, fail-loud bounds, explicit `resolveConfig`): `probeEnabled` (default true), `probeTimeoutMs` (10000), `maxProbes` (10), `refreshIntervalMs` (0 = on demand), `outputLanguage` (`'en' | 'zh' | 'es' | 'pt' | 'hi'`), `passiveProbeEnabled` (false), `passiveProbeIntervalMs` (60000). `cordis.patch.yml` comments document the same keys; the five-language READMEs carry the user-facing table. `package.json#dshWorkshop` is the omdsh-workshop-package/v1 intake manifest for the DSH Hub Workshop registry (declarations only — evidence paths stay null until their adapter runs).
 
 ## Build
 
