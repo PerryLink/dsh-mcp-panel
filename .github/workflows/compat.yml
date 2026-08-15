@@ -36,7 +36,11 @@ jobs:
       - uses: actions/checkout@v7
         with:
           repository: deepseek-ai/deepseek-harness
-          ref: 8c690c7cf885eeca723bbe46bd0502ecaddb3b12
+          # Pin must stay RESOLVABLE on the upstream remote: it was rewound past
+          # 8c690c7 (force-push), which silently broke this job's checkout.
+          # 47f9438 is the current upstream master and the base of the fork
+          # branch carrying the mcp/status seam verification.
+          ref: 47f943859bef60e4160492346772ded9b24f765a
           path: harness
       - name: Install harness dependencies
         working-directory: harness
