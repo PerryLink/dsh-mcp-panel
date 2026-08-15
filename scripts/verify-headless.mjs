@@ -26,7 +26,10 @@ for (let depth = 2; depth <= 6; depth += 1) {
 }
 if (process.env.DSH_INSTALL_ANCHOR !== undefined) {
   const value = process.env.DSH_INSTALL_ANCHOR
-  anchorCandidates.push(/^[a-z]+:/iu.test(value) ? new URL(value) : pathToFileURL(value))
+  // Only a full scheme (`http://`, `file://`) counts as a URL; a Windows
+  // drive-letter path like `D:\...` must go through pathToFileURL instead of
+  // being parsed as a `d:`-schemed URL.
+  anchorCandidates.push(/^[a-z][a-z0-9+.-]*:\/\//iu.test(value) ? new URL(value) : pathToFileURL(value))
 }
 const installAnchorPath = anchorCandidates.map(candidate => fileURLToPath(candidate)).find(path => existsSync(path))
 if (installAnchorPath === undefined) {
