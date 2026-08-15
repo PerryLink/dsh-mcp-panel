@@ -41,7 +41,15 @@ jobs:
       - name: Publish to npm
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: pnpm publish --provenance --no-git-checks
+        run: |
+          # Idempotent: a manual publish of the same version (or a re-run after
+          # a flaky step) must not fail the release — the goal (this exact
+          # version on the registry) is already met.
+          if pnpm view "dsh-mcp-panel@$(node -p "require('./package.json').version")" version >/dev/null 2>&1; then
+            echo "version already on the registry; skipping publish"
+          else
+            pnpm publish --provenance --no-git-checks
+          fi
       - name: Build release notes from the changelog section
         run: node scripts/changelog-section.mjs "${GITHUB_REF_NAME#v}" > release-notes.md
       - name: Create GitHub Release
