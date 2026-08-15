@@ -67,7 +67,7 @@
     },
     "install": {
       "mode": "transactional",
-      "adapter": "harness-profile",
+      "adapter": "profile-bundle",
       "failurePolicy": "generation-rollback",
       "touchesCurrentBeforeActivation": false
     },
