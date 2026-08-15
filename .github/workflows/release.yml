@@ -1,0 +1,52 @@
+name: release
+
+# Publish pipeline for a `v*` tag pushed to main: re-runs the full gate,
+# refuses to publish when the tag does not name the package version, publishes
+# to npm with provenance, and creates a GitHub Release whose notes are the
+# matching CHANGELOG section. See CONTRIBUTING.md §Release for the local flow
+# (`scripts/release.mjs` prepares the commit + tag; this workflow ships it).
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write # GitHub Release
+  id-token: write # npm provenance attestation
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11.7.0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Refuse mismatched tag/version
+        run: node scripts/check-tag-version.mjs "$GITHUB_REF_NAME"
+      - name: Gate
+        run: |
+          pnpm run typecheck:ci
+          pnpm test
+          pnpm run build
+          pnpm run verify:self-contained
+          pnpm run verify:artifacts
+          pnpm pack
+      - name: Publish to npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: pnpm publish --provenance --no-git-checks
+      - name: Build release notes from the changelog section
+        run: node scripts/changelog-section.mjs "${GITHUB_REF_NAME#v}" > release-notes.md
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: '*.tgz'
+          body_path: release-notes.md
+          generate_release_notes: false
