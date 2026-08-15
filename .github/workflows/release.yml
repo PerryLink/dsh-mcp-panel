@@ -44,8 +44,10 @@ jobs:
         run: |
           # Idempotent: a manual publish of the same version (or a re-run after
           # a flaky step) must not fail the release — the goal (this exact
-          # version on the registry) is already met.
-          if pnpm view "dsh-mcp-panel@$(node -p "require('./package.json').version")" version >/dev/null 2>&1; then
+          # version on the registry) is already met. The existence check uses
+          # plain anonymous HTTP, immune to the empty-token npmrc that
+          # setup-node writes while NPM_TOKEN is unset.
+          if curl -fsS "https://registry.npmjs.org/dsh-mcp-panel/$(node -p "require('./package.json').version")" >/dev/null 2>&1; then
             echo "version already on the registry; skipping publish"
           else
             pnpm publish --provenance --no-git-checks
