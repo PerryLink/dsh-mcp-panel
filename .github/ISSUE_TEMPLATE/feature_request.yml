@@ -1,0 +1,35 @@
+name: Feature request
+description: Suggest an improvement for dsh-mcp-panel
+title: 'feat: '
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the idea! The panel is strictly **read-only by contract** — it never writes config files
+        and never fakes connection state. Please frame proposals accordingly.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem to solve
+      description: What is missing or painful today?
+      placeholder: 'When many servers are configured, I cannot …'
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What should the improved plugin do?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered (optional)
+      description: Workarounds or alternative designs you already thought about.
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context (optional)
+      description: Anything else that helps — screenshots, workflows, links.

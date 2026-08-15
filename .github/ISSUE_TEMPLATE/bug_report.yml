@@ -1,0 +1,69 @@
+name: Bug report
+description: Report a bug in dsh-mcp-panel
+title: 'bug: '
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug! Precise reports get fixed faster — please fill in every required field.
+  - type: input
+    id: version
+    attributes:
+      label: Plugin version
+      description: The dsh-mcp-panel version (npm version, git tag, or `dsh plugin list` output).
+      placeholder: '0.3.0'
+    validations:
+      required: true
+  - type: input
+    id: harness-version
+    attributes:
+      label: DeepSeek Harness version
+      description: The harness version or install channel (`dsh --version`, or the checkout SHA if built from source).
+      placeholder: '0.1.0-rc.6 / git SHA'
+    validations:
+      required: true
+  - type: input
+    id: os-node
+    attributes:
+      label: OS and Node.js version
+      description: The platform and runtime the bug reproduces on.
+      placeholder: 'Windows 11, Node 22.19.0'
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Minimal steps that reproduce the problem from a known state.
+      placeholder: |
+        1. …
+        2. …
+        3. …
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What should happen instead.
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: What actually happens — command output, panel state, error messages.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs (optional)
+      description: Relevant log output.
+      render: text
+  - type: markdown
+    attributes:
+      value: |
+        > **⚠️ Sanitize before pasting: never include tokens, keys, secrets, request headers, or other credentials.**
+        > The plugin redacts credentials for display, but your issue text is public — redact it again yourself.
