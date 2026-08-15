@@ -39,7 +39,7 @@ Schema in `src/config.ts` (Schemastery, fail-loud bounds, explicit `resolveConfi
 
 ## Release
 
-`node scripts/release.mjs <x.y.z>` bumps `package.json`, stamps the `## [Unreleased]` CHANGELOG section to `[<x.y.z>] - <UTC date>`, re-runs the gate, commits, and tags `v<x.y.z>` locally — never pushes. Push with `git push origin main --follow-tags`; the `release` workflow (release.yml) then gates again, publishes npm with provenance (secret `NPM_TOKEN`), and creates the GitHub Release from the CHANGELOG section (`scripts/changelog-section.mjs`). Tags are `v<x.y.z>`; a missing historical tag gets backfilled at its release commit.
+`node scripts/release.mjs <x.y.z>` bumps `package.json` (and the hardcoded probe `clientInfo.version` in `src/probe.ts`), stamps the `## [Unreleased]` CHANGELOG section to `[<x.y.z>] - <UTC date>`, re-runs the gate, commits, and tags `v<x.y.z>` locally — never pushes. Push with `git push origin main --follow-tags`; the `release` workflow (release.yml) then gates again, publishes npm with provenance (secret `NPM_TOKEN`), and creates the GitHub Release from the CHANGELOG section (`scripts/changelog-section.mjs`). Tags are `v<x.y.z>`; a missing historical tag gets backfilled at its release commit.
 
 ## Docs
 

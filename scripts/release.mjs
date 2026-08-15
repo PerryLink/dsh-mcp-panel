@@ -114,7 +114,7 @@ try {
 }
 
 // 4. Commit and tag.
-git('add', 'package.json', 'CHANGELOG.md')
+git('add', 'package.json', 'CHANGELOG.md', 'src/probe.ts')
 git('commit', '-m', `chore(release): ${version}`)
 git('tag', '-a', `v${version}`, '-m', `dsh-mcp-panel v${version}`)
 
