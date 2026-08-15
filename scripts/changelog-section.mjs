@@ -21,7 +21,9 @@ if (!/^\d+\.\d+\.\d+$/.test(version ?? '')) {
 
 const changelog = readFileSync(resolve(import.meta.dirname, '..', 'CHANGELOG.md'), 'utf8')
 const lines = changelog.split('\n')
-const start = lines.findIndex(line => line === `## [${version}]`)
+// Section headings carry a date suffix (`## [0.3.0] - 2026-08-15`); the
+// trailing space keeps `0.1.0` from also matching `0.1.0-beta`-style names.
+const start = lines.findIndex(line => line.startsWith(`## [${version}] `))
 if (start === -1) {
   console.error(`CHANGELOG.md has no "## [${version}]" section`)
   process.exit(1)
