@@ -8,7 +8,7 @@
  */
 
 import { describe, expect, it } from 'vitest'
-import { connectionBadge, presentMcpPanel, probeBadge } from '../src/client/present.ts'
+import { connectionBadge, filterServers, presentMcpPanel, probeBadge, summarizePanel } from '../src/client/present.ts'
 import type { McpPanelSnapshot, McpServerView } from '../src/wire.ts'
 
 function server(overrides: Partial<McpServerView> = {}): McpServerView {
@@ -117,5 +117,72 @@ describe('presentMcpPanel', () => {
     const model = presentMcpPanel({ observed: false, patchFile: null, refreshIntervalMs: 0, servers: [], probes: [] })
     expect(model.empty).toBe(true)
     expect(model.observed).toBe(false)
+  })
+})
+
+describe('summarizePanel', () => {
+  it('counts connected and errored badges and always reports the total', () => {
+    const snapshot: McpPanelSnapshot = {
+      observed: false,
+      patchFile: null,
+      refreshIntervalMs: 0,
+      servers: [
+        server({ serverName: 'a', phase: 'connected' }),
+        server({ serverName: 'b', phase: 'connected' }),
+        server({ serverName: 'c', phase: 'exhausted' }),
+        server({ serverName: 'd', fiberPhase: 'failed' }),
+        server({ serverName: 'e', phase: 'connecting' }),
+        server({ serverName: 'f', enabled: false }),
+        server({ serverName: 'g', entryId: '', enabled: false }),
+      ],
+      probes: [],
+    }
+    const model = presentMcpPanel(snapshot)
+    expect(summarizePanel(model.servers)).toEqual({ total: 7, connected: 2, errored: 2 })
+    expect(summarizePanel([])).toEqual({ total: 0, connected: 0, errored: 0 })
+  })
+
+  it('agrees with the badge derivation for disabled and leftover rows', () => {
+    const snapshot: McpPanelSnapshot = {
+      observed: false,
+      patchFile: null,
+      refreshIntervalMs: 0,
+      servers: [server({ serverName: 'a', enabled: false, phase: 'connected' }), server({ serverName: 'b', entryId: '', phase: 'connected' })],
+      probes: [],
+    }
+    const model = presentMcpPanel(snapshot)
+    expect(model.servers.map(row => row.badge)).toEqual(['disabled', 'unknown'])
+    expect(summarizePanel(model.servers)).toEqual({ total: 2, connected: 0, errored: 0 })
+  })
+})
+
+describe('filterServers', () => {
+  function rows(): ReturnType<typeof presentMcpPanel>['servers'] {
+    const snapshot: McpPanelSnapshot = {
+      observed: false,
+      patchFile: null,
+      refreshIntervalMs: 0,
+      servers: [
+        server({ serverName: 'Everything', target: 'npx mcp-server-everything' }),
+        server({ serverName: 'gitlab', target: 'https://git.example.com/mcp' }),
+        server({ serverName: 'git-local', target: 'node server.js' }),
+      ],
+      probes: [],
+    }
+    return presentMcpPanel(snapshot).servers
+  }
+
+  it('matches server names case-insensitively and returns everything on empty query', () => {
+    const all = rows()
+    expect(filterServers(all, 'git').map(row => row.view.serverName)).toEqual(['gitlab', 'git-local'])
+    expect(filterServers(all, 'GIT')).toHaveLength(2)
+    expect(filterServers(all, '   ')).toBe(all)
+  })
+
+  it('matches display targets and finds nothing for an absent needle', () => {
+    const all = rows()
+    expect(filterServers(all, 'git.example.com').map(row => row.view.serverName)).toEqual(['gitlab'])
+    expect(filterServers(all, 'npx').map(row => row.view.serverName)).toEqual(['Everything'])
+    expect(filterServers(all, 'absent')).toEqual([])
   })
 })

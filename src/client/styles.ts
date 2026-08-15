@@ -57,6 +57,33 @@ const PANEL_CSS = `
   font-size: 1em;
   color: var(--dsw-alias-label-primary);
 }
+[data-dsh-mcp-panel] .dmcp-summary {
+  margin: 0;
+  color: var(--dsw-alias-label-secondary);
+}
+[data-dsh-mcp-panel] .dmcp-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+[data-dsh-mcp-panel] .dmcp-server-filter {
+  flex: 1 1 180px;
+  min-width: 0;
+}
+[data-dsh-mcp-panel] .dmcp-action {
+  font: inherit;
+  cursor: pointer;
+  color: var(--dsw-alias-label-primary);
+  background: var(--dsw-alias-bg-layer-1);
+  border: 1px solid var(--dsw-alias-border-l3);
+  border-radius: 4px;
+  padding: 4px 10px;
+}
+[data-dsh-mcp-panel] .dmcp-action:focus-visible {
+  outline: 2px solid var(--dsw-alias-brand-primary);
+  outline-offset: -2px;
+}
 [data-dsh-mcp-panel] .dmcp-cards {
   list-style: none;
   margin: 0;

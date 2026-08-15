@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useState, type ReactNode } from 'react'
 import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
-import { presentMcpPanel, probeBadge, type BadgeTone, type PresentedServerRow } from './present.ts'
+import { filterServers, presentMcpPanel, probeBadge, summarizePanel, type BadgeTone, type PresentedServerRow } from './present.ts'
 import type { McpPanelSnapshot, McpProbeView, ProbeStarted } from '../wire.ts'
 
 /** Registration-side injected face: the unwrapped snapshot read + probe start. */
@@ -61,12 +61,16 @@ function formatProbeTime(view: McpProbeView): string {
 export function McpPanelTab({ status, probe, t }: McpPanelTabProps): ReactNode {
   const listId = useId()
   const [request, setRequest] = useState(0)
-  const [expanded, setExpanded] = useState<string | null>(null)
+  // Expanded card set: multiple cards may be open at once, so "expand all"
+  // and "collapse all" can act on the whole (filtered) list.
+  const [expanded, setExpanded] = useState<Record<string, true>>({})
   const [probeError, setProbeError] = useState<string | null>(null)
   const [state, setState] = useState<ViewState>({ status: 'loading' })
   // Per-card tool filter: one query per server so expanding two cards at once
   // never filters one card by the other card's search text.
   const [toolQueries, setToolQueries] = useState<Record<string, string>>({})
+  // Server search across names and display targets; filters the card list only.
+  const [serverQuery, setServerQuery] = useState('')
 
   const reload = (): void => {
     setRequest(value => value + 1)
@@ -103,6 +107,12 @@ export function McpPanelTab({ status, probe, t }: McpPanelTabProps): ReactNode {
   }, [intervalMs])
 
   const model = state.status === 'ready' ? presentMcpPanel(state.snapshot) : undefined
+  const visibleServers = model !== undefined ? filterServers(model.servers, serverQuery) : []
+  const summary = model !== undefined ? summarizePanel(visibleServers) : null
+  const summaryText = summary === null ? '' : t('summary')
+    .replace('{total}', String(summary.total))
+    .replace('{connected}', String(summary.connected))
+    .replace('{errored}', String(summary.errored))
   const probeRunning = model !== undefined && model.probes.some(probe => probe.view.status === 'running')
   // While a probe runs, poll on a short fixed cadence so the probe row (and
   // the disabled probe button) settles even when refreshIntervalMs is 0.
@@ -132,9 +142,31 @@ export function McpPanelTab({ status, probe, t }: McpPanelTabProps): ReactNode {
           {model.empty ? <p className="dmcp-status">{t('empty')}</p> : (
             <>
               <h3 className="dmcp-heading">{t('servers')}</h3>
+              <p className="dmcp-summary">{summaryText}</p>
+              <div className="dmcp-toolbar">
+                <input
+                  type="search"
+                  className="dmcp-tool-filter dmcp-server-filter"
+                  value={serverQuery}
+                  placeholder={t('filterServers')}
+                  aria-label={t('filterServers')}
+                  onChange={(event) => { setServerQuery(event.currentTarget.value) }}
+                />
+                <button
+                  type="button"
+                  className="dmcp-action"
+                  onClick={() => {
+                    setExpanded(Object.fromEntries(visibleServers.map(row => [row.view.serverName, true] as const)))
+                  }}
+                >
+                  {t('expandAll')}
+                </button>
+                <button type="button" className="dmcp-action" onClick={() => { setExpanded({}) }}>{t('collapseAll')}</button>
+              </div>
+              {visibleServers.length === 0 ? <p className="dmcp-status">{t('noMatch')}</p> : null}
               <ul className="dmcp-cards">
-                {model.servers.map((row) => {
-                  const open = expanded === row.view.serverName
+                {visibleServers.map((row) => {
+                  const open = expanded[row.view.serverName] === true
                   const detailId = `${listId}-${encodeURIComponent(row.view.serverName)}`
                   const toolQuery = toolQueries[row.view.serverName] ?? ''
                   const rowProbeRunning = model.probes.some(
@@ -147,7 +179,14 @@ export function McpPanelTab({ status, probe, t }: McpPanelTabProps): ReactNode {
                         className="dmcp-card-content"
                         aria-expanded={open}
                         aria-controls={detailId}
-                        onClick={() => { setExpanded(current => current === row.view.serverName ? null : row.view.serverName) }}
+                        onClick={() => {
+                          setExpanded((current) => {
+                            const next = { ...current }
+                            if (next[row.view.serverName] === true) delete next[row.view.serverName]
+                            else next[row.view.serverName] = true
+                            return next
+                          })
+                        }}
                       >
                         <strong className="dmcp-card-title">{row.view.serverName}</strong>
                         <span className="dmcp-card-trailing">

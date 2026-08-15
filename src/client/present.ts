@@ -41,6 +41,16 @@ export interface PresentedProbeRow {
   readonly badge: 'running' | 'completed' | 'failed' | 'killed' | 'stopping' | 'unknown'
 }
 
+/** Counts for the panel summary line. */
+export interface PanelSummary {
+  /** Servers shown in the tab. */
+  readonly total: number
+  /** Servers whose connection badge reads `connected`. */
+  readonly connected: number
+  /** Servers whose connection badge reads `failed` or `exhausted`. */
+  readonly errored: number
+}
+
 /** The complete render-ready tab model. */
 export interface PresentedMcpPanel {
   /** Servers in snapshot order. */
@@ -126,4 +136,40 @@ export function presentMcpPanel(snapshot: McpPanelSnapshot, now = Date.now()): P
     patchFile: snapshot.patchFile,
     refreshIntervalMs: snapshot.refreshIntervalMs,
   }
+}
+
+/**
+ * Count the summary facts for the tab header line. Counting is derived from
+ * the same badge codes the cards show, so the line can never disagree with
+ * the rows beneath it.
+ *
+ * @param servers - the presented server rows (typically the filtered list).
+ * @returns the summary counts.
+ */
+export function summarizePanel(servers: readonly PresentedServerRow[]): PanelSummary {
+  let connected = 0
+  let errored = 0
+  for (const row of servers) {
+    if (row.badge === 'connected') connected += 1
+    else if (row.badge === 'failed' || row.badge === 'exhausted') errored += 1
+  }
+  return { total: servers.length, connected, errored }
+}
+
+/**
+ * Filter server rows by a case-insensitive substring match against the
+ * server name or its display target. An empty query returns the rows
+ * unchanged (stable identity, no copies).
+ *
+ * @param servers - the presented server rows.
+ * @param query - the raw filter text.
+ * @returns the matching rows.
+ */
+export function filterServers(servers: readonly PresentedServerRow[], query: string): readonly PresentedServerRow[] {
+  const needle = query.trim().toLocaleLowerCase()
+  if (needle === '') return servers
+  return servers.filter(row =>
+    row.view.serverName.toLocaleLowerCase().includes(needle)
+    || row.view.target.toLocaleLowerCase().includes(needle),
+  )
 }
