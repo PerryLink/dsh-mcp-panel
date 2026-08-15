@@ -136,6 +136,10 @@ pnpm pack
 对真实 harness checkout 的验证：
 `node --import tsx/esm scripts/verify-headless.mjs` 在进程内启动完整 web profile（临时端口），打印真实的 `/mcp`、`/mcp <server> tools`、`/mcp <server> disable` 输出。
 
+## 贡献者
+
+感谢所有反馈问题、参与评审或贡献代码的人——特别感谢 [xiaoyuyu6420](https://github.com/xiaoyuyu6420)，他定位了干净 checkout 构建失败背后缺失的 client devDependencies（PR #5）。
+
 ## License
 
 [Apache License 2.0](LICENSE) © 2026 dsh-mcp-panel contributors

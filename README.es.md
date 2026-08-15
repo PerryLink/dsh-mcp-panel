@@ -136,6 +136,10 @@ Publicación: `node scripts/release.mjs <x.y.z>` sube la versión, sella el CHAN
 Verificación contra un checkout real del harness:
 `node --import tsx/esm scripts/verify-headless.mjs` arranca el perfil web completo en proceso (puerto efímero) e imprime la salida exacta de `/mcp`, `/mcp <server> tools` y `/mcp <server> disable`.
 
+## Contribuidores
+
+Gracias a todas las personas que reportaron problemas, revisaron o contribuyeron código — en especial a [xiaoyuyu6420](https://github.com/xiaoyuyu6420), quien diagnosticó las devDependencies de cliente que faltaban y causaban fallos de compilación desde un checkout limpio (PR #5).
+
 ## Licencia
 
 [Apache License 2.0](LICENSE) © 2026 colaboradores de dsh-mcp-panel

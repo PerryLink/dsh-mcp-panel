@@ -136,6 +136,10 @@ pnpm pack
 असली harness checkout के विरुद्ध सत्यापन:
 `node --import tsx/esm scripts/verify-headless.mjs` पूरे वेब प्रोफ़ाइल को प्रोसेस में बूट करता है (क्षणिक पोर्ट) और `/mcp`, `/mcp <server> tools`, `/mcp <server> disable` का सटीक आउटपुट छापता है।
 
+## योगदानकर्ता
+
+समस्याएँ रिपोर्ट करने, समीक्षा करने या कोड में योगदान देने वाले सभी का धन्यवाद — विशेष रूप से [xiaoyuyu6420](https://github.com/xiaoyuyu6420) का, जिन्होंने क्लीन checkout बिल्ड विफलताओं के पीछे गुम client devDependencies का निदान किया (PR #5)।
+
 ## लाइसेंस
 
 [Apache License 2.0](LICENSE) © 2026 dsh-mcp-panel योगदानकर्ता

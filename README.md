@@ -136,6 +136,12 @@ Release: `node scripts/release.mjs <x.y.z>` bumps the version, stamps the change
 Verification against a real harness checkout:
 `node --import tsx/esm scripts/verify-headless.mjs` boots the full web profile in process (ephemeral port) and prints the exact `/mcp`, `/mcp <server> tools`, and `/mcp <server> disable` output.
 
+## Contributors
+
+Thanks to everyone who reported issues, reviewed, or contributed code — in
+particular [xiaoyuyu6420](https://github.com/xiaoyuyu6420), who diagnosed the
+missing client devDependencies behind clean-checkout build failures (PR #5).
+
 ## License
 
 [Apache License 2.0](LICENSE) © 2026 dsh-mcp-panel contributors
