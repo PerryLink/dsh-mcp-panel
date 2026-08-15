@@ -2,6 +2,22 @@
 
 All notable changes to this project are documented in this file.
 
+## [Unreleased]
+
+### Added
+
+- Panel at a glance: a summary line above the cards (total servers, connected, with errors — counted from the same badge codes the rows show), a server search box that filters cards by name or target, and expand-all / collapse-all buttons (multi-card expansion replaces the single-open accordion).
+- Release pipeline: `scripts/release.mjs` (version bump + changelog stamp + full gate + commit + annotated tag, with revert on failure), `scripts/check-tag-version.mjs` (tag/version tripwire for CI), `scripts/changelog-section.mjs` (prints one version's changelog section), and the tag-triggered `release` workflow — gate again → npm publish with provenance → GitHub Release with the packed tarball attached and notes from the changelog.
+- Package metadata: `homepage`, `bugs`, and `author` fields.
+
+### Changed
+
+- The dependency line actually lands: typescript 7.0.2 (the TS7 build the tsconfigs were already prepared for), vitest 4.1.10, jsdom 30.0.1 — the full gate suite stays green. The 0.2.1 changelog had claimed these bumps prematurely; that claim is removed from the 0.2.1 entry.
+
+### Engineering
+
+- 109 tests (up from 105): summary counting, server-filter matching, and their agreement with badge derivation.
+
 ## [0.2.1] - 2026-08-14
 
 ### Fixed

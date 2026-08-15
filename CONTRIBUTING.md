@@ -17,7 +17,23 @@ pnpm run verify:artifacts
 CI (`ci.yml`) runs `typecheck:ci → test → build → verify:self-contained → verify:artifacts`
 on Linux and Windows with Node 22 and 24, plus a monthly `harness-compat` job
 (`compat.yml`) that boots the real deepseek-harness web profile with the packed
-plugin installed.
+plugin installed. Pushing a `v*` tag triggers the `release` workflow
+(`release.yml`): gate again → npm publish with provenance → GitHub Release from
+the CHANGELOG section.
+
+## Release
+
+1. Put the release entries under a `## [Unreleased]` heading at the top of
+   `CHANGELOG.md` (keep it in sync with the five READMEs).
+2. Run `node scripts/release.mjs <x.y.z>` — it validates a clean tree, writes
+   the version into `package.json`, stamps the `[Unreleased]` section into
+   `[<x.y.z>] - <UTC date>`, re-runs the full gate (the version tripwire in
+   `tests/version.spec.ts` runs inside), then commits and tags `v<x.y.z>`.
+   On gate failure it reverts the two written files.
+3. `git push origin main --follow-tags`. The `release` workflow refuses to
+   publish when the tag does not name the package version (`scripts/check-tag-version.mjs`).
+4. If a release commit needs notes outside the changelog, `node scripts/changelog-section.mjs <x.y.z>`
+   prints the exact section used as the GitHub Release body.
 
 ## Typecheck boundary
 

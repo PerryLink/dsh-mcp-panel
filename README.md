@@ -5,6 +5,9 @@
 [English](README.md) · [简体中文](README.zh.md) · [Español](README.es.md) · [Português](README.pt.md) · [हिन्दी](README.hi.md)
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
+[![npm](https://img.shields.io/npm/v/dsh-mcp-panel)](https://www.npmjs.com/package/dsh-mcp-panel)
+[![downloads](https://img.shields.io/npm/dm/dsh-mcp-panel)](https://www.npmjs.com/package/dsh-mcp-panel)
+[![CI](https://github.com/PerryLink/dsh-mcp-panel/actions/workflows/ci.yml/badge.svg)](https://github.com/PerryLink/dsh-mcp-panel/actions/workflows/ci.yml)
 [![dsh-plugin](https://img.shields.io/badge/ecosystem-dsh--plugin-8b5cf6)](https://github.com/topics/dsh-plugin)
 [![deepseek-harness](https://img.shields.io/badge/runtime-deepseek--harness-4f46e5)](https://github.com/deepseek-ai/deepseek-harness)
 
@@ -13,6 +16,7 @@
 ## Compatibility
 
 - **Runtime**: DeepSeek Harness ≥ `0.1.0-rc.5` (peer dependencies pin the `0.1.0-rc.6` package line).
+- **Latest release**: v0.3.0 (2026-08-15) — full gate green on the TypeScript 7 / Vitest 4 / jsdom 30 toolchain, 109 tests.
 - **Last verified**: 2026-08-14 against a source checkout of deepseek-harness (workspace packages at `0.1.0-rc.5`, mainline `7b9644f`) — headless `/mcp` end-to-end plus a live web profile; evidence in [docs/research-notes.zh.md](docs/research-notes.zh.md). Re-verified the same day against mainline `47f9438` with the `mcp/status` seam branch (`feat/mcp-client-status-observability-seam`): a real `server-everything` row renders `status: connected (source: upstream-event)` through the packed plugin, plus the launcher-faithful compat flow; record in [docs/optimization-plan-v2.zh.md](docs/optimization-plan-v2.zh.md).
 
 ## What you get
@@ -21,6 +25,7 @@
 |---|---|
 | **`/mcp` command** | transport, target, tool count, connection status, last error, reconnect count — model-readable, session-log reconstructable, five output languages (`outputLanguage: en\|zh\|es\|pt\|hi`) |
 | **Settings → Plugins → MCP tab** | the same snapshot read-only, with status badges, expandable tool lists, sanitized errors, probe results |
+| **At a glance** | summary counts above the cards, a server search box, and expand-all / collapse-all buttons |
 | **Panel probe button** | one-click connectivity probe of one streamable-http server from the tab; results stay panel-only |
 | **Passive probes** | optional background reachability badges per server, kept separate from connection status |
 | **Auto refresh** | the host suggests a refresh interval (`refreshIntervalMs`); the tab polls and pauses while hidden |
@@ -31,9 +36,9 @@
 
 ```sh
 # git channel (builds via the package's prepare script)
-dsh plugin --profile web add github:PerryLink/dsh-mcp-panel#v0.2.0
+dsh plugin --profile web add github:PerryLink/dsh-mcp-panel#v0.3.0
 # npm channel (published tarball, no build approval needed)
-dsh plugin --profile web add dsh-mcp-panel@0.2.0
+dsh plugin --profile web add dsh-mcp-panel@0.3.0
 ```
 
 Then restart (or let the web surface hot-reload its `cordis.patch.yml`) and:
@@ -119,12 +124,14 @@ Found a security issue? Open a GitHub issue **without** pasting secrets, keys, o
 pnpm install
 pnpm run typecheck    # local gate: resolves the harness checkout's fresh type faces via tsconfig paths
 pnpm run typecheck:ci # npm gate: resolves the published 0.1.0-rc.6 type faces (what CI runs)
-pnpm test             # 105 tests: sanitizer extremes, grouping, aggregation tolerance, command output (5 languages), probe gating, client wiring, presenter
+pnpm test             # 109 tests: sanitizer extremes, grouping, aggregation tolerance, command output (5 languages), probe gating, client wiring, presenter (badges, summary, filter)
 pnpm run build        # tsc declarations → lib/types; tsdown → lib/index.js + lib/typert.host.js + lib/client.js
 pnpm run verify:self-contained
 pnpm run verify:artifacts
 pnpm pack
 ```
+
+Release: `node scripts/release.mjs <x.y.z>` bumps the version, stamps the changelog, re-runs the gate, commits and tags; pushing the tag publishes npm + the GitHub Release automatically (see [CONTRIBUTING.md](CONTRIBUTING.md)).
 
 Verification against a real harness checkout:
 `node --import tsx/esm scripts/verify-headless.mjs` boots the full web profile in process (ephemeral port) and prints the exact `/mcp`, `/mcp <server> tools`, and `/mcp <server> disable` output.

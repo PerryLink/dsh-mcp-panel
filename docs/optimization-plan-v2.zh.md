@@ -309,3 +309,17 @@ Phase 3 / Phase 4（可选，各自独立可插队）
 - 三轮重试（共 7 次创建尝试 + 双通道探测）结果一致，条件未变化；fork 分支 tip 已钉死在 seam 提交 `e1611e9`（共享 checkout 上其他会话的后续提交不会进入该分支）。
 
 结论：上游仓库当前不向外部账号开放 Pull Requests 通道。手头交付物已就绪：fork 分支 + PR 正文（`Project/Plugins/pr-body-mcp-status-seam.md`）+ 交接说明（`Project/Plugins/pr-handoff.md`，含对比链接 `https://github.com/deepseek-ai/deepseek-harness/compare/master...PerryLink:feat/mcp-client-status-observability-seam`）——具备权限者可从网页一键开 PR；上游恢复 PR 通道后重跑 `gh pr create --repo deepseek-ai/deepseek-harness --head PerryLink:feat/mcp-client-status-observability-seam --base master`。**已获授权并完成 Discussions 移交**：https://github.com/deepseek-ai/deepseek-harness/discussions/1300（Show and tell 分类，含完整实现清单与一键 PR 链接）。
+
+## 12. v0.3.0 实施记录（2026-08-15）
+
+| 项 | 状态 | 证据 |
+|---|---|---|
+| 0.2.1 CHANGELOG 虚假声明修正 | ✅ | "jsdom 30/vitest 4/typescript 7" 依赖行从未发生（`git diff 616ebaf..b32ab8c -- package.json` 无依赖变更）；amend 未发布 commit `b32ab8c` 删除该行 |
+| 依赖升级真实落地 | ✅ | typescript 7.0.2 / vitest 4.1.10 / jsdom 30.0.1；`pnpm install` 后全门禁绿（109 tests） |
+| 面板总览/过滤/展开折叠 | ✅ | `present.ts` 纯函数 `summarizePanel`/`filterServers`（与徽标派生同源，永不矛盾）；多卡展开替代单开手风琴；新增 4 个单测 |
+| 发布流水线 | ✅ | `scripts/release.mjs`（bump+盖章+门禁+commit+tag，失败回滚）、`check-tag-version.mjs`（CI tripwire）、`changelog-section.mjs`（Release notes）；`release.yml` 由 `v*` tag 触发：门禁 → `npm publish --provenance` → GitHub Release（附 tarball） |
+| compat pin 修复 | ✅ | 上游 master 被 force-push 回退（47f9438 ← 8c690c7 之后），旧 pin `8c690c7` 在远端已不可解析 → 月度 job checkout 必败；改 pin 为当前 master `47f9438`（fork 分支基准，已本地验证） |
+| 包元数据 + 五语言 README 同步 | ✅ | `homepage`/`bugs`/`author`；npm 版本/下载/CI 徽章；快速上手版本 → 0.3.0；测试数 105 → 109；发布流程说明 |
+| 发布 | ✅ | v0.3.0 tag + npm publish + GitHub Release（本次会话执行） |
+
+**面板 5 语言仍受阻**：harness locale face `LOCALE_IDS = ['zh', 'en']`（`packages/client/locale/src/locale-settings.ts`，截至 47f9438），es/pt/hi 面板字典继续等待宿主扩展；命令侧五语言不受影响。

@@ -5,6 +5,9 @@
 [English](README.md) · [简体中文](README.zh.md) · [Español](README.es.md) · [Português](README.pt.md) · [हिन्दी](README.hi.md)
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
+[![npm](https://img.shields.io/npm/v/dsh-mcp-panel)](https://www.npmjs.com/package/dsh-mcp-panel)
+[![downloads](https://img.shields.io/npm/dm/dsh-mcp-panel)](https://www.npmjs.com/package/dsh-mcp-panel)
+[![CI](https://github.com/PerryLink/dsh-mcp-panel/actions/workflows/ci.yml/badge.svg)](https://github.com/PerryLink/dsh-mcp-panel/actions/workflows/ci.yml)
 [![dsh-plugin](https://img.shields.io/badge/ecosystem-dsh--plugin-8b5cf6)](https://github.com/topics/dsh-plugin)
 [![deepseek-harness](https://img.shields.io/badge/runtime-deepseek--harness-4f46e5)](https://github.com/deepseek-ai/deepseek-harness)
 
@@ -13,6 +16,7 @@
 ## संगतता
 
 - **रनटाइम**: DeepSeek Harness ≥ `0.1.0-rc.5` (peerDependencies `0.1.0-rc.6` पैकेज लाइन पिन करती हैं)।
+- **नवीनतम संस्करण**: v0.3.0 (2026-08-15) — TypeScript 7 / Vitest 4 / jsdom 30 टूलचेन पर पूरा द्वार हरा, 109 टेस्ट।
 - **अंतिम सत्यापन**: 2026-08-14, deepseek-harness के सोर्स checkout के विरुद्ध (workspace पैकेज `0.1.0-rc.5`, mainline `7b9644f`) — headless `/mcp` एंड-टू-एंड + लाइव वेब प्रोफ़ाइल; प्रमाण [docs/research-notes.zh.md](docs/research-notes.zh.md) में। उसी दिन mainline `47f9438` + `mcp/status` सीम ब्रांच (`feat/mcp-client-status-observability-seam`) के विरुद्ध पुनः सत्यापित: असली `server-everything` पंक्ति पैक किए गए प्लगइन से `status: connected (source: upstream-event)` दिखाती है, साथ ही लॉन्चर-समतुल्य संगतता प्रवाह; रिकॉर्ड [docs/optimization-plan-v2.zh.md](docs/optimization-plan-v2.zh.md) में।
 
 ## आपको क्या मिलता है
@@ -21,6 +25,7 @@
 |---|---|
 | **`/mcp` कमांड** | ट्रांसपोर्ट, टार्गेट, टूल काउंट, कनेक्शन स्टेटस, अंतिम एरर, रीकनेक्ट काउंट — मॉडल-रीडेबल और लॉग से रीकंस्ट्रक्टेबल, पाँच आउटपुट भाषाएँ (`outputLanguage: en\|zh\|es\|pt\|hi`) |
 | **सेटिंग्स → प्लगइन्स → MCP टैब** | वही स्नैपशॉट रीड-ओनली: स्टेटस बैज, विस्तार योग्य टूल सूचियाँ, सैनिटाइज़्ड एरर, प्रोब परिणाम |
+| **एक नज़र में** | कार्ड के ऊपर सारांश गिनती, सर्वर खोज बॉक्स, और सभी विस्तार/संकुचन बटन |
 | **पैनल प्रोब बटन** | टैब से एक streamable-http सर्वर की एक-क्लिक कनेक्टिविटी प्रोब; परिणाम केवल पैनल में रहते हैं |
 | **पैसिव प्रोब** | प्रति सर्वर वैकल्पिक बैकग्राउंड रीचेबिलिटी बैज, कनेक्शन स्टेटस से अलग |
 | **ऑटो रिफ्रेश** | होस्ट एक रिफ्रेश अंतराल सुझाता है (`refreshIntervalMs`); टैब पोल करता है और छिपा होने पर रुक जाता है |
@@ -31,9 +36,9 @@
 
 ```sh
 # git चैनल (पैकेज के prepare स्क्रिप्ट से बिल्ड होता है)
-dsh plugin --profile web add github:PerryLink/dsh-mcp-panel#v0.2.0
+dsh plugin --profile web add github:PerryLink/dsh-mcp-panel#v0.3.0
 # npm चैनल (प्रकाशित tarball, बिल्ड अनुमोदन की आवश्यकता नहीं)
-dsh plugin --profile web add dsh-mcp-panel@0.2.0
+dsh plugin --profile web add dsh-mcp-panel@0.3.0
 ```
 
 फिर रीस्टार्ट करें (या वेब सतह को अपनी `cordis.patch.yml` हॉट-रीलोड करने दें) और चलाएँ:
@@ -119,12 +124,14 @@ MCP servers (1):
 pnpm install
 pnpm run typecheck    # स्थानीय द्वार: tsconfig पथों से harness checkout के ताज़ा टाइप फेस
 pnpm run typecheck:ci # npm द्वार: प्रकाशित 0.1.0-rc.6 टाइप फेस (जो CI चलाता है)
-pnpm test             # 105 टेस्ट: सैनिटाइज़र चरम मामले, समूहन, एग्रीगेशन सहनशीलता, कमांड आउटपुट (5 भाषाएँ), प्रोब गेटिंग, क्लाइंट वायरिंग, प्रेज़ेंटर
+pnpm test             # 109 टेस्ट: सैनिटाइज़र चरम मामले, समूहन, एग्रीगेशन सहनशीलता, कमांड आउटपुट (5 भाषाएँ), प्रोब गेटिंग, क्लाइंट वायरिंग, प्रेज़ेंटर (बैज/सारांश/फ़िल्टर)
 pnpm run build        # tsc डिक्लेरेशन → lib/types; tsdown → lib/index.js + lib/typert.host.js + lib/client.js
 pnpm run verify:self-contained
 pnpm run verify:artifacts
 pnpm pack
 ```
+
+रिलीज़: `node scripts/release.mjs <x.y.z>` संस्करण बढ़ाता है, CHANGELOG पर मुहर लगाता है, द्वार फिर चलाता है, कमिट और टैग करता है; टैग पुश करने पर npm और GitHub Release अपने आप प्रकाशित होते हैं (देखें [CONTRIBUTING.md](CONTRIBUTING.md))।
 
 असली harness checkout के विरुद्ध सत्यापन:
 `node --import tsx/esm scripts/verify-headless.mjs` पूरे वेब प्रोफ़ाइल को प्रोसेस में बूट करता है (क्षणिक पोर्ट) और `/mcp`, `/mcp <server> tools`, `/mcp <server> disable` का सटीक आउटपुट छापता है।

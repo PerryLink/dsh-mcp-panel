@@ -5,6 +5,9 @@
 [English](README.md) · [简体中文](README.zh.md) · [Español](README.es.md) · [Português](README.pt.md) · [हिन्दी](README.hi.md)
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
+[![npm](https://img.shields.io/npm/v/dsh-mcp-panel)](https://www.npmjs.com/package/dsh-mcp-panel)
+[![downloads](https://img.shields.io/npm/dm/dsh-mcp-panel)](https://www.npmjs.com/package/dsh-mcp-panel)
+[![CI](https://github.com/PerryLink/dsh-mcp-panel/actions/workflows/ci.yml/badge.svg)](https://github.com/PerryLink/dsh-mcp-panel/actions/workflows/ci.yml)
 [![dsh-plugin](https://img.shields.io/badge/ecosystem-dsh--plugin-8b5cf6)](https://github.com/topics/dsh-plugin)
 [![deepseek-harness](https://img.shields.io/badge/runtime-deepseek--harness-4f46e5)](https://github.com/deepseek-ai/deepseek-harness)
 
@@ -13,6 +16,7 @@
 ## 兼容性
 
 - **运行时**：DeepSeek Harness ≥ `0.1.0-rc.5`（peerDependencies 固定 `0.1.0-rc.6` 包线）。
+- **最新版本**：v0.3.0（2026-08-15）——TypeScript 7 / Vitest 4 / jsdom 30 工具链下全门禁通过，109 个测试。
 - **最后验证**：2026-08-14，针对 deepseek-harness 源码 checkout（workspace 包 `0.1.0-rc.5`，mainline `7b9644f`）——headless `/mcp` 端到端 + 实时 web profile；证据见 [docs/research-notes.zh.md](docs/research-notes.zh.md)。同日对 mainline `47f9438` + `mcp/status` seam 分支（`feat/mcp-client-status-observability-seam`）复验：真实 `server-everything` 行经打包插件渲染 `status: connected (source: upstream-event)`，并跑通与启动器一致的全流程；记录见 [docs/optimization-plan-v2.zh.md](docs/optimization-plan-v2.zh.md)。
 
 ## 你能得到什么
@@ -21,6 +25,7 @@
 |---|---|
 | **`/mcp` 命令** | transport、目标、工具数、连接状态、最近错误、重连计数——模型可读、可日志重建，支持五种输出语言（`outputLanguage: en\|zh\|es\|pt\|hi`） |
 | **设置 → 插件 → MCP 页签** | 同一快照的只读视图：状态徽标、可展开工具清单、脱敏错误、探测结果 |
+| **一览即得** | 卡片上方的统计汇总、服务器搜索框、全部展开/折叠按钮 |
 | **面板探测按钮** | 从页签对单个 streamable-http 服务器一键发起连通性探测；结果仍仅面板可见 |
 | **被动探测** | 可选的每服务器后台可达性徽标，与连接状态严格分离展示 |
 | **自动刷新** | 宿主建议刷新间隔（`refreshIntervalMs`）；页签轮询并在后台隐藏时暂停 |
@@ -31,9 +36,9 @@
 
 ```sh
 # git 通道（经包的 prepare 脚本构建）
-dsh plugin --profile web add github:PerryLink/dsh-mcp-panel#v0.2.0
+dsh plugin --profile web add github:PerryLink/dsh-mcp-panel#v0.3.0
 # npm 通道（已发布产物，免构建放行）
-dsh plugin --profile web add dsh-mcp-panel@0.2.0
+dsh plugin --profile web add dsh-mcp-panel@0.3.0
 ```
 
 重启（或让 web 面板热重载 `cordis.patch.yml`），然后：
@@ -119,12 +124,14 @@ MCP servers (1):
 pnpm install
 pnpm run typecheck    # 本地门禁：经 tsconfig paths 解析 harness checkout 的最新类型面
 pnpm run typecheck:ci # npm 门禁：解析已发布的 0.1.0-rc.6 类型面（CI 实际执行）
-pnpm test             # 105 个测试：脱敏极端用例、分组、聚合容错、命令输出（五语言）、探测门控、客户端接线、presenter
+pnpm test             # 109 个测试：脱敏极端用例、分组、聚合容错、命令输出（五语言）、探测门控、客户端接线、presenter（徽标/汇总/过滤）
 pnpm run build        # tsc 声明 → lib/types；tsdown → lib/index.js + lib/typert.host.js + lib/client.js
 pnpm run verify:self-contained
 pnpm run verify:artifacts
 pnpm pack
 ```
+
+发布：`node scripts/release.mjs <x.y.z>` 会改版本号、盖章 CHANGELOG、重跑门禁并提交打 tag；推送 tag 后自动发布 npm 与 GitHub Release（见 [CONTRIBUTING.md](CONTRIBUTING.md)）。
 
 对真实 harness checkout 的验证：
 `node --import tsx/esm scripts/verify-headless.mjs` 在进程内启动完整 web profile（临时端口），打印真实的 `/mcp`、`/mcp <server> tools`、`/mcp <server> disable` 输出。

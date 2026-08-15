@@ -37,6 +37,10 @@ Schema in `src/config.ts` (Schemastery, fail-loud bounds, explicit `resolveConfi
 
 `scripts/verify-headless.mjs` boots the real web profile with this plugin installed (temp `DSH_HOME` + `dsh plugin --profile web add <tarball>`) and prints the exact `/mcp` output; `.github/workflows/compat.yml` runs the same flow monthly against a pinned harness SHA (set `DSH_INSTALL_ANCHOR` when plugin and harness are siblings).
 
+## Release
+
+`node scripts/release.mjs <x.y.z>` bumps `package.json`, stamps the `## [Unreleased]` CHANGELOG section to `[<x.y.z>] - <UTC date>`, re-runs the gate, commits, and tags `v<x.y.z>` locally — never pushes. Push with `git push origin main --follow-tags`; the `release` workflow (release.yml) then gates again, publishes npm with provenance (secret `NPM_TOKEN`), and creates the GitHub Release from the CHANGELOG section (`scripts/changelog-section.mjs`). Tags are `v<x.y.z>`; a missing historical tag gets backfilled at its release commit.
+
 ## Docs
 
 - Five-language READMEs (`README.md`, `README.zh.md`, `README.es.md`, `README.pt.md`, `README.hi.md`) — keep all five in sync; the English file is the source of truth.
