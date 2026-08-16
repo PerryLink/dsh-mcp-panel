@@ -1,9 +1,9 @@
 name: release
 
-# TEMPORARY OIDC probe: exchanges the GitHub OIDC token at the CORRECT npm
-# endpoint (/-/npm/v1/oidc/token/exchange/package). Success prints only the
-# HTTP status (the response token is never printed); failure prints the npm
-# error body (contains no secrets). Restored right after the check.
+# TEMPORARY OIDC probe: exchanges the GitHub OIDC token at the real npm
+# endpoint (/-/npm/v1/oidc/token/exchange/package/<name>). Success prints only
+# the HTTP status (the response token is never printed); failure prints the
+# npm error body (contains no secrets). Restored right after the check.
 
 on:
   workflow_dispatch:
@@ -27,9 +27,7 @@ jobs:
           resp=$(mktemp)
           code=$(curl -sS -o "$resp" -w '%{http_code}' -X POST \
             -H "Authorization: Bearer $oidc" \
-            -H "Content-Type: application/json" \
-            -d '{"package":"dsh-mcp-panel"}' \
-            https://registry.npmjs.org/-/npm/v1/oidc/token/exchange/package)
+            https://registry.npmjs.org/-/npm/v1/oidc/token/exchange/package/dsh-mcp-panel)
           echo "npm OIDC exchange HTTP status: $code"
           if [ "$code" != "200" ]; then
             echo "--- npm error body ---"
