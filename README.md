@@ -147,6 +147,10 @@ pnpm run typecheck && pnpm run typecheck:ci && pnpm test && pnpm run build && pn
 
 Releases: `node scripts/release.mjs <x.y.z>` runs the full gate, commits, and tags `v<x.y.z>` locally (never pushes).
 
+## Contributors
+
+Thanks to everyone who reported issues, reviewed, or contributed code — in particular [xiaoyuyu6420](https://github.com/xiaoyuyu6420), who diagnosed the missing client devDependencies behind clean-checkout build failures (PR #5).
+
 ## License
 
 Apache-2.0 — see [LICENSE](LICENSE).

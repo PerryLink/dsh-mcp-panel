@@ -6,8 +6,9 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for the idea! The panel is strictly **read-only by contract** — it never writes config files
-        and never fakes connection state. Please frame proposals accordingly.
+        Thanks for the idea! The console is **append-only by contract** — it never rewrites your
+        `cordis.patch.yml`, every profile write is approval-gated and backed up, and it never fakes
+        connection state. Please frame proposals accordingly.
   - type: textarea
     id: problem
     attributes:

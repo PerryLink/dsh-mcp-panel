@@ -75,6 +75,10 @@ Reinicia (o deja que la superficie web recargue `cordis.patch.yml`) y abre **Aju
 
 El cliente oficial documenta "Tools are the only bridged MCP capability": ambos están diferidos. La consola detecta un seam de catálogo propuesto y mostrará listas de solo lectura cuando llegue; hasta entonces el tablero marca *pendiente de soporte upstream* (addendum en `docs/upstream-proposal.md` del harness).
 
+## Contribuidores
+
+Gracias a todos los que reportaron problemas, revisaron o contribuyeron código — en particular a [xiaoyuyu6420](https://github.com/xiaoyuyu6420), quien diagnosticó las devDependencies de client faltantes detrás de los fallos de build en checkouts limpios (PR #5).
+
 ## Licencia
 
 Apache-2.0 — véase [LICENSE](LICENSE).

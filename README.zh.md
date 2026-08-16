@@ -146,6 +146,10 @@ pnpm run typecheck && pnpm run typecheck:ci && pnpm test && pnpm run build && pn
 
 发布：`node scripts/release.mjs <x.y.z>` 跑全量门禁、提交并本地打 `v<x.y.z>` 标签（绝不推送）。
 
+## 贡献者
+
+感谢所有报告问题、参与评审或贡献代码的朋友——特别感谢 [xiaoyuyu6420](https://github.com/xiaoyuyu6420)，他诊断出干净 checkout 构建失败背后缺失的 client devDependencies（PR #5）。
+
 ## 许可证
 
 Apache-2.0 —— 见 [LICENSE](LICENSE)。

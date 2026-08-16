@@ -75,6 +75,10 @@ dsh plugin --profile web add dsh-mcp-panel@0.4.0
 
 आधिकारिक क्लाइंट दस्तावेज़ कहता है "Tools are the only bridged MCP capability": दोनों स्थगित हैं। कंसोल प्रस्तावित कैटलॉग seam को फ़ीचर-डिटेक्ट करता है और उसके आते ही रीड-ओनली सूचियाँ दिखाएगा; तब तक क्षमता बोर्ड *upstream समर्थन की प्रतीक्षा में* दर्शाता है (harness के `docs/upstream-proposal.md` में अनुपूरक)।
 
+## योगदानकर्ता
+
+समस्याएँ रिपोर्ट करने, समीक्षा करने या कोड योगदान देने वाले सभी का धन्यवाद — विशेष रूप से [xiaoyuyu6420](https://github.com/xiaoyuyu6420), जिन्होंने क्लीन-चेकआउट बिल्ड विफलताओं के पीछे की गुम client devDependencies का निदान किया (PR #5)।
+
 ## लाइसेंस
 
 Apache-2.0 — देखें [LICENSE](LICENSE)।
