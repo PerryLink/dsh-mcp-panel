@@ -1,10 +1,8 @@
 name: release
 
-# TEMPORARY OIDC probe (replaces the real release pipeline for one dispatch):
-# performs exactly the token exchange `pnpm publish --provenance` performs —
-# GitHub OIDC token -> npm short-lived token — and reports success or failure
-# WITHOUT printing the token and WITHOUT publishing anything. Restored to the
-# real release.yml immediately after the check.
+# TEMPORARY OIDC probe: GitHub OIDC token -> npm short-lived token exchange,
+# printing the npm error BODY on failure (error bodies carry no tokens) and
+# never printing the token on success. Restored right after the check.
 
 on:
   workflow_dispatch:
@@ -25,10 +23,13 @@ jobs:
             echo "::error::could not obtain a GitHub OIDC token for the npm audience"
             exit 1
           fi
-          code=$(curl -sS -o /dev/null -w '%{http_code}' -X POST -H "Authorization: Bearer $oidc" https://registry.npmjs.org/-/npm/v1/tokens)
+          resp=$(mktemp)
+          code=$(curl -sS -o "$resp" -w '%{http_code}' -X POST -H "Authorization: Bearer $oidc" https://registry.npmjs.org/-/npm/v1/tokens)
           echo "npm token exchange HTTP status: $code"
           if [ "$code" != "200" ]; then
-            echo "::error::npm OIDC token exchange failed (status $code) — the publisher is not registered on npm for this repository/workflow, or the form fields do not match"
+            echo "--- npm error body ---"
+            cat "$resp"
+            echo "--- end body ---"
             exit 1
           fi
           echo "npm OIDC publisher is registered and the exchange works"
