@@ -1,145 +1,80 @@
 # dsh-mcp-panel
 
-**Painel de gerenciamento em tempo de execução, somente leitura, para o cliente MCP oficial do DeepSeek Harness: veja status, ferramentas, erros e contadores de reconexão de cada servidor MCP sem tocar na sua configuração.**
+**Console de gerenciamento MCP para o cliente MCP oficial do DeepSeek Harness: adicione, edite, remova e teste servidores MCP numa página de configurações, com status honesto, diagnósticos de saúde e gravações de perfil seguras e reversíveis.**
 
 [English](README.md) · [简体中文](README.zh.md) · [Español](README.es.md) · [Português](README.pt.md) · [हिन्दी](README.hi.md)
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![npm](https://img.shields.io/npm/v/dsh-mcp-panel)](https://www.npmjs.com/package/dsh-mcp-panel)
-[![downloads](https://img.shields.io/npm/dm/dsh-mcp-panel)](https://www.npmjs.com/package/dsh-mcp-panel)
 [![CI](https://github.com/PerryLink/dsh-mcp-panel/actions/workflows/ci.yml/badge.svg)](https://github.com/PerryLink/dsh-mcp-panel/actions/workflows/ci.yml)
 [![dsh-plugin](https://img.shields.io/badge/ecosystem-dsh--plugin-8b5cf6)](https://github.com/topics/dsh-plugin)
-[![deepseek-harness](https://img.shields.io/badge/runtime-deepseek--harness-4f46e5)](https://github.com/deepseek-ai/deepseek-harness)
 
-> 🔭 **Observabilidade em primeiro lugar.** [`@deepseek-ai/dsh-mcp-client`](https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/mcp/mcp-client) mantém seu estado de conexão privado — apenas logs. Este plugin mostra tudo o que *consegue* observar (configuração, registro de ferramentas, estado do Loader) e diz **"unknown"** para o que não consegue, em vez de adivinhar. Ele também propõe a costura mínima que tornaria o status real: veja a [proposta upstream](docs/upstream-proposal.md).
+## Arquitetura: o cliente oficial é a ponte; este plugin é o console
 
-## Compatibilidade
+[`@deepseek-ai/dsh-mcp-client`](https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/mcp/mcp-client) é a **única ponte**: uma instância por servidor MCP, configurada como linha escrita à mão no `cordis.yml`, que conecta o transporte, sincroniza ferramentas e registra os nomes `mcp__<servidor>__<ferramenta>`. Este plugin nunca a substitui: é a **camada de experiência** por cima:
 
-- **Runtime**: DeepSeek Harness ≥ `0.1.0-rc.5` (as peerDependencies fixam a linha `0.1.0-rc.6`).
-- **Última versão**: v0.3.0 (2026-08-15) — porta completa em verde com a cadeia TypeScript 7 / Vitest 4 / jsdom 30, 109 testes.
-- **Última verificação**: 2026-08-14 contra um checkout do código-fonte do deepseek-harness (pacotes do workspace em `0.1.0-rc.5`, mainline `7b9644f`) — `/mcp` headless de ponta a ponta mais um perfil web ao vivo; evidências em [docs/research-notes.zh.md](docs/research-notes.zh.md). Reverificado no mesmo dia contra mainline `47f9438` com o ramo da costura `mcp/status` (`feat/mcp-client-status-observability-seam`): uma linha real de `server-everything` mostra `status: connected (source: upstream-event)` através do plugin empacotado, além do fluxo de compatibilidade fiel ao lançador; registro em [docs/optimization-plan-v2.zh.md](docs/optimization-plan-v2.zh.md).
+```
+ profile/composição            dsh-mcp-client (ponte)       dsh-mcp-panel (console)
+ - id: mcp-github              • transporte                 • comando /mcp
+   name: '@deepseek-ai/…'      • sincronização de tools     • Configurações → Plugins →
+   config: { serverName, … }   • ferramentas mcp__*           MCP: CRUD, banco de testes,
+ - id: mcp-panel               • seam mcp/status ◄─status─►  diagnósticos, sondas
+   name: dsh-mcp-panel
+```
+
+O console **lê** pelo seam `mcp/status` (evento + serviço `mcpStatus`), pelo registro de ferramentas e pelo loader; **escreve** apenas na camada de patches do perfil: somente anexa, com aprovação e backup automático. Transporte, OAuth e protocolo permanecem intocados.
+
+## Console vs. cordis.yml escrito à mão
+
+| | cordis.yml à mão | Console dsh-mcp-panel |
+|---|---|---|
+| Adicionar servidor | Editar YAML | Formulário → fragmento de patch → **copiar** ou **gravar** (aprovação + backup) |
+| Editar servidor | Editar YAML e reiniciar | Formulário pré-preenchido; segredos inalterados preservam o valor no host |
+| Remover servidor | Apagar a linha | Operação `set disabled: true` (o vocabulário de patches não tem remove); re-habilitável |
+| Ver status | Ler logs | Selos + reconexões + último erro, ao vivo do `mcp/status` |
+| Testar uma ferramenta | Pedir ao modelo | Banco de testes → pipeline oficial `ctx.tools.execute()` (permissões e aprovação em vigor) |
+| Diagnosticar | grep de logs | `/mcp <servidor> health` com sugestões derivadas |
 
 ## O que você ganha
 
-| Superfície | O que mostra |
-|---|---|
-| **Comando `/mcp`** | transporte, alvo, contagem de ferramentas, status de conexão, último erro, contador de reconexões — legível pelo modelo e reconstruível pelo log, cinco idiomas de saída (`outputLanguage: en\|zh\|es\|pt\|hi`) |
-| **Configurações → Plugins → aba MCP** | o mesmo snapshot somente leitura, com selos de status, listas expansíveis de ferramentas, erros sanitizados e resultados de sondas |
-| **De relance** | contagens de resumo acima dos cartões, um campo de busca de servidores e botões de expandir/recolher tudo |
-| **Botão de sonda do painel** | sonda de conectividade em um clique para um servidor streamable-http a partir da aba; os resultados continuam somente do painel |
-| **Sondas passivas** | selos de alcançabilidade opcionais em segundo plano por servidor, separados do status de conexão |
-| **Atualização automática** | o host sugere um intervalo de atualização (`refreshIntervalMs`); a aba consulta e pausa enquanto oculta |
-| **`/mcp <server> disable\|enable`** | a linha exata de `cordis.patch.yml` a aplicar — uma *sugestão*, nunca uma escrita |
-| **Ferramenta `mcp_probe`** | sonda de conectividade de uso único para Streamable HTTP como tarefa em segundo plano; resultados são **somente do painel** |
+- **`/mcp`**: uma linha por servidor — transporte, destino, contagem de ferramentas, status de conexão (honesto: `unknown` sem dados upstream), último erro, reconexões; legível pelo modelo, reconstruível do log da sessão, cinco idiomas de saída.
+- **`/mcp <servidor> tools | health | call <tool> [json] | disable | enable`**: lista de ferramentas; diagnósticos derivados (ENOENT → dependência ausente, ECONNREFUSED, timeouts, 401/403/404, DNS, rate limit, reconexão esgotada); chamada de teste pelo **pipeline oficial** (permissões + aprovação em vigor); sugestões de patch exatas.
+- **Configurações → Plugins → MCP**: cartões de status com selos e diagnósticos, **CRUD de servidores** (fragmentos `insert`/`set`/`set disabled`, cópia para a área de transferência ou gravação com aprovação e backup `cordis.patch.yml.bak-<ts>`), **banco de testes de ferramentas** (JSON canônico + conteúdo renderizado, limitado por `trialMaxResultChars`, somente painel) e o **painel de capacidades**: Resources e Prompts marcados como *aguardando suporte upstream* (hoje o cliente oficial só pontua ferramentas).
+- **Sondas**: conectividade Streamable HTTP com um clique ou passiva (resultados somente do painel).
 
 ## Início rápido
 
 ```sh
-# canal git (compila pelo script prepare do pacote)
-dsh plugin --profile web add github:PerryLink/dsh-mcp-panel#v0.3.0
-# canal npm (tarball publicado, sem aprovação de compilação)
-dsh plugin --profile web add dsh-mcp-panel@0.3.0
+dsh plugin --profile web add github:PerryLink/dsh-mcp-panel#v0.4.0
+# ou pelo canal npm:
+dsh plugin --profile web add dsh-mcp-panel@0.4.0
 ```
 
-Reinicie (ou deixe a superfície web recarregar seu `cordis.patch.yml`) e execute:
+Reinicie (ou deixe a superfície web recarregar o `cordis.patch.yml`) e abra **Configurações → Plugins → MCP**, ou execute `/mcp`.
 
-```text
-/mcp
-/mcp everything tools
-/mcp everything disable
-```
+## Honesto por contrato
 
-```text
-MCP servers (1):
-- everything [mcp-everything] stdio node …/server-everything/dist/index.js
-  | 13 tools | enabled | status: unknown (source: derived) | reconnects: — | last error: —
-```
+- **A ponte continua sendo a ponte**: nenhuma mudança de transporte/OAuth/protocolo.
+- **Sem status falso**: `unknown` / `—` com `statusSource: 'derived'` sem dados upstream; códigos de saída e stderr nunca inventados (marcados *aguardando suporte upstream*).
+- **Exibição saneada**: credenciais em URLs, userinfo, valores de headers, tokens bearer e JWTs redigidos; os **valores** de env/headers nunca saem do host (o editor vê apenas chaves).
+- **Gravações somente-anexar, com aprovação e backup**: o console nunca reescreve o `cordis.patch.yml`; havendo serviço de aprovação e um agente em turno aberto, pergunta ao `ctx.approval` (apenas `allowed-once` prossegue); caso contrário, a confirmação interativa é o canal de aprovação. `writeEnabled: false` é o interruptor de segurança.
+- **Sem injeção de prompts**: o console não registra seções de prompt; apenas as descrições de suas duas ferramentas/comandos, no estilo minimalista do cliente oficial.
 
-Instalação manual: coloque `dsh-mcp-panel` no `node_modules` do perfil (ou no
-respaldo compartilhado `$DSH_HOME/profiles/node_modules`) e adicione a linha a `cordis.patch.yml`:
+## Config
 
-```yaml
-- insert:
-    - id: mcp-panel
-      name: dsh-mcp-panel
-      config:
-        probeEnabled: true
-        probeTimeoutMs: 10000
-```
-
-### Desinstalação
-
-1. Remova a linha `mcp-panel` de `cordis.patch.yml` (a superfície web a recarrega em quente; outras superfícies reiniciam).
-2. Apague o pacote do `node_modules` do perfil (ou do respaldo compartilhado `profiles/node_modules`).
-3. Confirme com `dsh web --dump-config` que nenhuma linha `mcp-panel` restou.
-
-## Honestidade por contrato
-
-- **Somente leitura.** Nenhum arquivo de configuração é gravado. `disable`/`enable` imprime uma sugestão que você aplica.
-- **Sem status falso.** Campos de conexão sem dados upstream mostram `unknown` / `—`, com `statusSource: derived`.
-- **Exibição sanitizada.** Credenciais em query strings, senhas userinfo, valores de cabeçalhos, tokens bearer e JWTs são removidos antes da renderização; os `headers` configurados nunca entram em nenhum snapshot.
-- **Resultados somente do painel.** Os detalhes das sondas ficam na aba de configurações, nunca no contexto do modelo; `/mcp` é a superfície legível pelo modelo e é totalmente reconstruível a partir do log da sessão.
-- **Sem mudanças no mcp-client.** Transporte, OAuth e protocolo permanecem intactos — a lacuna de observabilidade é coberta pela [proposta upstream](docs/upstream-proposal.md), que este plugin já consome (evento tipado `mcp/status` + serviço de consulta `mcpStatus`, detectados em tempo de execução).
-
-## Configuração
-
-| Campo | Padrão | Descrição |
+| Chave | Valor | Descrição |
 |---|---|---|
-| `probeEnabled` | `true` | Registra a ferramenta `mcp_probe` (requer `ctx.jobs` na composição) |
-| `probeTimeoutMs` | `10000` | Tempo limite por sonda |
-| `maxProbes` | `10` | Limite de registros de sonda exibidos no painel |
-| `refreshIntervalMs` | `0` | Intervalo de atualização sugerido para o painel em ms (`0` = somente sob demanda) |
-| `outputLanguage` | `en` | Idioma de saída do comando `/mcp` (`en` \| `zh` \| `es` \| `pt` \| `hi`) |
-| `passiveProbeEnabled` | `false` | Sondear periodicamente servidores streamable-http em segundo plano |
-| `passiveProbeIntervalMs` | `60000` | Intervalo da sonda passiva em milissegundos |
+| `probeEnabled` / `probeTimeoutMs` / `maxProbes` | `true` / `10000` / `10` | ferramenta de sonda, prazo, registros exibidos |
+| `refreshIntervalMs` | `0` | atualização sugerida do painel (`0` = sob demanda) |
+| `outputLanguage` | `en` | idioma do `/mcp`: `en\|zh\|es\|pt\|hi` |
+| `passiveProbeEnabled` / `passiveProbeIntervalMs` | `false` / `60000` | sondas passivas e seu intervalo |
+| `trialEnabled` / `trialTimeoutMs` / `trialMaxResultChars` | `true` / `120000` / `60000` | banco de testes e seus limites |
+| `writeEnabled` / `backupCount` | `true` / `5` | interruptor de gravações; backups retidos |
 
-## Permissões e dados
+## Resources e Prompts
 
-- **Lê**: linhas do Loader, o registro de ferramentas (nomes `mcp__<server>__`) e, quando o upstream implementar, eventos `mcp/status`.
-- **Escreve**: nada. Nenhum arquivo de configuração é modificado.
-- **Rede**: apenas a sonda de uso único `mcp_probe` (e a sonda passiva opcional) envia uma requisição MCP `initialize` para os endpoints que você configurou; os cabeçalhos configurados são usados na requisição e nunca são exibidos nem registrados.
-- Sem telemetria, sem serviços externos, sem trabalho em segundo plano além dos temporizadores de sonda opcionais.
-
-## Solução de problemas
-
-- A linha não aparece? Rode `dsh web --dump-config` e confira se o insert `mcp-panel` foi aplicado com um id único.
-- O painel mostra `status: unknown (source: derived)` — esperado até a costura upstream aterrissar; veja [docs/upstream-proposal.md](docs/upstream-proposal.md).
-- O painel parece desatualizado? Defina `refreshIntervalMs` com um valor positivo (ex.: `5000`) na linha de configuração `mcp-panel` para consultar automaticamente.
-- O log de boot mostra um fiber `mcp-panel` FAILED — o pacote precisa resolver a partir do perfil (o `name: dsh-mcp-panel` simples resolve via o `node_modules` do perfil ou o respaldo compartilhado).
-- Rollback: remova a linha (ver Desinstalação).
-
-## Segurança
-
-Encontrou um problema de segurança? Abra uma issue no GitHub **sem** colar segredos, chaves ou tokens — redija tudo antes. Este plugin mantém as credenciais dos seus servidores MCP configurados apenas em memória para as requisições de sonda; elas nunca chegam a logs ou snapshots.
-
-## Como funciona
-
-- **Metade host** — um serviço Typert Remote `mcpPanel` monta o snapshot a partir de três fontes somente leitura: linhas do Loader (entradas `@deepseek-ai/dsh-mcp-client`), `ctx.tools.schemas()` agrupadas pelo namespace `mcp__<server>__`, e observações upstream `mcp/status`. O manifesto `./typert` escrito à mão registra `mcpPanel/status` no gateway; o `zod` é empacotado, então a metade host é autocontida.
-- **Metade navegador** — um bundle `dsh.client` (servido em `/plugins/dsh-mcp-panel/client.js`) monta o mesmo descritor via `ctx.remote.$mount` e registra uma entrada `settings.plugins.tab` somente leitura (`id: mcp`). O apresentador é uma função pura; os estilos têm escopo e usam tokens de tema.
-- **O comando `/mcp`** passa pelo registro de comandos padrão — cada linha cai nos eventos de sessão `command/run` + `command/done`.
-
-## Desenvolvimento
-
-```sh
-pnpm install
-pnpm run typecheck    # porta local: resolve as faces de tipo frescas do checkout do harness via caminhos tsconfig
-pnpm run typecheck:ci # porta npm: resolve as faces de tipo publicadas 0.1.0-rc.6 (o que o CI executa)
-pnpm test             # 109 testes: extremos do sanitizador, agrupamento, tolerância de agregação, saída do comando (5 idiomas), controle de sondas, fiação do cliente, apresentador (selos/resumo/filtro)
-pnpm run build        # declarações tsc → lib/types; tsdown → lib/index.js + lib/typert.host.js + lib/client.js
-pnpm run verify:self-contained
-pnpm run verify:artifacts
-pnpm pack
-```
-
-Publicação: `node scripts/release.mjs <x.y.z>` sobe a versão, sela o CHANGELOG, reexecuta a porta, faz commit e cria a tag; ao empurrar a tag, npm e GitHub Release são publicados automaticamente (ver [CONTRIBUTING.md](CONTRIBUTING.md)).
-
-Verificação contra um checkout real do harness:
-`node --import tsx/esm scripts/verify-headless.mjs` inicializa o perfil web completo em processo (porta efêmera) e imprime a saída exata de `/mcp`, `/mcp <server> tools` e `/mcp <server> disable`.
-
-## Contribuidores
-
-Obrigado a todos que reportaram problemas, revisaram ou contribuíram com código — em especial a [xiaoyuyu6420](https://github.com/xiaoyuyu6420), que diagnosticou as devDependencies de cliente ausentes por trás das falhas de build em um checkout limpo (PR #5).
+O cliente oficial documenta "Tools are the only bridged MCP capability": ambos estão adiados. O console detecta um seam de catálogo proposto e exibirá listas somente-leitura quando chegar; até lá o painel marca *aguardando suporte upstream* (adendo em `docs/upstream-proposal.md` do harness).
 
 ## Licença
 
-[Apache License 2.0](LICENSE) © 2026 colaboradores do dsh-mcp-panel
+Apache-2.0 — veja [LICENSE](LICENSE).

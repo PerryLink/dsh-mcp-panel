@@ -2,6 +2,24 @@
 
 All notable changes to this project are documented in this file.
 
+## [Unreleased]
+
+### Added
+
+- **MCP management console** (the official `@deepseek-ai/dsh-mcp-client` stays the only bridge; this plugin is now its full experience layer):
+  - **Server CRUD in the Settings tab**: add/edit/remove servers through a visual form (stdio and streamable-http shapes); every edit renders as an APPEND-ONLY `cordis.patch.yml` operation (`insert` / `set` / `set disabled: true` — the patch vocabulary has no remove, so removal disables the row and keeps it re-enableable). One-click copy, or approval-gated write: the host asks `ctx.approval` when an agent with an open turn exists, otherwise the explicit interactive confirmation is the approval channel; every write first copies the file to a timestamped backup and prunes to the newest `backupCount`.
+  - **Tool trial console**: pick a server → registered `mcp__*` tools → JSON arguments → call through the OFFICIAL `ctx.tools.execute()` pipeline (pre-execute permission policy, approval asks, guards, and post-execute all stay in force). Results show the canonical JSON value plus the rendered content, capped by `trialMaxResultChars`; panel-only, never model context. `/mcp <server> call <tool> [json]` exposes the same pipeline to the model with approval routed through the command's agent.
+  - **Health diagnostics**: `/mcp <server> health` and per-card suggestion lists derived from sanitized error text (ENOENT → dependency missing, ECONNREFUSED, ETIMEDOUT, 401/403/404, DNS, rate limit, reconnect exhaustion, failed fiber). Child exit codes / stderr tails are honestly labeled "pending upstream support" until the official client exposes them (proposed in the harness `docs/upstream-proposal.md`).
+  - **Capabilities board**: Resources/Prompts availability is feature-detected against a proposed upstream catalog seam; today the console clearly labels both "pending upstream support" (the official client bridges tools only).
+- Config: `trialEnabled` / `trialTimeoutMs` / `trialMaxResultChars` / `writeEnabled` (kill switch) / `backupCount`, all with Schemastery schema, fail-loud bounds, and explicit `resolveConfig` re-validation.
+- The panel injects NO prompt sections; the only model-facing text it adds remains the two tool/command descriptions.
+
+### Changed
+
+- The snapshot now carries sanitized per-server config views (env/header VALUES never leave the host — keys only, with keep-semantics re-merge for edits), derived diagnostics, and the trial/write policy; the upstream seam consumption now also carries the proposed `exitCode`/`stderrTail` fields when present.
+- `/mcp` usage now documents `call` and `health`; the command output stays model-readable and log-reconstructable.
+- Sanitization rules unchanged and extended over the new surfaces: fragment previews never contain `!!js` expressions and never echo secret values.
+
 ## [0.3.0] - 2026-08-15
 
 ### Added

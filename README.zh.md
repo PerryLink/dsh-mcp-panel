@@ -1,6 +1,6 @@
 # dsh-mcp-panel
 
-**DeepSeek Harness 官方 MCP 客户端的只读运行时管理面板——一眼看清每个 MCP 服务器的状态、工具、错误与重连计数，绝不改动你的配置。**
+**官方 DeepSeek Harness MCP client 的 MCP 管理控制台 —— 在设置页可视化增删改 MCP 服务器、试用工具调用，配以诚实的连接状态、健康诊断与安全可逆的 profile 写入。**
 
 [English](README.md) · [简体中文](README.zh.md) · [Español](README.es.md) · [Português](README.pt.md) · [हिन्दी](README.hi.md)
 
@@ -11,52 +11,82 @@
 [![dsh-plugin](https://img.shields.io/badge/ecosystem-dsh--plugin-8b5cf6)](https://github.com/topics/dsh-plugin)
 [![deepseek-harness](https://img.shields.io/badge/runtime-deepseek--harness-4f46e5)](https://github.com/deepseek-ai/deepseek-harness)
 
-> 🔭 **可观测优先。** [`@deepseek-ai/dsh-mcp-client`](https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/mcp/mcp-client) 的连接状态是私有的——只有日志。本插件展示一切**能**观测到的事实（配置、工具注册表、Loader 状态），对观测不到的字段如实显示 **"unknown"**，绝不猜测；同时给出让状态可观测的最小上游 seam 提案（见 [upstream proposal](docs/upstream-proposal.md)）。
+## 架构：官方 client 负责桥接，本插件是完整体验层
 
-## 兼容性
+[`@deepseek-ai/dsh-mcp-client`](https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/mcp/mcp-client) 是**唯一的桥接层**：每个 MCP server 一个插件实例，以手写 `cordis.yml` 行的形式配置，负责连接传输、同步工具并注册 `mcp__<server>__<tool>` 工具名。本插件从不取代它 —— 而是构建其上的**体验层**：
 
-- **运行时**：DeepSeek Harness ≥ `0.1.0-rc.5`（peerDependencies 固定 `0.1.0-rc.6` 包线）。
-- **最新版本**：v0.3.0（2026-08-15）——TypeScript 7 / Vitest 4 / jsdom 30 工具链下全门禁通过，109 个测试。
-- **最后验证**：2026-08-14，针对 deepseek-harness 源码 checkout（workspace 包 `0.1.0-rc.5`，mainline `7b9644f`）——headless `/mcp` 端到端 + 实时 web profile；证据见 [docs/research-notes.zh.md](docs/research-notes.zh.md)。同日对 mainline `47f9438` + `mcp/status` seam 分支（`feat/mcp-client-status-observability-seam`）复验：真实 `server-everything` 行经打包插件渲染 `status: connected (source: upstream-event)`，并跑通与启动器一致的全流程；记录见 [docs/optimization-plan-v2.zh.md](docs/optimization-plan-v2.zh.md)。
-
-## 你能得到什么
-
-| 界面 | 展示内容 |
-|---|---|
-| **`/mcp` 命令** | transport、目标、工具数、连接状态、最近错误、重连计数——模型可读、可日志重建，支持五种输出语言（`outputLanguage: en\|zh\|es\|pt\|hi`） |
-| **设置 → 插件 → MCP 页签** | 同一快照的只读视图：状态徽标、可展开工具清单、脱敏错误、探测结果 |
-| **一览即得** | 卡片上方的统计汇总、服务器搜索框、全部展开/折叠按钮 |
-| **面板探测按钮** | 从页签对单个 streamable-http 服务器一键发起连通性探测；结果仍仅面板可见 |
-| **被动探测** | 可选的每服务器后台可达性徽标，与连接状态严格分离展示 |
-| **自动刷新** | 宿主建议刷新间隔（`refreshIntervalMs`）；页签轮询并在后台隐藏时暂停 |
-| **`/mcp <server> disable\|enable`** | 应应用的 `cordis.patch.yml` 确切行——只是**建议**，绝不写文件 |
-| **`mcp_probe` 工具** | 对 Streamable HTTP 端点的一次性连通性探测（后台 job），结果**仅面板可见** |
-
-## 快速上手
-
-```sh
-# git 通道（经包的 prepare 脚本构建）
-dsh plugin --profile web add github:PerryLink/dsh-mcp-panel#v0.3.0
-# npm 通道（已发布产物，免构建放行）
-dsh plugin --profile web add dsh-mcp-panel@0.3.0
+```
+                    ┌────────────────────────────────────────────┐
+ profile            │  cordis.yml / cordis.patch.yml             │
+ 组合（每个         │   - id: mcp-github                          │
+ server 一行，      │     name: '@deepseek-ai/dsh-mcp-client'     │
+ 手写）             │     config: { serverName, transport, … }    │
+                    │   - id: mcp-panel                           │
+                    │     name: dsh-mcp-panel   ◄── 本插件        │
+                    └───────────────┬────────────────────────────┘
+                                    │
+        ┌───────────────────────────┴───────────────────────────┐
+        │                                                        │
+   ┌────▼──────────────┐        ┌───────────────────────────┐    │
+   │ @deepseek-ai/dsh- │        │ dsh-mcp-panel（控制台）    │    │
+   │ mcp-client        │        │                           │    │
+   │ • 传输连接        │        │ • /mcp 命令               │    │
+   │ • 工具同步        │        │ • 设置 → 插件 → MCP 页：  │    │
+   │ • mcp__* 工具     │◄──────►│   CRUD、工具试用台        │    │
+   │ • mcp/status seam │ 状态   │ • 健康诊断、探测、能力一览 │    │
+   └───────────────────┘        └───────────────────────────┘    │
 ```
 
-重启（或让 web 面板热重载 `cordis.patch.yml`），然后：
+控制台通过官方 client 已落地的 `mcp/status` 可观测 seam（事件 + `mcpStatus` 查询服务）、工具注册表与 loader **读取**事实；**写入**只发生在 profile 的 patch 层 —— 只追加、走审批、自动备份。传输、OAuth 与协议完全不动。
+
+## 控制台 vs. 手写 cordis.yml
+
+| | 手写 cordis.yml | dsh-mcp-panel 控制台 |
+|---|---|---|
+| 添加服务器 | 改 YAML，注意缩进与引号 | 表单 → patch 片段 → **一键复制**或**写入**（审批 + 自动备份） |
+| 修改服务器 | 改 YAML，重启/热重载 | 表单预填当前行；未改动的密钥在 host 侧保留原值 |
+| 删除服务器 | 删掉该行 | 追加 `set disabled: true` 操作（patch 词汇表没有 remove）——可随时重新启用 |
+| 查看状态 | 翻日志 | 徽章 + 重连次数 + 最近错误，来自 `mcp/status` seam 实时数据 |
+| 试用工具 | 让模型调用 | 试用台 → 官方 `ctx.tools.execute()` 管线（权限与审批全程生效） |
+| 排查故障 | grep 日志 | `/mcp <server> health` 派生自愈建议 |
+| 误操作 | 手动回滚 | 每次写入只追加、留时间戳备份 |
+
+控制台的输出就是 `cordis.patch.yml` 的词汇表 —— 你手写的那几行，由它生成、预览并安全落地。
+
+## 功能一览
+
+| 界面 | 功能 |
+|---|---|
+| **`/mcp` 命令** | 每 server 一行：transport、目标、工具数、连接状态（来自上游 seam；未观测时如实显示 `unknown`）、最近错误、重连计数——模型可读、会话日志可重建、五种输出语言 |
+| **`/mcp <server> tools`** | 模型可见的 `mcp__*` 工具名与描述 |
+| **`/mcp <server> health`** | 派生自愈建议（ENOENT → 依赖缺失、ECONNREFUSED、超时、401/403/404、DNS、限流、重连耗尽…）；退出码 / stderr 尾部如实标注"待官方支持" |
+| **`/mcp <server> call <tool> [json]`** | 经**官方工具管线**试用调用——pre-execute 权限策略、审批（经命令所属 agent 路由）、guard、post-execute 全部生效 |
+| **`/mcp <server> disable\|enable`** | 精确的 `set` patch 行（同旧版） |
+| **设置 → 插件 → MCP 页** | 状态卡片（徽章、诊断、探测），加以下三块控制台 |
+| **Server CRUD** | 增删改表单 → `insert`/`set`/`set disabled` 片段 → 剪贴板复制或审批写入，自动备份（`cordis.patch.yml.bak-<ts>`，保留最新 `backupCount` 份） |
+| **工具试用台** | 选 server → 选 `mcp__*` 工具 → JSON 填参 → 规范 JSON 结果 + render 内容；按 `trialMaxResultChars` 截断；仅面板可见、永不进入模型上下文 |
+| **能力一览** | Resources / Prompts 可用性（特征探测）；目前二者均如实标注"待官方支持"（官方 client 仅桥接工具） |
+| **探测** | 一键 / 被动 Streamable HTTP 连通性探测（结果仅面板可见） |
+
+## 快速开始
+
+```sh
+# git 渠道（由包的 prepare 脚本构建）
+dsh plugin --profile web add github:PerryLink/dsh-mcp-panel#v0.4.0
+# npm 渠道（已发布 tarball，无需构建审批）
+dsh plugin --profile web add dsh-mcp-panel@0.4.0
+```
+
+随后重启（或让 web 面板热重载 `cordis.patch.yml`），打开 **设置 → 插件 → MCP**，或运行：
 
 ```text
 /mcp
 /mcp everything tools
-/mcp everything disable
+/mcp everything health
+/mcp everything call echo '{"message": "hi"}'
 ```
 
-```text
-MCP servers (1):
-- everything [mcp-everything] stdio node …/server-everything/dist/index.js
-  | 13 tools | enabled | status: unknown (source: derived) | reconnects: — | last error: —
-```
-
-手动安装：把 `dsh-mcp-panel` 放进 profile 的 `node_modules`（或共享的
-`$DSH_HOME/profiles/node_modules` 回退目录），并在 `cordis.patch.yml` 添加：
+手动安装：把 `dsh-mcp-panel` 放进 profile 的 `node_modules`（或共享的 `$DSH_HOME/profiles/node_modules` 回退目录），并在 `cordis.patch.yml` 加一行：
 
 ```yaml
 - insert:
@@ -64,104 +94,58 @@ MCP servers (1):
       name: dsh-mcp-panel
       config:
         probeEnabled: true
-        probeTimeoutMs: 10000
 ```
 
 ### 卸载
 
-1. 从 `cordis.patch.yml` 移除 `mcp-panel` 行（web 面板会热重载；其他面板重启）。
-2. 从 profile 的 `node_modules`（或共享的 `profiles/node_modules` 回退目录）删除该包。
+1. 从 `cordis.patch.yml` 移除 `mcp-panel` 行（web 面板热重载；其他面板重启生效）。
+2. 从 profile 的 `node_modules`（或共享 `profiles/node_modules` 回退目录）删除本包。
 3. 用 `dsh web --dump-config` 确认没有残留的 `mcp-panel` 行。
 
 ## 诚实契约
 
-- **只读。** 绝不写任何配置文件；`disable`/`enable` 只是打印建议，由你自行应用。
-- **不伪造状态。** 无上游数据的连接字段显示 `unknown` / `—`，并标注 `statusSource: derived`。
-- **展示脱敏。** URL 查询串凭据、userinfo 密码、header 值、Bearer token、JWT 在渲染前全部清洗；配置中的 `headers` 从不进入任何快照。
-- **panel-only 结果。** 探测细节只进设置页签，不进模型上下文；`/mcp` 输出是模型可读面，且完全可从会话日志重建。
-- **零 mcp-client 改动。** 传输 / OAuth / 协议不动——可观测缺口由[上游提案](docs/upstream-proposal.md)覆盖，本插件已实现其消费侧（类型化的 `mcp/status` 事件 + `mcpStatus` 查询服务，运行时特性探测）。
+- **桥接层仍是桥接层。** 不改传输、OAuth、协议；每个 server 一行 mcp-client，与你手写完全一致。
+- **不伪造状态。** 无上游观测时连接字段显示 `unknown` / `—`，并标注 `statusSource: 'derived'`；退出码与 stderr 尾部绝不臆造。
+- **展示全程脱敏。** URL 查询凭据、userinfo 密码、header 值、Bearer token、JWT 在渲染前一律打码；配置的 `headers` 从不进入任何快照；env/header 的**值**绝不出 host（编辑器只见 key）。
+- **写入只追加、走审批、先备份。** 控制台从不改写 `cordis.patch.yml`：只追加生成的操作。存在审批服务且调用方会话的 agent 处于开启轮次时，写入走 `ctx.approval`（仅 `allowed-once` 放行）；否则以界面显式确认为审批通道。`writeEnabled: false` 是硬性总开关。
+- **零提示词注入。** 本插件不注册任何提示词段落；对模型可见的文本只有两个工具/命令描述，沿用官方 client 的 Minimal 风格。
 
 ## 配置
 
-| 字段 | 默认 | 说明 |
+| 键 | 默认值 | 说明 |
 |---|---|---|
-| `probeEnabled` | `true` | 是否注册 `mcp_probe` 工具（需要组合里有 `ctx.jobs`） |
-| `probeTimeoutMs` | `10000` | 单次探测超时 |
-| `maxProbes` | `10` | 面板展示的探测记录上限 |
-| `refreshIntervalMs` | `0` | 建议的面板刷新间隔（毫秒；`0` = 仅手动刷新） |
-| `outputLanguage` | `en` | `/mcp` 命令输出语言（`en` \| `zh` \| `es` \| `pt` \| `hi`） |
-| `passiveProbeEnabled` | `false` | 是否周期性后台探测 streamable-http 服务器 |
-| `passiveProbeIntervalMs` | `60000` | 被动探测间隔（毫秒） |
+| `probeEnabled` | `true` | 注册 `mcp_probe` 后台任务工具（结果仅面板可见） |
+| `probeTimeoutMs` | `10000` | 单次探测超时（ms） |
+| `maxProbes` | `10` | 面板展示的探测记录数 |
+| `refreshIntervalMs` | `0` | 建议的面板刷新间隔（ms）；`0` = 按需 |
+| `outputLanguage` | `en` | `/mcp` 输出语言：`en\|zh\|es\|pt\|hi` |
+| `passiveProbeEnabled` | `false` | 周期性探测 streamable-http 服务器 |
+| `passiveProbeIntervalMs` | `60000` | 被动探测间隔（ms） |
+| `trialEnabled` | `true` | 工具试用台（设置页 + `/mcp call`） |
+| `trialTimeoutMs` | `120000` | 每次试用调用的面板侧截止时间 |
+| `trialMaxResultChars` | `60000` | 试用结果载荷上限（字符） |
+| `writeEnabled` | `true` | 总开关：`false` 拒绝一切 profile 写入（仍可复制片段） |
+| `backupCount` | `5` | 每次写入保留的 `cordis.patch.yml` 备份数 |
 
-## 权限与数据
+## Resources 与 Prompts
 
-- **读取**：Loader 条目、工具注册表（`mcp__<server>__` 名字）以及上游落地后的 `mcp/status` 事件。
-- **写入**：无。绝不修改任何配置文件。
-- **网络**：仅一次性 `mcp_probe`（及可选被动探测）向你**已配置**的端点 POST 一次 MCP `initialize` 请求；已配置 headers 仅用于该请求，从不展示或记录。
-- 无遥测、无外部服务，除可选探测定时器外无后台任务。
-
-## 故障排查
-
-- 行不见了？运行 `dsh web --dump-config`，检查 `mcp-panel` insert 是否生效且 id 唯一。
-- 面板显示 `status: unknown (source: derived)`——在上游 seam 落地前属预期；见 [docs/upstream-proposal.md](docs/upstream-proposal.md)。
-- 面板数据不更新？把 `mcp-panel` 配置行的 `refreshIntervalMs` 设为正值（如 `5000`）自动轮询。
-- 启动日志出现 FAILED 的 `mcp-panel` fiber——确认包能从 profile 解析（裸 `name: dsh-mcp-panel` 经 profile 的 `node_modules` 或共享回退目录解析）。
-- 回滚：移除该行（见「卸载」）。
-
-## 安全
-
-发现安全问题？请在 GitHub 提 issue，但**不要**粘贴密钥、key 或 token——先脱敏。本插件仅在内存中持有你所配置 MCP 服务器的凭据用于探测请求；它们从不进入日志或快照。
-
-## 工作原理
-
-- **Host 半部**——`mcpPanel` Typert Remote 服务从三个只读来源组装快照：Loader 行（`@deepseek-ai/dsh-mcp-client` 条目）、按 `mcp__<server>__` 名字空间分组的 `ctx.tools.schemas()`、以及上游 `mcp/status` 观测。手写的 `./typert` 清单把 `mcpPanel/status` 注册进网关；`zod` 被打包进产物，host bundle 自包含。
-- **浏览器半部**——`dsh.client` bundle（由 `/plugins/dsh-mcp-panel/client.js` 提供）通过 `ctx.remote.$mount` 挂载同一描述符，并注册只读的 `settings.plugins.tab` 条目（`id: mcp`）。presenter 是纯函数；样式带作用域且使用主题 token。
-- **`/mcp` 命令**走标准命令注册表——每一行都落入 `command/run` + `command/done` 会话事件。
+官方 client 明确记载"Tools 是当前唯一桥接的 MCP 能力"——Resources 与 Prompts 处于 deferred 状态。控制台特征探测了上游提案中的 catalog seam，一旦落地即可只读展示列表；在此之前，能力一览中二者均标注**待官方支持**（详见 deepseek-harness `docs/upstream-proposal.md` 的补充提案）。
 
 ## 开发
 
 ```sh
-pnpm install
-pnpm run typecheck    # 本地门禁：经 tsconfig paths 解析 harness checkout 的最新类型面
-pnpm run typecheck:ci # npm 门禁：解析已发布的 0.1.0-rc.6 类型面（CI 实际执行）
-pnpm test             # 109 个测试：脱敏极端用例、分组、聚合容错、命令输出（五语言）、探测门控、客户端接线、presenter（徽标/汇总/过滤）
-pnpm run build        # tsc 声明 → lib/types；tsdown → lib/index.js + lib/typert.host.js + lib/client.js
-pnpm run verify:self-contained
-pnpm run verify:artifacts
-pnpm pack
+pnpm run typecheck && pnpm run typecheck:ci && pnpm test && pnpm run build && pnpm run verify:self-contained && pnpm run verify:artifacts && pnpm pack
 ```
 
-发布：`node scripts/release.mjs <x.y.z>` 会改版本号、盖章 CHANGELOG、重跑门禁并提交打 tag；推送 tag 后自动发布 npm 与 GitHub Release（见 [CONTRIBUTING.md](CONTRIBUTING.md)）。
+- `src/patch.ts` — 校验、保留语义合并、YAML 片段渲染（纯函数）。
+- `src/write.ts` — 备份 + 追加 + 保留策略（唯一写文件模块）。
+- `src/trial.ts` — 经 `ctx.tools.execute()` 的官方管线试用调用。
+- `src/diagnostics.ts` — 错误模式 → 建议映射（纯函数）。
+- `src/client/` — 设置页控制台（服务器编辑器、试用台、诊断）。
+- `scripts/verify-headless.mjs` 启动真实 web profile 并打印 `/mcp` 实际输出。
 
-对真实 harness checkout 的验证：
-`node --import tsx/esm scripts/verify-headless.mjs` 在进程内启动完整 web profile（临时端口），打印真实的 `/mcp`、`/mcp <server> tools`、`/mcp <server> disable` 输出。
+发布：`node scripts/release.mjs <x.y.z>` 跑全量门禁、提交并本地打 `v<x.y.z>` 标签（绝不推送）。
 
-## 贡献者
+## 许可证
 
-感谢所有反馈问题、参与评审或贡献代码的人——特别感谢 [xiaoyuyu6420](https://github.com/xiaoyuyu6420)，他定位了干净 checkout 构建失败背后缺失的 client devDependencies（PR #5）。
-
-## PerryLink DSH 插件家族
-
-本项目是 [PerryLink](https://github.com/PerryLink) 维护的 [15 个 DeepSeek Harness 插件](https://github.com/PerryLink)之一。如果你觉得这个插件有用，其余的很可能同样有用：
-
-| 插件 | 一句话说明 |
-|---|---|
-| **[dsh-mcp-panel](https://github.com/PerryLink/dsh-mcp-panel)** | 只读 MCP 运行时面板：/mcp 命令 + 设置页，状态/工具/错误一览 |
-| [dsh-doublecheck](https://github.com/PerryLink/dsh-doublecheck) | 工程纪律守门：需求审讯、测试证据门、对抗评审 |
-| [dsh-background-agents](https://github.com/PerryLink/dsh-background-agents) | 持久化后台子代理：Web 侧边栏进度、随时留言与打断 |
-| [dsh-lsp-actions](https://github.com/PerryLink/dsh-lsp-actions) | 基于语言服务器的诊断/格式化/补全/代码动作/重命名 |
-| [dsh-output-styles](https://github.com/PerryLink/dsh-output-styles) | 对标 Claude Code outputStyles 的运行时风格切换 |
-| [dsh-checkpoint-rewind](https://github.com/PerryLink/dsh-checkpoint-rewind) | 对标 Claude Code /rewind：快照、会话 fork、一键回退 |
-| [dsh-permission-rules](https://github.com/PerryLink/dsh-permission-rules) | Claude Code 风格声明式 allow/deny/ask 权限规则，带审计 |
-| [dsh-auto-review](https://github.com/PerryLink/dsh-auto-review) | 审批链上的第二模型自动审查，默认 fail-closed |
-| [dsh-memento](https://github.com/PerryLink/dsh-memento) | 带审批门的跨会话记忆：ctx.memory + SQLite + memory 工具 |
-| [dsh-skill-pack-security](https://github.com/PerryLink/dsh-skill-pack-security) | 安全审计技能包：密钥扫描、依赖与供应链审查 |
-| [dsh-session-pin](https://github.com/PerryLink/dsh-session-pin) | 在 Web 侧边栏置顶会话，持久排序 |
-| [dsh-composer-history](https://github.com/PerryLink/dsh-composer-history) | Web 作曲器终端式输入历史：方向键、Ctrl+R 搜索 |
-| [dsh-github](https://github.com/PerryLink/dsh-github) | DSH 的 GitHub PR/issue 集成，所有写操作经审批门 |
-| [dsh-plugin-guide](https://github.com/PerryLink/dsh-plugin-guide) | 插件开发知识库，随 bundle 安装的按需 agent 技能 |
-| [dsh-claude-move](https://github.com/PerryLink/dsh-claude-move) | 把 Claude Code 会话、记忆、技能和 CLAUDE.md 迁入 DSH |
-
-## License
-
-[Apache License 2.0](LICENSE) © 2026 dsh-mcp-panel contributors
+Apache-2.0 —— 见 [LICENSE](LICENSE)。
