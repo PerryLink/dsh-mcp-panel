@@ -8,7 +8,7 @@
  */
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { probeEndpoint, probeJob } from '../src/probe.ts'
+import { probeEndpoint, probeJob, probeStdio } from '../src/probe.ts'
 
 /** Minimal fetch Response face the probe reads. */
 function fakeResponse(status: number, statusText: string, jsonBody?: unknown): Response {
@@ -119,5 +119,30 @@ describe('probeJob', () => {
     const hooks = probeJob('https://example.com/mcp', {}, 1000)
     const outcome = await hooks.done
     expect(outcome.status).toBe('completed')
+  })
+})
+describe('probeStdio', () => {
+  const NEVER_ABORTED = new AbortController().signal
+
+  it('completes an initialize handshake over a real stdio child', async () => {
+    const script = 'const line = await new Promise((r) => process.stdin.once("data", (d) => r(d.toString())))'
+      + '; process.stdout.write(JSON.stringify({ jsonrpc: "2.0", id: 1, result: { serverInfo: { name: "fake-stdio", version: "9.9.9" } } }) + "\\n")'
+    const outcome = await probeStdio(
+      { kind: 'stdio', command: process.execPath, args: ['-e', script], env: {} },
+      5000,
+      NEVER_ABORTED,
+    )
+    expect(outcome.status).toBe('completed')
+    expect(outcome.detail).toContain('server fake-stdio 9.9.9')
+  })
+
+  it('reports failure when the child exits without responding', async () => {
+    const outcome = await probeStdio(
+      { kind: 'stdio', command: process.execPath, args: ['-e', 'process.exit(0)'], env: {} },
+      5000,
+      NEVER_ABORTED,
+    )
+    expect(outcome.status).toBe('failed')
+    expect(outcome.detail).toContain('process exited before initialize response')
   })
 })

@@ -31,7 +31,7 @@ import {
   type McpLoaderRow,
 } from './aggregate.ts'
 import { groupMcpTools } from './grouping.ts'
-import { probeEndpoint, probeJob, PROBE_KIND } from './probe.ts'
+import { probeEndpoint, probeJob, probeStdio, PROBE_KIND, type ProbeTarget } from './probe.ts'
 import { sanitizeText } from './sanitize.ts'
 import type { McpServerStatus, McpStatusPhase } from './upstream.ts'
 import type { McpFiberPhase, McpPanelSnapshot, McpProbeView, ProbeStarted } from './wire.ts'
@@ -225,9 +225,9 @@ export class McpPanelService extends TypertRemoteService {
    * @returns the started job id and where the result lands.
    */
   probe(serverName: string): ProbeStarted {
-    const target = this.rawEndpoint(serverName)
+    const target = this.probeSpec(serverName)
     if (target === undefined) {
-      throw new Error(`dsh-mcp-panel: "${serverName}" is not a configured streamable-http MCP server`)
+      throw new Error(`dsh-mcp-panel: "${serverName}" is not a configured MCP server`)
     }
     const jobs = this.ctx.get('jobs')
     if (jobs === undefined) {
@@ -237,7 +237,7 @@ export class McpPanelService extends TypertRemoteService {
       kind: PROBE_KIND,
       label: `mcp_probe ${serverName}`,
       // Unowned: no model completion notice, readable by the panel only.
-      run: () => probeJob(target.url, target.headers, this.config.probeTimeoutMs),
+      run: () => probeJob(target, this.config.probeTimeoutMs),
     })
     return {
       jobId,
@@ -253,9 +253,9 @@ export class McpPanelService extends TypertRemoteService {
       for (const entry of this.ctx.loader.entries()) {
         if (entry.options.name !== MCP_CLIENT_MODULE) continue
         const serverName = serverNameOf(entry.options.config, `entry:${entry.options.id}`)
-        const target = this.rawEndpoint(serverName)
+        const target = this.probeSpec(serverName)
         if (target === undefined) continue
-        const outcome = await probeEndpoint(target.url, target.headers, this.config.probeTimeoutMs, AbortSignal.timeout(this.config.probeTimeoutMs))
+        const outcome = target.kind === 'stdio' ? await probeStdio(target, this.config.probeTimeoutMs, AbortSignal.timeout(this.config.probeTimeoutMs)) : await probeEndpoint(target.url, target.headers, this.config.probeTimeoutMs, AbortSignal.timeout(this.config.probeTimeoutMs))
         this.probeStates.set(serverName, { state: outcome.status === 'completed' ? 'reachable' : 'unreachable', checkedAt: Date.now() })
       }
     } finally {
@@ -298,6 +298,60 @@ export class McpPanelService extends TypertRemoteService {
     return undefined
   }
 
+  /**
+   * Resolve one server's probe spec: the raw HTTP endpoint + headers for a
+   * streamable-http row, or the stdio launch spec (command/args/env/cwd) for
+   * a stdio row. Credentials stay inside this return value and are used for
+   * the probe request only — they never reach a snapshot, a log, or a display.
+   *
+   * @param serverName - configured namespace.
+   * @returns the probe spec, or `undefined` when the row is missing or malformed.
+   */
+  probeSpec(serverName: string): ProbeTarget | undefined {
+    for (const entry of this.ctx.loader.entries()) {
+      if (entry.options.name !== MCP_CLIENT_MODULE) continue
+      const config = entry.options.config
+      if (serverNameOf(config, `entry:${entry.options.id}`) !== serverName) continue
+      if (typeof config !== 'object' || config === null || Array.isArray(config)) return undefined
+      const row = config as Record<string, unknown>
+      if (row['transport'] === 'streamable-http') {
+        const url = row['url']
+        if (typeof url !== 'string' || url === '') return undefined
+        const headersValue = row['headers']
+        const headers: Record<string, string> = {}
+        if (typeof headersValue === 'object' && headersValue !== null && !Array.isArray(headersValue)) {
+          for (const [name, value] of Object.entries(headersValue as Record<string, unknown>)) {
+            if (typeof value === 'string') headers[name] = value
+          }
+        }
+        return { kind: 'http', url, headers }
+      }
+      if (row['transport'] === 'stdio') {
+        const command = row['command']
+        if (typeof command !== 'string' || command === '') return undefined
+        const argsValue = row['args']
+        const args: string[] = []
+        if (Array.isArray(argsValue)) for (const arg of argsValue) if (typeof arg === 'string') args.push(arg)
+        const envValue = row['env']
+        const env: Record<string, string> = {}
+        if (typeof envValue === 'object' && envValue !== null && !Array.isArray(envValue)) {
+          for (const [name, value] of Object.entries(envValue as Record<string, unknown>)) {
+            if (typeof value === 'string') env[name] = value
+          }
+        }
+        const cwdValue = row['cwd']
+        return {
+          kind: 'stdio',
+          command,
+          args,
+          env,
+          ...(typeof cwdValue === 'string' && cwdValue !== '' ? { cwd: cwdValue } : {}),
+        }
+      }
+      return undefined
+    }
+    return undefined
+  }
   /** Unowned `mcp-probe` background jobs, newest first, sanitized for display. */
   private probeViews(): McpProbeView[] {
     const jobs = this.ctx.get('jobs')

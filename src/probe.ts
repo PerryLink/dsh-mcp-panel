@@ -13,6 +13,8 @@ import type { JobHooks, JobOutcome, JobRegistry } from '@deepseek-ai/dsh-jobs'
 import type { ToolDefinition } from '@deepseek-ai/dsh-tools'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import { sanitizeError, sanitizeText } from './sanitize.ts'
+import { spawn } from 'node:child_process'
+import { scrubbedParentEnv } from '@deepseek-ai/dsh-subprocess'
 import type { McpPanelService } from './service.ts'
 
 /** Producer kind; also the job-id prefix. */
@@ -41,6 +43,16 @@ export interface ProbeOutcome {
   detail: string
 }
 
+/** One configured server's probe spec: an HTTP endpoint or a stdio launch. */
+export type ProbeTarget =
+  | { readonly kind: 'http'; readonly url: string; readonly headers: Record<string, string> }
+  | {
+      readonly kind: 'stdio'
+      readonly command: string
+      readonly args: readonly string[]
+      readonly env: Record<string, string>
+      readonly cwd?: string
+    }
 /** Display cap for server-reported name/version fields in probe details. */
 const DISPLAY_LIMIT = 80
 
@@ -120,11 +132,93 @@ export async function probeEndpoint(
  * @param timeoutMs - probe deadline.
  * @returns the registry hooks.
  */
-export function probeJob(url: string, headers: Readonly<Record<string, string>>, timeoutMs: number): JobHooks {
+export async function probeStdio(
+  target: Extract<ProbeTarget, { kind: 'stdio' }>,
+  timeoutMs: number,
+  signal: AbortSignal,
+): Promise<ProbeOutcome> {
+  const started = Date.now()
+  return new Promise<ProbeOutcome>((resolve) => {
+    let settled = false
+    let child: ReturnType<typeof spawn> | undefined
+    let buffer = ''
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const finish = (outcome: ProbeOutcome): void => {
+      if (settled) return
+      settled = true
+      if (timer !== undefined) clearTimeout(timer)
+      try { child?.kill() } catch {}
+      resolve(outcome)
+    }
+    timer = setTimeout(() => {
+      if (!settled) finish({ status: 'failed', detail: `timeout after ${timeoutMs}ms or cancelled` })
+    }, timeoutMs)
+    try {
+      child = spawn(target.command, [...target.args], {
+        stdio: ['pipe', 'pipe', 'pipe'],
+        env: { ...scrubbedParentEnv(), ...target.env },
+        ...(target.cwd !== undefined && target.cwd !== '' ? { cwd: target.cwd } : {}),
+        windowsHide: true,
+      })
+    } catch (error) {
+      finish({ status: 'failed', detail: sanitizeError(error) })
+      return
+    }
+    child.on('error', (error) => finish({ status: 'failed', detail: sanitizeError(error) }))
+    child.on('exit', (code, signalName) => {
+      if (!settled) {
+        finish({ status: 'failed', detail: `process exited before initialize response (code ${code ?? 'null'}${signalName ? `, signal ${signalName}` : ''})` })
+      }
+    })
+    child.stdout?.on('data', (chunk) => {
+      buffer += chunk.toString('utf8')
+      let index: number
+      while ((index = buffer.indexOf('\n')) !== -1) {
+        const line = buffer.slice(0, index).trim()
+        buffer = buffer.slice(index + 1)
+        if (line === '') continue
+        let message: { id?: unknown; result?: { serverInfo?: { name?: unknown; version?: unknown } } } | undefined
+        try {
+          message = JSON.parse(line) as typeof message
+        } catch {
+          continue
+        }
+        if (message !== null && typeof message === 'object' && message.id === 1 && message.result !== undefined) {
+          const serverInfo = message.result.serverInfo ?? {}
+          const name = typeof serverInfo.name === 'string' && serverInfo.name !== ''
+            ? boundedDisplay(sanitizeText(serverInfo.name))
+            : 'unnamed'
+          const version = typeof serverInfo.version === 'string' && serverInfo.version !== ''
+            ? boundedDisplay(sanitizeText(serverInfo.version))
+            : 'unknown version'
+          finish({ status: 'completed', detail: `MCP initialize ok over stdio (server ${name} ${version}) in ${Date.now() - started}ms` })
+          return
+        }
+      }
+    })
+    child.stderr?.on('data', () => { /* never rendered */ })
+    signal.addEventListener('abort', () => {
+      if (!settled) finish({ status: 'failed', detail: `timeout after ${timeoutMs}ms or cancelled` })
+    }, { once: true })
+    try {
+      child.stdin?.write(`${JSON.stringify({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'initialize',
+        params: {
+          protocolVersion: INITIALIZE_PROTOCOL_VERSION,
+          capabilities: {},
+          clientInfo: PROBE_CLIENT_INFO,
+        },
+      })}\n`)
+    } catch {}
+  })
+}
+export function probeJob(target: ProbeTarget, timeoutMs: number): JobHooks {
   const controller = new AbortController()
   const timer = setTimeout(() => { controller.abort() }, timeoutMs)
   timer.unref?.()
-  const done: Promise<JobOutcome> = probeEndpoint(url, headers, timeoutMs, controller.signal)
+  const done: Promise<JobOutcome> = (target.kind === 'stdio' ? probeStdio(target, timeoutMs, controller.signal) : probeEndpoint(target.url, target.headers, timeoutMs, controller.signal))
     .then(outcome => ({ ...outcome }))
     .finally(() => { clearTimeout(timer) })
   return {
@@ -138,7 +232,7 @@ function probeTarget(
   service: McpPanelService,
   server: string,
 ): { url: string; headers: Record<string, string> } | undefined {
-  return service.rawEndpoint(server)
+  return service.probeSpec(server)
 }
 
 /**
@@ -152,13 +246,13 @@ function probeTarget(
 export function mcpProbeTool(service: McpPanelService, jobs: JobRegistry, timeoutMs: number): ToolDefinition {
   return defineTool({
     name: 'mcp_probe',
-    description: 'Run a one-shot connectivity probe of a configured streamable-http MCP server as a background job. '
+    description: 'Run a one-shot connectivity probe of a configured MCP server (stdio or streamable-http) as a background job. '
       + 'Results appear in the MCP settings panel only — they are not injected into model context.',
     parameters: {
       server: {
         type: 'string',
         required: true,
-        description: 'serverName of a configured streamable-http MCP server (see /mcp for the list).',
+        description: 'serverName of a configured MCP server (see /mcp for the list); stdio and streamable-http transports are both supported.',
       },
     },
     output: {
@@ -179,15 +273,14 @@ export function mcpProbeTool(service: McpPanelService, jobs: JobRegistry, timeou
       const target = probeTarget(service, args.server)
       if (target === undefined) {
         throw new Error(
-          `mcp_probe: "${args.server}" is not a configured streamable-http MCP server (see /mcp). `
-          + 'stdio servers have no HTTP endpoint to probe.',
+          `mcp_probe: "${args.server}" is not a configured MCP server (see /mcp).`
         )
       }
       const jobId = jobs.start({
         kind: PROBE_KIND,
         label: `mcp_probe ${args.server}`,
         // Unowned: no model completion notice, readable by the panel only.
-        run: () => probeJob(target.url, target.headers, timeoutMs),
+        run: () => probeJob(target, timeoutMs),
       })
       return {
         jobId,

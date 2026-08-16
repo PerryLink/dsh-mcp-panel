@@ -2,6 +2,11 @@
 
 All notable changes to this project are documented in this file.
 
+## [Unreleased]
+
+### Added
+
+- Stdio connectivity probes: `mcp_probe`, the panel probe action, `/mcp <server> probe`, and the optional passive probe now work for stdio MCP servers too. The probe spawns the configured command, completes one MCP `initialize` handshake over stdio, and records the sanitized server name/version (or a sanitized failure) in the panel; previously only streamable-http endpoints could be probed.
 ## [0.3.0] - 2026-08-15
 
 ### Added
