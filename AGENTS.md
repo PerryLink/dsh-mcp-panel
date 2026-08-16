@@ -48,4 +48,4 @@ Schema in `src/config.ts` (Schemastery, fail-loud bounds, explicit `resolveConfi
 
 ## Peer versions
 
-Peer deps pin `0.1.0-rc.6`; the package runs against harness installations ≥ rc.5 (the profile's hoisted module fallback resolves peers to the installation's own copies).
+Peer deps pin `0.1.0-rc.6`; the package runs against harness installations ≥ rc.5 (the profile's hoisted module fallback resolves peers to the installation's own copies). `@types/node` deliberately tracks the `engines` floor (Node 22 line, `^22.19.0`): major bumps such as dependabot's 26.2.0 proposal describe APIs the supported runtime does not have and are declined (dependabot.yml ignores semver-major for it; rationale also on PR #3). Client type faces come from the five `@deepseek-ai/dsh-client-*` devDependencies (`connection`/`locale`/`runtime`/`ui-settings`/`ui-slots`, rc.6) — imports in `src/client` resolve against them, so a clean checkout typechecks with `typecheck:ci` alone.
