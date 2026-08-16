@@ -10,6 +10,7 @@
 
 import { describe, expect, it } from 'vitest'
 import { mcpRow, mountHarness, nestedMcpRow, runCommand } from './harness.ts'
+import { parseMcpArgs } from '../src/command.ts'
 
 function text(result: unknown): string {
   return (result as { result?: { text?: string }; text?: string }).result?.text ?? (result as { text?: string }).text ?? ''
@@ -49,7 +50,7 @@ describe('/mcp command', () => {
     const harness = await mountHarness()
     expect(harness.ctx.commands.list(harness.agent).map(command => command.name)).toContain('mcp')
     expect(harness.ctx.commands.find(harness.agent, 'mcp')).toMatchObject({
-      input: { hint: '[server] [tools|disable|enable|probe]' },
+      input: { hint: '[server] [tools|call|health|disable|enable|probe]' },
     })
   })
 
@@ -279,5 +280,62 @@ describe('/mcp <server> probe command action', () => {
     const result = await runCommand(harness, '/mcp web probe')
     expect(result?.result.kind).toBe('error')
     expect(text(result)).toContain('ctx.jobs is not composed')
+  })
+})
+
+describe('/mcp health and call console actions', () => {
+  it('renders the health block with derived suggestions and honest pending markers', async () => {
+    const harness = await mountHarness([mcpRow('mcp-github', GITHUB_CONFIG)])
+    harness.ctx.emit('mcp/status', {
+      serverName: 'github',
+      phase: 'waiting',
+      attempt: 2,
+      maxAttempts: 10,
+      error: 'spawn npx ENOENT',
+      toolCount: 0,
+    })
+    const output = text(await runCommand(harness, '/mcp github health'))
+    expect(output).toContain('Health of "github":')
+    expect(output).toContain('Suggestions:')
+    expect(output).toContain('command-not-found')
+    expect(output).toContain('reconnect-waiting')
+    expect(output).toContain('pending upstream support')
+    expect(output).not.toContain('ENOENT-secret')
+  })
+
+  it('trial-calls a tool through the official pipeline and reports the canonical result', async () => {
+    const harness = await mountHarness([mcpRow('mcp-github', GITHUB_CONFIG)])
+    harness.ctx.tools.register({
+      name: 'mcp__github__create_issue',
+      description: 'Create an issue',
+      parameters: {},
+      output: { schema: { type: 'null' }, render: () => [{ type: 'text', text: 'created' }] },
+      execute: () => Promise.resolve(null),
+    })
+    const result = await runCommand(harness, '/mcp github call mcp__github__create_issue {"title":"hi"}')
+    expect(result?.result.kind).toBe('success')
+    const output = text(result)
+    expect(output).toContain('Trial call mcp__github__create_issue through the official tool pipeline')
+    expect(output).toContain(': ok.')
+    expect(output).toContain('"value": null')
+    expect(output).toContain('created')
+  })
+
+  it('reports trial-call errors as error results without touching any config', async () => {
+    const harness = await mountHarness([mcpRow('mcp-github', GITHUB_CONFIG)])
+    const unknown = await runCommand(harness, '/mcp github call mcp__github__nope {}')
+    expect(unknown?.result.kind).toBe('error')
+    expect(text(unknown)).toContain('not registered')
+  })
+
+  it('parses call arguments with embedded whitespace verbatim', () => {
+    expect(parseMcpArgs('github call mcp__github__t {"a": 1, "b": "two words"}')).toEqual({
+      kind: 'server',
+      server: 'github',
+      action: 'call',
+      tool: 'mcp__github__t',
+      argsJson: '{"a": 1, "b": "two words"}',
+    })
+    expect(parseMcpArgs('github call')).toEqual({ kind: 'usage' })
   })
 })

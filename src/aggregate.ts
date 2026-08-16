@@ -16,12 +16,14 @@
  */
 
 import { groupMcpTools, type McpToolGroup } from './grouping.ts'
+import { diagnoseServer } from './diagnostics.ts'
 import { sanitizeError, sanitizeUrl } from './sanitize.ts'
 import type { McpServerStatus } from './upstream.ts'
 import type {
   McpConnectionPhase,
   McpFiberPhase,
   McpPanelSnapshot,
+  McpServerConfigView,
   McpServerView,
   McpTransport,
 } from './wire.ts'
@@ -152,6 +154,56 @@ function connectionPhase(status: McpServerStatus | undefined): McpConnectionPhas
 }
 
 /**
+ * Assemble the sanitized editing view of one row's config. Secret VALUES
+ * never appear — env/header maps surface as key lists only, and the URL is
+ * credential-redacted for display. Editing semantics re-merge raw values
+ * host-side (`src/patch.ts`), so a redacted value never round-trips.
+ *
+ * @param config - the row's raw serialized config (never displayed).
+ * @param fallbackName - stable namespace fallback for a malformed row.
+ * @returns the display-only config view.
+ */
+export function configViewOf(config: unknown, fallbackName: string): McpServerConfigView {
+  const transport = stringField(config, 'transport', '')
+  const normalized: McpTransport = transport === 'stdio' || transport === 'streamable-http' ? transport : 'unknown'
+  const argsValue = plainField(config, 'args')
+  const args = Array.isArray(argsValue)
+    ? argsValue.filter((entry): entry is string => typeof entry === 'string')
+    : []
+  const keysOf = (key: string): string[] => {
+    const value = plainField(config, key)
+    if (typeof value !== 'object' || value === null || Array.isArray(value)) return []
+    return Object.keys(value as Record<string, unknown>)
+  }
+  const urlRaw = stringField(config, 'url', '')
+  const timeout = plainField(config, 'toolCallTimeoutMs')
+  const failFast = plainField(config, 'failOnStartupError')
+  const reconnectValue = plainField(config, 'reconnect')
+  let reconnectEnabled: boolean | null = null
+  let reconnectMaxAttempts: number | null = null
+  if (typeof reconnectValue === 'object' && reconnectValue !== null && !Array.isArray(reconnectValue)) {
+    const enabled = plainField(reconnectValue, 'enabled')
+    const maxAttempts = plainField(reconnectValue, 'maxAttempts')
+    if (typeof enabled === 'boolean') reconnectEnabled = enabled
+    if (typeof maxAttempts === 'number' && Number.isFinite(maxAttempts)) reconnectMaxAttempts = maxAttempts
+  }
+  return {
+    serverName: serverNameOf(config, fallbackName),
+    transport: normalized,
+    command: normalized === 'stdio' ? stringField(config, 'command', '') || null : null,
+    args,
+    cwd: normalized === 'stdio' ? stringField(config, 'cwd', '') || null : null,
+    url: normalized === 'streamable-http' && urlRaw !== '' ? sanitizeUrl(urlRaw) : null,
+    envKeys: keysOf('env'),
+    headerKeys: keysOf('headers'),
+    toolCallTimeoutMs: typeof timeout === 'number' && Number.isFinite(timeout) ? timeout : null,
+    failOnStartupError: typeof failFast === 'boolean' ? failFast : null,
+    reconnectEnabled,
+    reconnectMaxAttempts,
+  }
+}
+
+/**
  * Assemble one server view from loader, registry, and upstream facts.
  * Missing upstream data degrades to `unknown`/`-1`/`null` — never fabricated.
  *
@@ -177,6 +229,9 @@ export function aggregateServerView(
   const delayMs = status?.delayMs ?? null
   const observedAt = facts.observedAt.get(serverName) ?? null
   const probe = facts.probeStates.get(serverName)
+  const phase = connectionPhase(status)
+  const exitCode = status?.exitCode ?? null
+  const stderrTail = status?.stderrTail === undefined ? null : sanitizeError(status.stderrTail)
   return {
     serverName,
     entryId: row?.entryId ?? '',
@@ -187,7 +242,7 @@ export function aggregateServerView(
     configuredNote: row === undefined ? null : configuredNote(row.config),
     toolCount: group?.tools.length ?? 0,
     tools: group?.tools ?? [],
-    phase: connectionPhase(status),
+    phase,
     attempt,
     maxAttempts,
     delayMs,
@@ -198,6 +253,19 @@ export function aggregateServerView(
     probeState: probe?.state ?? null,
     probeCheckedAt: probe?.checkedAt ?? null,
     statusSource: status === undefined ? 'derived' : 'upstream-event',
+    config: row === undefined ? null : configViewOf(row.config, `entry:${row.entryId}`),
+    diagnostics: diagnoseServer({
+      lastError,
+      phase,
+      attempt,
+      maxAttempts,
+      fiberPhase: row?.fiberPhase ?? null,
+      transport,
+      probeState: probe?.state ?? null,
+      enabled: row?.disabled === false,
+    }),
+    exitCode,
+    stderrTail,
   }
 }
 
@@ -215,6 +283,12 @@ export interface McpAggregateInput {
   patchFile: string | null
   /** Suggested panel refresh interval in ms (`0` = on demand). */
   refreshIntervalMs: number
+  /** Resources/Prompts availability (feature-detected upstream catalog seam). */
+  capabilities: McpPanelSnapshot['capabilities']
+  /** Trial console policy and limits. */
+  trial: McpPanelSnapshot['trial']
+  /** Whether profile-patch writes are allowed at all. */
+  writeEnabled: boolean
 }
 
 /**
@@ -225,7 +299,7 @@ export interface McpAggregateInput {
  * @returns the wire snapshot.
  */
 export function aggregateSnapshot(input: McpAggregateInput): McpPanelSnapshot {
-  const { rows, groups, facts, probes, patchFile, refreshIntervalMs } = input
+  const { rows, groups, facts, probes, patchFile, refreshIntervalMs, capabilities, trial, writeEnabled } = input
   // One view per namespace: the enabled row wins; otherwise the first row.
   const rowsByName = new Map<string, McpLoaderRow>()
   for (const row of rows) {
@@ -244,5 +318,8 @@ export function aggregateSnapshot(input: McpAggregateInput): McpPanelSnapshot {
     refreshIntervalMs,
     servers,
     probes,
+    capabilities,
+    trial,
+    writeEnabled,
   }
 }

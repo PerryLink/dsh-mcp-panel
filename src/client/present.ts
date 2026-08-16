@@ -65,6 +65,12 @@ export interface PresentedMcpPanel {
   readonly patchFile: string | null
   /** Suggested refresh interval in ms (`0` = on demand only). */
   readonly refreshIntervalMs: number
+  /** Resources/Prompts availability (feature-detected upstream catalog seam). */
+  readonly capabilities: McpPanelSnapshot['capabilities']
+  /** Trial console policy and limits. */
+  readonly trial: McpPanelSnapshot['trial']
+  /** Whether profile-patch writes are allowed at all. */
+  readonly writeEnabled: boolean
 }
 
 /**
@@ -135,6 +141,9 @@ export function presentMcpPanel(snapshot: McpPanelSnapshot, now = Date.now()): P
     observed: snapshot.observed,
     patchFile: snapshot.patchFile,
     refreshIntervalMs: snapshot.refreshIntervalMs,
+    capabilities: snapshot.capabilities,
+    trial: snapshot.trial,
+    writeEnabled: snapshot.writeEnabled,
   }
 }
 

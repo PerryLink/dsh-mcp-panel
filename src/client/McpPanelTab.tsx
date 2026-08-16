@@ -1,16 +1,32 @@
-/** The read-only MCP management tab: server rows, badges, tools, probes. */
+/** The MCP management console tab: server cards, CRUD editor, trial console, capabilities, probes. */
 
 import { useEffect, useId, useState, type ReactNode } from 'react'
 import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import { filterServers, presentMcpPanel, probeBadge, summarizePanel, type BadgeTone, type PresentedServerRow } from './present.ts'
-import type { McpPanelSnapshot, McpProbeView, ProbeStarted } from '../wire.ts'
+import { ServerEditor } from './ServerEditor.tsx'
+import { TrialConsole } from './TrialConsole.tsx'
+import type {
+  McpPanelSnapshot,
+  McpProbeView,
+  McpServerView,
+  McpTrialResultWire,
+  PatchPreview,
+  PatchWriteResult,
+  ProbeStarted,
+} from '../wire.ts'
 
-/** Registration-side injected face: the unwrapped snapshot read + probe start. */
+/** Registration-side injected face: the console RPCs (RemoteResult already unwrapped). */
 export interface McpPanelTabInjected {
-  /** Read the current Host snapshot (RemoteResult already unwrapped). */
+  /** Read the current Host snapshot. */
   status: () => Promise<McpPanelSnapshot>
   /** Start a one-shot probe of one streamable-http server (panel-only result). */
   probe: (serverName: string) => Promise<ProbeStarted>
+  /** Render one CRUD operation as its patch fragment (no write). */
+  previewPatch: (opJson: string) => Promise<PatchPreview>
+  /** Approval-gated append of one CRUD operation to the profile patch layer. */
+  writePatch: (opJson: string, confirmed: boolean) => Promise<PatchWriteResult>
+  /** Trial-call one tool through the official pipeline. */
+  callTool: (requestJson: string) => Promise<McpTrialResultWire>
 }
 
 /** Full component props assembled by the Settings slot renderer. */
@@ -57,8 +73,15 @@ function formatProbeTime(view: McpProbeView): string {
   return view.finishedAt === null ? start : `${start}–${format(view.finishedAt)}`
 }
 
-/** Render the read-only MCP management tab. */
-export function McpPanelTab({ status, probe, t }: McpPanelTabProps): ReactNode {
+/** Localized text for one diagnostic code (fallback: the wire's English text). */
+function diagnosticText(code: string, text: string, t: McpPanelTabProps['t']): string {
+  const key = `diag_${code}` as const
+  const candidate = (t as unknown as (key: string) => string)(key)
+  return candidate === key ? text : candidate
+}
+
+/** Render the MCP management console tab. */
+export function McpPanelTab({ status, probe, previewPatch, writePatch, callTool, t }: McpPanelTabProps): ReactNode {
   const listId = useId()
   const [request, setRequest] = useState(0)
   // Expanded card set: multiple cards may be open at once, so "expand all"
@@ -71,6 +94,11 @@ export function McpPanelTab({ status, probe, t }: McpPanelTabProps): ReactNode {
   const [toolQueries, setToolQueries] = useState<Record<string, string>>({})
   // Server search across names and display targets; filters the card list only.
   const [serverQuery, setServerQuery] = useState('')
+  // CRUD editor state: null = closed; { view: null } = add mode.
+  const [editor, setEditor] = useState<{ readonly entryId: string; readonly view: McpServerView['config'] } | { readonly entryId: ''; readonly view: null } | null>(null)
+  // Armed removal (a disable-patch write) per server namespace.
+  const [removeArm, setRemoveArm] = useState<string | null>(null)
+  const [removeError, setRemoveError] = useState<string | null>(null)
 
   const reload = (): void => {
     setRequest(value => value + 1)
@@ -113,7 +141,7 @@ export function McpPanelTab({ status, probe, t }: McpPanelTabProps): ReactNode {
     .replace('{total}', String(summary.total))
     .replace('{connected}', String(summary.connected))
     .replace('{errored}', String(summary.errored))
-  const probeRunning = model !== undefined && model.probes.some(probe => probe.view.status === 'running')
+  const probeRunning = model !== undefined && model.probes.some(probeRow => probeRow.view.status === 'running')
   // While a probe runs, poll on a short fixed cadence so the probe row (and
   // the disabled probe button) settles even when refreshIntervalMs is 0.
   useEffect(() => {
@@ -170,7 +198,7 @@ export function McpPanelTab({ status, probe, t }: McpPanelTabProps): ReactNode {
                   const detailId = `${listId}-${encodeURIComponent(row.view.serverName)}`
                   const toolQuery = toolQueries[row.view.serverName] ?? ''
                   const rowProbeRunning = model.probes.some(
-                    probe => probe.view.status === 'running' && probe.view.serverName === row.view.serverName,
+                    probeRow => probeRow.view.status === 'running' && probeRow.view.serverName === row.view.serverName,
                   )
                   return (
                     <li className="dmcp-card" key={row.view.serverName} data-mcp-server={row.view.serverName} data-open={open ? 'true' : undefined}>
@@ -218,8 +246,62 @@ export function McpPanelTab({ status, probe, t }: McpPanelTabProps): ReactNode {
                             {row.view.configuredNote !== null ? <div><dt>{t('configured')}</dt><dd>{row.view.configuredNote}</dd></div> : null}
                             {row.ageSeconds !== null ? <div><dt>{t('lastEvent')}</dt><dd>{row.ageSeconds}s</dd></div> : null}
                             {row.view.delayMs !== null ? <div><dt>{t('retryIn')}</dt><dd>{row.view.delayMs} {t('ms')}</dd></div> : null}
+                            {row.view.exitCode !== null ? <div><dt>{t('exitCode')}</dt><dd>{row.view.exitCode}</dd></div> : null}
+                            {row.view.stderrTail !== null ? <div><dt>{t('stderrTail')}</dt><dd>{row.view.stderrTail}</dd></div> : null}
                           </dl>
+                          {row.view.diagnostics.length > 0 ? (
+                            <div className="dmcp-health">
+                              <p className="dmcp-health-title">{t('healthSuggestions')}</p>
+                              <ul className="dmcp-health-list">
+                                {row.view.diagnostics.map(diagnostic => (
+                                  <li key={diagnostic.code}>{diagnosticText(diagnostic.code, diagnostic.text, t)} <code className="dmcp-diag-code">({diagnostic.code})</code></li>
+                                ))}
+                              </ul>
+                            </div>
+                          ) : null}
+                          {row.view.exitCode === null && row.view.stderrTail === null ? (
+                            <p className="dmcp-status">{t('healthPending')}</p>
+                          ) : null}
                           <code className="dmcp-target" title={row.view.target}>{row.view.transport} {row.view.target}</code>
+                          {row.view.config !== null ? (
+                            <div className="dmcp-editor-actions">
+                              <button type="button" className="dmcp-action" onClick={() => { setEditor({ entryId: row.view.entryId, view: row.view.config }) }}>
+                                {t('editServer')}
+                              </button>
+                              <button
+                                type="button"
+                                className="dmcp-action dmcp-danger"
+                                onClick={() => { setRemoveArm(row.view.serverName); setRemoveError(null) }}
+                              >
+                                {t('removeServer')}
+                              </button>
+                            </div>
+                          ) : null}
+                          {removeArm === row.view.serverName && row.view.entryId !== '' ? (
+                            <div className="dmcp-remove">
+                              <p className="dmcp-status">{t('removeConfirm')}</p>
+                              {removeError !== null ? <p className="dmcp-error-text" role="alert">{removeError}</p> : null}
+                              <div className="dmcp-editor-actions">
+                                <button
+                                  type="button"
+                                  className="dmcp-action dmcp-danger"
+                                  onClick={() => {
+                                    setRemoveError(null)
+                                    void Promise.resolve().then(() => writePatch(
+                                      JSON.stringify({ kind: 'disable', entryId: row.view.entryId, serverName: row.view.serverName }),
+                                      true,
+                                    )).then(
+                                      () => { setRemoveArm(null); reload() },
+                                      (error: unknown) => { setRemoveError(error instanceof Error ? error.message : String(error)) },
+                                    )
+                                  }}
+                                >
+                                  {t('confirmWrite')}
+                                </button>
+                                <button type="button" className="dmcp-action" onClick={() => { setRemoveArm(null) }}>{t('cancel')}</button>
+                              </div>
+                            </div>
+                          ) : null}
                           {row.view.transport === 'streamable-http' ? (
                             <button
                               type="button"
@@ -274,25 +356,64 @@ export function McpPanelTab({ status, probe, t }: McpPanelTabProps): ReactNode {
           )}
           {!model.observed && !model.empty ? <p className="dmcp-derived-note">{t('derivedNote')}</p> : null}
           {probeError !== null ? <p className="dmcp-error-text" role="alert">{t('probeFailedAction')}: {probeError}</p> : null}
+          {model.patchFile !== null ? (
+            <p className="dmcp-patch-hint">{t('patchHint')} <code>{model.patchFile}</code></p>
+          ) : null}
+
+          <div className="dmcp-toolbar">
+            <button type="button" className="dmcp-action" onClick={() => { setEditor({ entryId: '', view: null }) }}>
+              {t('addServer')}
+            </button>
+          </div>
+          {editor !== null ? (
+            <ServerEditor
+              t={t}
+              view={editor.view}
+              entryId={editor.entryId}
+              writeEnabled={model.writeEnabled}
+              actions={{ previewPatch, writePatch }}
+              onClose={() => { setEditor(null); reload() }}
+              onWritten={() => { reload() }}
+            />
+          ) : null}
+
+          <TrialConsole
+            t={t}
+            servers={model.servers.map(row => row.view)}
+            policy={state.status === 'ready' ? state.snapshot.trial : { enabled: false, timeoutMs: 0, maxResultChars: 0 }}
+            callTool={callTool}
+          />
+
+          <div className="dmcp-capabilities">
+            <h3 className="dmcp-heading">{t('capabilities')}</h3>
+            <ul className="dmcp-capabilities-list">
+              <li>
+                <Badge tone={model.capabilities.resources.available ? 'ok' : 'muted'} label={t('capResources')} />
+                {!model.capabilities.resources.available ? <span className="dmcp-tool-description">{t('capPending')}</span> : null}
+              </li>
+              <li>
+                <Badge tone={model.capabilities.prompts.available ? 'ok' : 'muted'} label={t('capPrompts')} />
+                {!model.capabilities.prompts.available ? <span className="dmcp-tool-description">{t('capPending')}</span> : null}
+              </li>
+            </ul>
+          </div>
+
           <h3 className="dmcp-heading">{t('probes')}</h3>
           {model.probes.length === 0 ? <p className="dmcp-status">{t('probeEmpty')}</p> : (
             <ul className="dmcp-probes">
-              {model.probes.map((probe) => {
-                const badge = probeBadge(probe.view.status)
+              {model.probes.map((probeRow) => {
+                const badge = probeBadge(probeRow.view.status)
                 return (
-                  <li key={probe.view.id} className="dmcp-probe" data-mcp-probe={probe.view.id}>
+                  <li key={probeRow.view.id} className="dmcp-probe" data-mcp-probe={probeRow.view.id}>
                     <Badge tone={badge.tone} label={probeLabel(badge.badge, t)} />
-                    <code>{probe.view.serverName}</code>
-                    <span className="dmcp-probe-time">{formatProbeTime(probe.view)}</span>
-                    <span className="dmcp-probe-detail">{probe.view.detail ?? t('none')}</span>
+                    <code>{probeRow.view.serverName}</code>
+                    <span className="dmcp-probe-time">{formatProbeTime(probeRow.view)}</span>
+                    <span className="dmcp-probe-detail">{probeRow.view.detail ?? t('none')}</span>
                   </li>
                 )
               })}
             </ul>
           )}
-          {model.patchFile !== null ? (
-            <p className="dmcp-patch-hint">{t('patchHint')} <code>{model.patchFile}</code></p>
-          ) : null}
         </div>
       ) : null}
     </div>

@@ -25,6 +25,13 @@ function row(entryId: string, config: unknown, disabled = false, fiberPhase: Mcp
 
 const NO_FACTS = { statuses: new Map(), reconnects: new Map(), observedAt: new Map(), probeStates: new Map() }
 
+/** The console policy inputs every snapshot call carries. */
+const CONSOLE_INPUT = {
+  capabilities: { resources: { available: false }, prompts: { available: false } },
+  trial: { enabled: true, timeoutMs: 120_000, maxResultChars: 60_000 },
+  writeEnabled: true,
+} as const
+
 describe('deriveTarget', () => {
   it('derives stdio command lines with quoted args', () => {
     expect(deriveTarget({ transport: 'stdio', command: 'npx', args: ['-y', 'pkg with space'] }))
@@ -158,7 +165,7 @@ describe('aggregateSnapshot', () => {
       row('mcp-a-2', { serverName: 'a', transport: 'stdio', command: 'two' }, false),
     ]
     const groups = groupMcpTools([{ name: 'mcp__a__t', description: '' }], ['a'])
-    const snapshot = aggregateSnapshot({ rows, groups, facts: NO_FACTS, probes: [], patchFile: null, refreshIntervalMs: 0 })
+    const snapshot = aggregateSnapshot({ ...CONSOLE_INPUT, rows, groups, facts: NO_FACTS, probes: [], patchFile: null, refreshIntervalMs: 0 })
     expect(snapshot.servers).toHaveLength(1)
     expect(snapshot.servers[0]!.entryId).toBe('mcp-a-2')
     expect(snapshot.observed).toBe(false)
@@ -167,20 +174,30 @@ describe('aggregateSnapshot', () => {
   it('includes leftover namespaces from the tool registry', () => {
     const rows = [row('mcp-a', { serverName: 'a' })]
     const groups = groupMcpTools([{ name: 'mcp__stray__t', description: '' }], ['a'])
-    const snapshot = aggregateSnapshot({ rows, groups, facts: NO_FACTS, probes: [], patchFile: '/p/cordis.patch.yml', refreshIntervalMs: 0 })
+    const snapshot = aggregateSnapshot({ ...CONSOLE_INPUT, rows, groups, facts: NO_FACTS, probes: [], patchFile: '/p/cordis.patch.yml', refreshIntervalMs: 0 })
     expect(snapshot.servers.map(view => view.serverName)).toEqual(['a', 'stray'])
     expect(snapshot.patchFile).toBe('/p/cordis.patch.yml')
   })
 
   it('survives a fully empty environment', () => {
-    const snapshot = aggregateSnapshot({ rows: [], groups: [], facts: NO_FACTS, probes: [], patchFile: null, refreshIntervalMs: 0 })
-    expect(snapshot).toEqual({ observed: false, patchFile: null, refreshIntervalMs: 0, servers: [], probes: [] })
+    const snapshot = aggregateSnapshot({ ...CONSOLE_INPUT, rows: [], groups: [], facts: NO_FACTS, probes: [], patchFile: null, refreshIntervalMs: 0 })
+    expect(snapshot).toEqual({
+      observed: false,
+      patchFile: null,
+      refreshIntervalMs: 0,
+      servers: [],
+      probes: [],
+      capabilities: CONSOLE_INPUT.capabilities,
+      trial: CONSOLE_INPUT.trial,
+      writeEnabled: true,
+    })
   })
 })
 
 describe('wire schema', () => {
   it('round-trips a representative snapshot through the strict codec', () => {
     const snapshot = aggregateSnapshot({
+      ...CONSOLE_INPUT,
       rows: [row('mcp-github', { transport: 'stdio', command: 'npx', args: ['-y', 'x'], serverName: 'github' })],
       groups: groupMcpTools([{ name: 'mcp__github__t', description: 'd' }], ['github']),
       facts: NO_FACTS,

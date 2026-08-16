@@ -33,9 +33,20 @@ function server(overrides: Partial<McpServerView> = {}): McpServerView {
     probeState: null,
     probeCheckedAt: null,
     statusSource: 'derived',
+    config: null,
+    diagnostics: [],
+    exitCode: null,
+    stderrTail: null,
     ...overrides,
   }
 }
+
+/** The console policy fields every snapshot literal carries. */
+const SNAPSHOT_BASE = {
+  capabilities: { resources: { available: false }, prompts: { available: false } },
+  trial: { enabled: true, timeoutMs: 120_000, maxResultChars: 60_000 },
+  writeEnabled: true,
+} as const
 
 describe('connectionBadge', () => {
   it('prefers disabled and failed-fiber facts over the connection phase', () => {
@@ -74,7 +85,7 @@ describe('probeBadge', () => {
 
 describe('presentMcpPanel', () => {
   it('projects reconnect counts, error flags, and empty/observed facts', () => {
-    const snapshot: McpPanelSnapshot = {
+    const snapshot: McpPanelSnapshot = { ...SNAPSHOT_BASE,
       observed: true,
       patchFile: '/p/cordis.patch.yml',
       refreshIntervalMs: 15000,
@@ -96,7 +107,7 @@ describe('presentMcpPanel', () => {
   })
 
   it('computes event age and attempt-budget visibility from a fixed clock', () => {
-    const snapshot: McpPanelSnapshot = {
+    const snapshot: McpPanelSnapshot = { ...SNAPSHOT_BASE,
       observed: true,
       patchFile: null,
       refreshIntervalMs: 0,
@@ -114,7 +125,7 @@ describe('presentMcpPanel', () => {
   })
 
   it('flags the empty composition', () => {
-    const model = presentMcpPanel({ observed: false, patchFile: null, refreshIntervalMs: 0, servers: [], probes: [] })
+    const model = presentMcpPanel({ ...SNAPSHOT_BASE, observed: false, patchFile: null, refreshIntervalMs: 0, servers: [], probes: [] })
     expect(model.empty).toBe(true)
     expect(model.observed).toBe(false)
   })
@@ -122,7 +133,7 @@ describe('presentMcpPanel', () => {
 
 describe('summarizePanel', () => {
   it('counts connected and errored badges and always reports the total', () => {
-    const snapshot: McpPanelSnapshot = {
+    const snapshot: McpPanelSnapshot = { ...SNAPSHOT_BASE,
       observed: false,
       patchFile: null,
       refreshIntervalMs: 0,
@@ -143,7 +154,7 @@ describe('summarizePanel', () => {
   })
 
   it('agrees with the badge derivation for disabled and leftover rows', () => {
-    const snapshot: McpPanelSnapshot = {
+    const snapshot: McpPanelSnapshot = { ...SNAPSHOT_BASE,
       observed: false,
       patchFile: null,
       refreshIntervalMs: 0,
@@ -158,7 +169,7 @@ describe('summarizePanel', () => {
 
 describe('filterServers', () => {
   function rows(): ReturnType<typeof presentMcpPanel>['servers'] {
-    const snapshot: McpPanelSnapshot = {
+    const snapshot: McpPanelSnapshot = { ...SNAPSHOT_BASE,
       observed: false,
       patchFile: null,
       refreshIntervalMs: 0,

@@ -1,7 +1,7 @@
 {
   "name": "dsh-mcp-panel",
   "version": "0.3.0",
-  "description": "Read-only runtime management panel for the official DeepSeek Harness MCP client: /mcp command, a Settings page MCP tab with connection status, recent errors, reconnect counts and tool inventory (sanitized for display), controlled enable/disable patch suggestions, and an optional one-shot Streamable HTTP connectivity probe.",
+  "description": "MCP management console for the official DeepSeek Harness MCP client: /mcp command with health diagnostics and pipeline trial calls, a Settings MCP tab with server CRUD (append-only profile-patch fragments, approval-gated writes with automatic backups), a tool trial console over the official tool pipeline, connection status, reconnect counts and sanitized tool inventory, plus an optional Streamable HTTP probe.",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/PerryLink/dsh-mcp-panel.git"
@@ -86,10 +86,10 @@
       ]
     },
     "capability": {
-      "id": "mcp-command",
+      "id": "mcp-console",
       "kind": "command",
       "invocation": "/mcp",
-      "expected": "lists configured MCP servers with connection status, tool counts, last errors and reconnect counts, with localized output"
+      "expected": "lists configured MCP servers with connection status, tool counts, health diagnostics and reconnect counts, trial-calls tools through the official pipeline, and renders append-only profile-patch CRUD operations (add/edit/remove) for copy or approval-gated write, with localized output"
     },
     "evidence": {
       "install": null,
@@ -106,6 +106,8 @@
     "cordis",
     "mcp",
     "mcp-client",
+    "mcp-console",
+    "management",
     "observability",
     "panel"
   ],

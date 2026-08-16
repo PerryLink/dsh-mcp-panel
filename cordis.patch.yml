@@ -1,7 +1,8 @@
-# dsh-mcp-panel bundle patch: mount the read-only MCP management panel. `name`
-# is the package name, resolved through the profile's node_modules. An
-# id-targeted override replaces the whole config row — restate every key when
-# overriding. The panel never edits any config file itself.
+# dsh-mcp-panel bundle patch: mount the MCP management console. `name` is the
+# package name, resolved through the profile's node_modules. An id-targeted
+# override replaces the whole config row — restate every key when overriding.
+# The console writes the PROFILE patch layer (cordis.patch.yml) only through
+# its approval-gated, backup-first, append-only CRUD actions.
 - insert:
     - id: mcp-panel
       name: dsh-mcp-panel
@@ -21,3 +22,15 @@
         # passiveProbeEnabled: false
         # Passive probe interval in milliseconds.
         # passiveProbeIntervalMs: 60000
+        # Tool trial console (settings tab + /mcp call) through the official
+        # tool pipeline. Set false to disable trial calls entirely.
+        # trialEnabled: true
+        # Panel-side deadline for one trial tool call in milliseconds.
+        # trialTimeoutMs: 120000
+        # Cap on the trial result payload in characters.
+        # trialMaxResultChars: 60000
+        # Kill switch for profile-patch writes: false rejects every write
+        # (fragments stay copyable).
+        # writeEnabled: true
+        # Number of cordis.patch.yml backups retained per write.
+        # backupCount: 5

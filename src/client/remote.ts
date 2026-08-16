@@ -10,18 +10,33 @@
 
 import type { RemoteResult, TypertRemoteContribution } from '@deepseek-ai/dsh-typert-protocol'
 import { MCP_PANEL_INVOCATIONS } from '../wire.ts'
-import type { McpPanelSnapshot, ProbeStarted } from '../wire.ts'
+import type {
+  McpPanelSnapshot,
+  McpTrialResultWire,
+  PatchPreview,
+  PatchWriteResult,
+  ProbeStarted,
+} from '../wire.ts'
 
 declare module '@deepseek-ai/dsh-typert-protocol' {
   interface TypertRemoteNamespace$mcpPanel {
-    /** Read the current read-only MCP snapshot. */
+    /** Read the current console snapshot. */
     status: () => Promise<RemoteResult<McpPanelSnapshot>>
     /** Start a one-shot connectivity probe of one streamable-http server. */
     probe: (serverName: string) => Promise<RemoteResult<ProbeStarted>>
+    /** Render one CRUD operation as its patch fragment (no write). */
+    previewPatch: (opJson: string) => Promise<RemoteResult<PatchPreview>>
+    /** Approval-gated append of one CRUD operation to the profile patch layer. */
+    writePatch: (opJson: string, confirmed: boolean, sessionId?: string) => Promise<RemoteResult<PatchWriteResult>>
+    /** Trial-call one tool through the official pipeline. */
+    callTool: (requestJson: string, sessionId?: string) => Promise<RemoteResult<McpTrialResultWire>>
   }
   interface TypertRemoteMap {
     'mcpPanel/status': () => Promise<RemoteResult<McpPanelSnapshot>>
     'mcpPanel/probe': (serverName: string) => Promise<RemoteResult<ProbeStarted>>
+    'mcpPanel/previewPatch': (opJson: string) => Promise<RemoteResult<PatchPreview>>
+    'mcpPanel/writePatch': (opJson: string, confirmed: boolean, sessionId?: string) => Promise<RemoteResult<PatchWriteResult>>
+    'mcpPanel/callTool': (requestJson: string, sessionId?: string) => Promise<RemoteResult<McpTrialResultWire>>
   }
   interface TypertRemoteNamespaceMap {
     mcpPanel: TypertRemoteNamespace$mcpPanel

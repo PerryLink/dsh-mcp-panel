@@ -1,10 +1,13 @@
 /**
- * The panel's wire vocabulary: the snapshot types served over the `mcpPanel`
- * Remote namespace, their zod v4 validation schema (the strict codec both
- * Typert faces carry), and the single invocation descriptor shared by the
- * host `./typert` manifest and the client Remote contribution. One canonical
- * source for both faces keeps the host and client codecs from ever drifting
- * apart.
+ * The console's wire vocabulary: the snapshot types served over the
+ * `mcpPanel` Remote namespace, their zod v4 validation schema (the strict
+ * codec both Typert faces carry), and the invocation descriptors shared
+ * verbatim by the host `./typert` manifest (`src/typert.host.ts`) and the
+ * client Remote contribution (`src/client/remote.ts`). One canonical source
+ * for both faces keeps the host and client codecs from ever drifting apart.
+ *
+ * Values that could be large or heterogeneous (trial results) cross the wire
+ * as single bounded JSON strings; every scalar here has an explicit shape.
  *
  * @module dsh-mcp-panel/wire
  */
@@ -18,7 +21,7 @@ export type McpTransport = 'stdio' | 'streamable-http' | 'unknown'
 /** Cordis Fiber phases projected for display; `null` = no fiber observed. */
 export type McpFiberPhase = 'pending' | 'loading' | 'active' | 'failed' | 'unloading' | null
 
-/** Connection phase from the proposed upstream `mcp/status` seam, plus `unknown`. */
+/** Connection phase from the upstream `mcp/status` seam, plus `unknown`. */
 export type McpConnectionPhase = 'connecting' | 'connected' | 'waiting' | 'exhausted' | 'disposed' | 'unknown'
 
 /** Provenance of the connection fields: upstream events or derived facts only. */
@@ -32,7 +35,49 @@ export interface McpToolView {
   description: string
 }
 
-/** One MCP server's read-only status view. */
+/**
+ * Sanitized editing view of one row's config. Secret VALUES never appear:
+ * env/header entries are exposed as KEYS only (the editor's "unchanged"
+ * placeholder keeps the raw value host-side). The URL is credential-redacted
+ * for display; editing semantics re-merge raw values host-side, so a redacted
+ * value never round-trips.
+ */
+export interface McpServerConfigView {
+  /** Effective namespace. */
+  serverName: string
+  /** Declared transport; `unknown` when the row is malformed. */
+  transport: McpTransport
+  /** stdio: the executable. */
+  command: string | null
+  /** stdio: the argument list (display form). */
+  args: readonly string[]
+  /** stdio: working directory. */
+  cwd: string | null
+  /** http: sanitized endpoint URL. */
+  url: string | null
+  /** env keys present on the raw row (values never leave the host). */
+  envKeys: readonly string[]
+  /** header keys present on the raw row (values never leave the host). */
+  headerKeys: readonly string[]
+  /** Per-tool-call timeout ms, or null when unset. */
+  toolCallTimeoutMs: number | null
+  /** failOnStartupError, or null when unset. */
+  failOnStartupError: boolean | null
+  /** reconnect.enabled, or null when unset. */
+  reconnectEnabled: boolean | null
+  /** reconnect.maxAttempts, or null when unset. */
+  reconnectMaxAttempts: number | null
+}
+
+/** One derived health suggestion (code = locale key, text = English fallback). */
+export interface McpDiagnosticView {
+  /** Localization code (`diag_<code>`). */
+  code: string
+  /** English fallback text, always renderable. */
+  text: string
+}
+
+/** One MCP server's status view. */
 export interface McpServerView {
   /** Stable namespace from plugin config. */
   serverName: string
@@ -74,6 +119,14 @@ export interface McpServerView {
   probeCheckedAt: number | null
   /** Where the connection fields came from. */
   statusSource: McpStatusSource
+  /** Sanitized editing view of the row's config (`null` for leftover namespaces). */
+  config: McpServerConfigView | null
+  /** Derived health suggestions (empty = nothing to suggest). */
+  diagnostics: readonly McpDiagnosticView[]
+  /** PROPOSED upstream: child exit code at failure; `null` = pending upstream support. */
+  exitCode: number | null
+  /** PROPOSED upstream: sanitized stderr tail; `null` = pending upstream support. */
+  stderrTail: string | null
 }
 
 /** One background connectivity probe (panel-only; never model context). */
@@ -92,11 +145,17 @@ export interface McpProbeView {
   detail: string | null
 }
 
+/** One bridged capability's availability (`false` = pending upstream support). */
+export interface McpCapabilityView {
+  /** Whether the upstream bridge exposes this capability today. */
+  available: boolean
+}
+
 /** The complete panel snapshot served by `mcpPanel/status`. */
 export interface McpPanelSnapshot {
-  /** True when the proposed upstream `mcp/status` seam produced data this process. */
+  /** True when the upstream `mcp/status` seam produced data this process. */
   observed: boolean
-  /** Absolute path of the profile patch layer that disable/enable suggestions name. */
+  /** Absolute path of the profile patch layer that the CRUD console writes. */
   patchFile: string | null
   /** Suggested panel refresh interval in ms; `0` = the tab refreshes on demand only. */
   refreshIntervalMs: number
@@ -104,6 +163,19 @@ export interface McpPanelSnapshot {
   servers: readonly McpServerView[]
   /** Connectivity probes this process, newest first. */
   probes: readonly McpProbeView[]
+  /** Resources/Prompts availability (the official client exposes neither yet). */
+  capabilities: {
+    resources: McpCapabilityView
+    prompts: McpCapabilityView
+  }
+  /** Trial console policy: enabled flag and panel-side limits. */
+  trial: {
+    enabled: boolean
+    timeoutMs: number
+    maxResultChars: number
+  }
+  /** Whether profile-patch writes are allowed at all (kill switch). */
+  writeEnabled: boolean
 }
 
 /** Strict wire schema for {@link McpPanelSnapshot} (zod v4, both Typert faces). */
@@ -135,6 +207,26 @@ export const MCP_PANEL_SNAPSHOT_SCHEMA = z.object({
     probeState: z.union([z.literal('reachable'), z.literal('unreachable'), z.null()]),
     probeCheckedAt: z.number().int().nullable(),
     statusSource: z.union([z.literal('upstream-event'), z.literal('derived')]),
+    config: z.object({
+      serverName: z.string(),
+      transport: z.union([z.literal('stdio'), z.literal('streamable-http'), z.literal('unknown')]),
+      command: z.string().nullable(),
+      args: z.array(z.string()),
+      cwd: z.string().nullable(),
+      url: z.string().nullable(),
+      envKeys: z.array(z.string()),
+      headerKeys: z.array(z.string()),
+      toolCallTimeoutMs: z.number().int().nullable(),
+      failOnStartupError: z.boolean().nullable(),
+      reconnectEnabled: z.boolean().nullable(),
+      reconnectMaxAttempts: z.number().int().nullable(),
+    }).nullable(),
+    diagnostics: z.array(z.object({
+      code: z.string(),
+      text: z.string(),
+    })),
+    exitCode: z.number().int().nullable(),
+    stderrTail: z.string().nullable(),
   })),
   probes: z.array(z.object({
     id: z.string(),
@@ -144,6 +236,16 @@ export const MCP_PANEL_SNAPSHOT_SCHEMA = z.object({
     finishedAt: z.number().int().nullable(),
     detail: z.string().nullable(),
   })),
+  capabilities: z.object({
+    resources: z.object({ available: z.boolean() }),
+    prompts: z.object({ available: z.boolean() }),
+  }),
+  trial: z.object({
+    enabled: z.boolean(),
+    timeoutMs: z.number().int(),
+    maxResultChars: z.number().int(),
+  }),
+  writeEnabled: z.boolean(),
 })
 
 /**
@@ -210,6 +312,183 @@ export const MCP_PANEL_PROBE_DESCRIPTOR = Object.freeze({
   sourceLocation: Object.freeze({ file: 'src/wire.ts', line: 1, column: 1 }),
 } as const) satisfies InvocationDescriptor
 
+/** Result of `mcpPanel/previewPatch`: the generated fragment before any write. */
+export interface PatchPreview {
+  /** The generated YAML block (append-only operation). */
+  fragment: string
+  /** Absolute target file, or null when the profile patch path is unknown. */
+  file: string | null
+  /** Number of operations in the fragment (always 1). */
+  ops: number
+}
+
+/** Strict wire schema for {@link PatchPreview}. */
+export const PATCH_PREVIEW_SCHEMA = z.object({
+  fragment: z.string(),
+  file: z.string().nullable(),
+  ops: z.number().int(),
+})
+
+/** The `mcpPanel/previewPatch` invocation descriptor: render one CRUD op. */
+export const MCP_PANEL_PREVIEW_DESCRIPTOR = Object.freeze({
+  id: 'dsh-mcp-panel#mcpPanel/previewPatch',
+  service: 'mcpPanel',
+  namespace: 'mcpPanel',
+  method: 'previewPatch',
+  invocation: Object.freeze({ kind: 'direct' }),
+  parameters: Object.freeze([Object.freeze({
+    name: 'opJson',
+    wire: 'opJson',
+    source: 'json',
+    codec: Object.freeze({
+      mode: 'strict',
+      typeSymbol: 'dsh-mcp-panel/types#PatchOpJson',
+      schema: z.string(),
+    }),
+  } satisfies InvocationDescriptor['parameters'][number])]),
+  result: Object.freeze({
+    mode: 'strict',
+    typeSymbol: 'dsh-mcp-panel/types#PatchPreview',
+    schema: PATCH_PREVIEW_SCHEMA,
+  }),
+  sourceLocation: Object.freeze({ file: 'src/wire.ts', line: 1, column: 1 }),
+} as const) satisfies InvocationDescriptor
+
+/** Result of `mcpPanel/writePatch`: the applied append, with audit facts. */
+export interface PatchWriteResult {
+  /** Absolute file the fragment was appended to. */
+  file: string
+  /** Absolute timestamped backup created before the append. */
+  backupPath: string
+  /** Which approval path authorized the write. */
+  approvalPath: 'harness-approval' | 'interactive-confirmation'
+  /** Bytes appended. */
+  bytes: number
+  /** Operations applied (always 1). */
+  ops: number
+  /** What the user should do next (reload note). */
+  note: string
+}
+
+/** Strict wire schema for {@link PatchWriteResult}. */
+export const PATCH_WRITE_RESULT_SCHEMA = z.object({
+  file: z.string(),
+  backupPath: z.string(),
+  approvalPath: z.union([z.literal('harness-approval'), z.literal('interactive-confirmation')]),
+  bytes: z.number().int(),
+  ops: z.number().int(),
+  note: z.string(),
+})
+
+/** The `mcpPanel/writePatch` invocation descriptor: approval-gated append. */
+export const MCP_PANEL_WRITE_DESCRIPTOR = Object.freeze({
+  id: 'dsh-mcp-panel#mcpPanel/writePatch',
+  service: 'mcpPanel',
+  namespace: 'mcpPanel',
+  method: 'writePatch',
+  invocation: Object.freeze({ kind: 'direct' }),
+  parameters: Object.freeze([
+    Object.freeze({
+      name: 'opJson',
+      wire: 'opJson',
+      source: 'json',
+      codec: Object.freeze({
+        mode: 'strict',
+        typeSymbol: 'dsh-mcp-panel/types#PatchOpJson',
+        schema: z.string(),
+      }),
+    } satisfies InvocationDescriptor['parameters'][number]),
+    Object.freeze({
+      name: 'confirmed',
+      wire: 'confirmed',
+      source: 'json',
+      codec: Object.freeze({
+        mode: 'strict',
+        typeSymbol: 'dsh-mcp-panel/types#PatchWriteConfirmed',
+        schema: z.boolean(),
+      }),
+    } satisfies InvocationDescriptor['parameters'][number]),
+    Object.freeze({
+      name: 'sessionId',
+      wire: 'sessionId',
+      source: 'json',
+      codec: Object.freeze({
+        mode: 'strict',
+        typeSymbol: 'dsh-mcp-panel/types#PatchWriteSessionId',
+        schema: z.string(),
+      }),
+      acceptsUndefined: true,
+    } satisfies InvocationDescriptor['parameters'][number]),
+  ]),
+  result: Object.freeze({
+    mode: 'strict',
+    typeSymbol: 'dsh-mcp-panel/types#PatchWriteResult',
+    schema: PATCH_WRITE_RESULT_SCHEMA,
+  }),
+  sourceLocation: Object.freeze({ file: 'src/wire.ts', line: 1, column: 1 }),
+} as const) satisfies InvocationDescriptor
+
+/** Result of `mcpPanel/callTool`: one trial call through the official pipeline. */
+export interface McpTrialResultWire {
+  /** Panel-assigned correlation id. */
+  callId: string
+  /** Whether the pipeline settled the call as an error. */
+  isError: boolean
+  /** Whether the JSON projection hit the display cap. */
+  truncated: boolean
+  /** Wall-clock duration of the pipeline run in ms. */
+  durationMs: number
+  /** Capped JSON of `{ value, content }` or `{ error, content }`. */
+  resultJson: string
+}
+
+/** Strict wire schema for {@link McpTrialResultWire}. */
+export const MCP_TRIAL_RESULT_SCHEMA = z.object({
+  callId: z.string(),
+  isError: z.boolean(),
+  truncated: z.boolean(),
+  durationMs: z.number().int(),
+  resultJson: z.string(),
+})
+
+/** The `mcpPanel/callTool` invocation descriptor: official-pipeline trial call. */
+export const MCP_PANEL_CALLTOOL_DESCRIPTOR = Object.freeze({
+  id: 'dsh-mcp-panel#mcpPanel/callTool',
+  service: 'mcpPanel',
+  namespace: 'mcpPanel',
+  method: 'callTool',
+  invocation: Object.freeze({ kind: 'direct' }),
+  parameters: Object.freeze([
+    Object.freeze({
+      name: 'requestJson',
+      wire: 'requestJson',
+      source: 'json',
+      codec: Object.freeze({
+        mode: 'strict',
+        typeSymbol: 'dsh-mcp-panel/types#TrialRequestJson',
+        schema: z.string(),
+      }),
+    } satisfies InvocationDescriptor['parameters'][number]),
+    Object.freeze({
+      name: 'sessionId',
+      wire: 'sessionId',
+      source: 'json',
+      codec: Object.freeze({
+        mode: 'strict',
+        typeSymbol: 'dsh-mcp-panel/types#TrialSessionId',
+        schema: z.string(),
+      }),
+      acceptsUndefined: true,
+    } satisfies InvocationDescriptor['parameters'][number]),
+  ]),
+  result: Object.freeze({
+    mode: 'strict',
+    typeSymbol: 'dsh-mcp-panel/types#McpTrialResultWire',
+    schema: MCP_TRIAL_RESULT_SCHEMA,
+  }),
+  sourceLocation: Object.freeze({ file: 'src/wire.ts', line: 1, column: 1 }),
+} as const) satisfies InvocationDescriptor
+
 /**
  * The canonical invocation list both Typert faces register — the host
  * manifest and the client contribution share these exact descriptor objects,
@@ -218,4 +497,7 @@ export const MCP_PANEL_PROBE_DESCRIPTOR = Object.freeze({
 export const MCP_PANEL_INVOCATIONS = Object.freeze([
   MCP_PANEL_STATUS_DESCRIPTOR,
   MCP_PANEL_PROBE_DESCRIPTOR,
+  MCP_PANEL_PREVIEW_DESCRIPTOR,
+  MCP_PANEL_WRITE_DESCRIPTOR,
+  MCP_PANEL_CALLTOOL_DESCRIPTOR,
 ])

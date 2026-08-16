@@ -59,6 +59,18 @@ export interface CommandMessages {
   hint: string
   probeStarted: (server: string, jobId: string) => string
   unknownServer: (server: string, known: string) => string
+  /** Header for the /mcp <server> health diagnostics block. */
+  healthHeader: (server: string) => string
+  /** Shown when the health derivation found no known failure pattern. */
+  healthNone: string
+  /** Marker for facts the official client does not expose yet. */
+  healthPending: string
+  /** Label above the derived suggestion list. */
+  suggestions: string
+  /** Malformed trial-call usage. */
+  callUsage: string
+  /** One-line trial-call summary (tool, callId, duration, outcome). */
+  callResult: (tool: string, callId: string, ms: number, outcome: string) => string
 }
 
 /** English output dictionary (default). */
@@ -85,12 +97,19 @@ export const EN_MESSAGES: CommandMessages = {
   patchReloadPath: 'The web surface hot-reloads cordis.patch.yml edits; other surfaces restart. This command never edits your config.',
   noPatchForLeftover: server =>
     `"${server}" is not a configured server — its tools come from another plugin's mcp__ namespace, so there is no row to disable or enable.`,
-  usage: 'Usage: /mcp | /mcp <server> | /mcp <server> tools | /mcp <server> disable | /mcp <server> enable | /mcp <server> probe',
-  hint: '[server] [tools|disable|enable|probe]',
+  usage: 'Usage: /mcp | /mcp <server> | /mcp <server> tools | /mcp <server> call <tool> [json-arguments] | /mcp <server> health | /mcp <server> disable | /mcp <server> enable | /mcp <server> probe',
+  hint: '[server] [tools|call|health|disable|enable|probe]',
   probeStarted: (server, jobId) =>
     `Probe started for "${server}" (background job ${jobId}). Read the result in the MCP panel: Settings → Plugins → MCP.`,
   unknownServer: (server, known) =>
     `Unknown MCP server "${server}" (configured: ${known === '' ? 'none' : known})`,
+  healthHeader: server => `Health of "${server}":`,
+  healthNone: 'No specific suggestions — the observable facts show no known failure pattern.',
+  healthPending: 'exit code / stderr tail: pending upstream support (the official client does not expose process diagnostics yet).',
+  suggestions: 'Suggestions:',
+  callUsage: 'Usage: /mcp <server> call <tool> [json-arguments]',
+  callResult: (tool, callId, ms, outcome) =>
+    `Trial call ${tool} through the official tool pipeline (${callId}, ${ms}ms): ${outcome}.`,
 }
 
 /** Simplified Chinese output dictionary. */
@@ -119,12 +138,19 @@ export const ZH_MESSAGES: CommandMessages = {
   patchReloadPath: 'web 面板会热重载 cordis.patch.yml 的修改；其他面板重启生效。本命令绝不修改你的配置。',
   noPatchForLeftover: server =>
     `"${server}" 不是已配置的服务器——其工具来自其他插件的 mcp__ 命名空间，没有可停用/启用的条目。`,
-  usage: '用法：/mcp | /mcp <server> | /mcp <server> tools | /mcp <server> disable | /mcp <server> enable | /mcp <server> probe',
-  hint: '[server] [tools|disable|enable|probe]',
+  usage: '用法：/mcp | /mcp <server> | /mcp <server> tools | /mcp <server> call <tool> [json-参数] | /mcp <server> health | /mcp <server> disable | /mcp <server> enable | /mcp <server> probe',
+  hint: '[server] [tools|call|health|disable|enable|probe]',
   probeStarted: (server, jobId) =>
     `已对 "${server}" 启动探测（后台任务 ${jobId}）。结果仅面板可见：设置 → 插件 → MCP。`,
   unknownServer: (server, known) =>
     `未知 MCP 服务器 "${server}"（已配置：${known === '' ? '无' : known}）`,
+  healthHeader: server => `"${server}" 健康检查：`,
+  healthNone: '没有具体建议——可观测事实中未发现已知故障模式。',
+  healthPending: '进程退出码 / stderr 尾部：待官方支持（官方 client 尚未暴露进程诊断）。',
+  suggestions: '建议：',
+  callUsage: '用法：/mcp <server> call <tool> [json-参数]',
+  callResult: (tool, callId, ms, outcome) =>
+    `试用调用 ${tool}（官方工具管线，${callId}，${ms}ms）：${outcome}。`,
 }
 
 /** Spanish output dictionary. */
@@ -153,12 +179,19 @@ export const ES_MESSAGES: CommandMessages = {
   patchReloadPath: 'La superficie web recarga en caliente los cambios de cordis.patch.yml; otras superficies se reinician. Este comando nunca edita tu configuración.',
   noPatchForLeftover: server =>
     `"${server}" no es un servidor configurado — sus herramientas provienen del espacio mcp__ de otro plugin, así que no hay fila que deshabilitar o habilitar.`,
-  usage: 'Uso: /mcp | /mcp <server> | /mcp <server> tools | /mcp <server> disable | /mcp <server> enable | /mcp <server> probe',
-  hint: '[server] [tools|disable|enable|probe]',
+  usage: 'Uso: /mcp | /mcp <server> | /mcp <server> tools | /mcp <server> call <tool> [json-argumentos] | /mcp <server> health | /mcp <server> disable | /mcp <server> enable | /mcp <server> probe',
+  hint: '[server] [tools|call|health|disable|enable|probe]',
   probeStarted: (server, jobId) =>
     `Sonda iniciada para "${server}" (tarea en segundo plano ${jobId}). Lee el resultado en el panel MCP: Ajustes → Plugins → MCP.`,
   unknownServer: (server, known) =>
     `Servidor MCP desconocido "${server}" (configurados: ${known === '' ? 'ninguno' : known})`,
+  healthHeader: server => `Salud de "${server}":`,
+  healthNone: 'Sin sugerencias específicas: los hechos observables no muestran ningún patrón de fallo conocido.',
+  healthPending: 'código de salida / final de stderr: pendiente de soporte upstream (el cliente oficial aún no expone diagnósticos de proceso).',
+  suggestions: 'Sugerencias:',
+  callUsage: 'Uso: /mcp <server> call <tool> [json-argumentos]',
+  callResult: (tool, callId, ms, outcome) =>
+    `Llamada de prueba ${tool} por el pipeline oficial de herramientas (${callId}, ${ms}ms): ${outcome}.`,
 }
 
 /** Portuguese output dictionary. */
@@ -187,12 +220,19 @@ export const PT_MESSAGES: CommandMessages = {
   patchReloadPath: 'A superfície web recarrega em quente as edições de cordis.patch.yml; outras superfícies reiniciam. Este comando nunca edita sua configuração.',
   noPatchForLeftover: server =>
     `"${server}" não é um servidor configurado — suas ferramentas vêm do namespace mcp__ de outro plugin, então não há linha para desabilitar ou habilitar.`,
-  usage: 'Uso: /mcp | /mcp <server> | /mcp <server> tools | /mcp <server> disable | /mcp <server> enable | /mcp <server> probe',
-  hint: '[server] [tools|disable|enable|probe]',
+  usage: 'Uso: /mcp | /mcp <server> | /mcp <server> tools | /mcp <server> call <tool> [json-argumentos] | /mcp <server> health | /mcp <server> disable | /mcp <server> enable | /mcp <server> probe',
+  hint: '[server] [tools|call|health|disable|enable|probe]',
   probeStarted: (server, jobId) =>
     `Sonda iniciada para "${server}" (tarefa em segundo plano ${jobId}). Leia o resultado no painel MCP: Configurações → Plugins → MCP.`,
   unknownServer: (server, known) =>
     `Servidor MCP desconhecido "${server}" (configurados: ${known === '' ? 'nenhum' : known})`,
+  healthHeader: server => `Saúde de "${server}":`,
+  healthNone: 'Sem sugestões específicas — os fatos observáveis não mostram nenhum padrão de falha conhecido.',
+  healthPending: 'código de saída / fim do stderr: aguardando suporte upstream (o cliente oficial ainda não expõe diagnósticos de processo).',
+  suggestions: 'Sugestões:',
+  callUsage: 'Uso: /mcp <server> call <tool> [json-argumentos]',
+  callResult: (tool, callId, ms, outcome) =>
+    `Chamada de teste ${tool} pelo pipeline oficial de ferramentas (${callId}, ${ms}ms): ${outcome}.`,
 }
 
 /** Hindi output dictionary. */
@@ -221,12 +261,19 @@ export const HI_MESSAGES: CommandMessages = {
   patchReloadPath: 'वेब सतह cordis.patch.yml के बदलाव हॉट-रीलोड करती है; अन्य सतहें रीस्टार्ट करें। यह कमांड आपका कॉन्फ़िगरेशन कभी नहीं बदलती।',
   noPatchForLeftover: server =>
     `"${server}" कॉन्फ़िगर किया गया सर्वर नहीं है — इसके टूल दूसरे प्लगइन के mcp__ नेमस्पेस से आते हैं, इसलिए अक्षम/सक्षम करने के लिए कोई पंक्ति नहीं है।`,
-  usage: 'उपयोग: /mcp | /mcp <server> | /mcp <server> tools | /mcp <server> disable | /mcp <server> enable | /mcp <server> probe',
-  hint: '[server] [tools|disable|enable|probe]',
+  usage: 'उपयोग: /mcp | /mcp <server> | /mcp <server> tools | /mcp <server> call <tool> [json-तर्क] | /mcp <server> health | /mcp <server> disable | /mcp <server> enable | /mcp <server> probe',
+  hint: '[server] [tools|call|health|disable|enable|probe]',
   probeStarted: (server, jobId) =>
     `"${server}" के लिए प्रोब शुरू (बैकग्राउंड जॉब ${jobId})। परिणाम MCP पैनल में पढ़ें: सेटिंग्स → प्लगइन्स → MCP।`,
   unknownServer: (server, known) =>
     `अज्ञात MCP सर्वर "${server}" (कॉन्फ़िगर: ${known === '' ? 'कोई नहीं' : known})`,
+  healthHeader: server => `"${server}" की सेहत:`,
+  healthNone: 'कोई विशेष सुझाव नहीं — देखने योग्य तथ्यों में कोई ज्ञात विफलता पैटर्न नहीं है।',
+  healthPending: 'एग्ज़िट कोड / stderr का अंत: अपस्ट्रीम समर्थन की प्रतीक्षा में (आधिकारिक क्लाइंट अभी प्रोसेस डायग्नोस्टिक्स उजागर नहीं करता)।',
+  suggestions: 'सुझाव:',
+  callUsage: 'उपयोग: /mcp <server> call <tool> [json-तर्क]',
+  callResult: (tool, callId, ms, outcome) =>
+    `आधिकारिक टूल पाइपलाइन से परीक्षण कॉल ${tool} (${callId}, ${ms}ms): ${outcome}।`,
 }
 
 /** Every output dictionary indexed by the configured language. */
@@ -347,32 +394,84 @@ export function renderPatchSuggestion(
 /** Parsed `/mcp` arguments. */
 export type McpCommandArgs =
   | { readonly kind: 'list' }
-  | { readonly kind: 'server'; readonly server: string; readonly action: 'detail' | 'tools' | 'disable' | 'enable' | 'probe' }
+  | { readonly kind: 'server'; readonly server: string; readonly action: 'detail' | 'tools' | 'disable' | 'enable' | 'probe' | 'health' }
+  | { readonly kind: 'server'; readonly server: string; readonly action: 'call'; readonly tool: string; readonly argsJson: string }
   | { readonly kind: 'usage' }
 
 /**
- * Parse the free-form command input.
+ * Parse the free-form command input. For `call`, the tool name and the raw
+ * JSON-argument remainder are captured verbatim (arguments may contain
+ * whitespace), so the official pipeline receives exactly what the user wrote.
  *
  * @param rawInput - text after `/mcp`, including leading whitespace.
  * @returns the parsed intent; malformed input becomes `usage`.
  */
 export function parseMcpArgs(rawInput: string): McpCommandArgs {
-  const tokens = rawInput.trim().split(/\s+/u).filter(token => token !== '')
+  const trimmed = rawInput.trim()
+  const tokens = trimmed.split(/\s+/u).filter(token => token !== '')
   if (tokens.length === 0) return { kind: 'list' }
   const server = tokens[0]
   const action = tokens[1]
   if (action === undefined) return { kind: 'server', server: server ?? '', action: 'detail' }
-  if (tokens.length !== 2) return { kind: 'usage' }
-  if (action === 'tools' || action === 'disable' || action === 'enable' || action === 'probe') {
+  if (tokens.length !== 2) {
+    // `call` is the one action whose third token starts a free-form tail.
+    if (action === 'call') {
+      const match = /^(\S+)\s+call\s+(\S+)\s*(.*)$/su.exec(trimmed)
+      if (match === null || match[2] === undefined) return { kind: 'usage' }
+      return { kind: 'server', server: match[1] ?? '', action: 'call', tool: match[2], argsJson: (match[3] ?? '').trim() }
+    }
+    return { kind: 'usage' }
+  }
+  if (action === 'tools' || action === 'disable' || action === 'enable' || action === 'probe' || action === 'health') {
     return { kind: 'server', server: server ?? '', action }
   }
   return { kind: 'usage' }
 }
 
+/** Character cap on the model-readable rendering of one trial result. */
+const TRIAL_RENDER_CAP = 4_000
+
+/** Pretty JSON for the command output; unparseable (truncated) text renders raw. */
+function prettyJson(json: string): string {
+  try {
+    return JSON.stringify(JSON.parse(json), null, 2)
+  } catch {
+    return json
+  }
+}
+
+/** Render one trial result for model-readable command output (capped). */
+export function renderTrialCall(
+  tool: string,
+  result: { readonly callId: string; readonly isError: boolean; readonly durationMs: number; readonly resultJson: string },
+  messages: CommandMessages = EN_MESSAGES,
+): string {
+  const outcome = result.isError ? 'error' : 'ok'
+  const header = messages.callResult(tool, result.callId, result.durationMs, outcome)
+  const body = prettyJson(result.resultJson)
+  const capped = body.length > TRIAL_RENDER_CAP ? `${body.slice(0, TRIAL_RENDER_CAP)}… [truncated for display]` : body
+  return `${header}\n${capped}`
+}
+
+/** Render the health diagnostics block for one server. */
+export function renderHealth(view: McpServerView, messages: CommandMessages = EN_MESSAGES): string {
+  const lines = [messages.healthHeader(view.serverName), renderServer(view, messages), '']
+  if (view.exitCode !== null) lines.push(`exit code: ${view.exitCode}`)
+  if (view.stderrTail !== null) lines.push(`stderr tail: ${view.stderrTail}`)
+  if (view.exitCode === null && view.stderrTail === null) lines.push(messages.healthPending)
+  if (view.diagnostics.length === 0) {
+    lines.push(messages.healthNone)
+  } else {
+    lines.push(messages.suggestions)
+    for (const diagnostic of view.diagnostics) lines.push(`- ${diagnostic.text} (${diagnostic.code})`)
+  }
+  return lines.join('\n')
+}
+
 /**
  * Build the `/mcp` command definition over one service instance.
  *
- * @param service - the panel service supplying snapshots.
+ * @param service - the panel service supplying snapshots and console actions.
  * @param language - output language for the rendered text.
  * @returns the registration-ready definition.
  */
@@ -380,9 +479,9 @@ export function mcpCommand(service: McpPanelService, language: CommandLanguage =
   const messages = MESSAGES[language] ?? EN_MESSAGES
   return {
     name: 'mcp',
-    description: 'Show MCP server status, tools, and enable/disable patch suggestions (read-only)',
+    description: 'Show MCP server status, tools, health diagnostics, and enable/disable patch suggestions; trial-call a tool through the official pipeline',
     input: { hint: messages.hint },
-    handler: ({ rawInput }) => {
+    handler: ({ rawInput, agent }) => {
       const parsed = parseMcpArgs(rawInput)
       if (parsed.kind === 'usage') return { kind: 'error', text: messages.usage }
       const snapshot = service.status()
@@ -397,6 +496,28 @@ export function mcpCommand(service: McpPanelService, language: CommandLanguage =
       }
       switch (parsed.action) {
         case 'tools': return { kind: 'success', text: renderTools(view, messages) }
+        case 'health': return { kind: 'success', text: renderHealth(view, messages) }
+        case 'call': {
+          // The trial runs through the OFFICIAL pipeline (permission policy,
+          // guards, and approval via the command's agent), so an `ask`
+          // decision routes to the same approval channel as a model call.
+          const request = {
+            serverName: parsed.server,
+            toolName: parsed.tool,
+            argsJson: parsed.argsJson,
+          }
+          const promise = service.callTool(JSON.stringify(request), String(agent.id))
+          return promise.then(
+            (result) => {
+              const text = renderTrialCall(parsed.tool, result, messages)
+              return { kind: 'success', text } as const
+            },
+            (error: unknown) => ({
+              kind: 'error',
+              text: error instanceof Error ? error.message : String(error),
+            } as const),
+          )
+        }
         case 'disable':
         case 'enable': {
           // Leftover namespaces have no loader row: a patch suggestion with an
