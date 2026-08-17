@@ -1,84 +1,174 @@
+<div align="center">
+
 # dsh-mcp-panel
 
 **DeepSeek Harness के आधिकारिक MCP क्लाइंट के लिए MCP प्रबंधन कंसोल — सेटिंग्स पेज से MCP सर्वर जोड़ें, बदलें, हटाएँ और टूल आज़माएँ; ईमानदार स्थिति, स्वास्थ्य निदान और सुरक्षित, वापस लाने योग्य प्रोफ़ाइल लेखन के साथ।**
 
-[English](README.md) · [简体中文](README.zh.md) · [Español](README.es.md) · [Português](README.pt.md) · [हिन्दी](README.hi.md)
+*आधिकारिक क्लाइंट = पुल, यह प्लगइन = कंसोल: `mcp/status` seam से स्थिति पढ़ें, केवल जोड़ने वाले, अनुमोदित प्रोफ़ाइल patch लिखें।*
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
-[![npm](https://img.shields.io/npm/v/dsh-mcp-panel)](https://www.npmjs.com/package/dsh-mcp-panel)
-[![CI](https://github.com/PerryLink/dsh-mcp-panel/actions/workflows/ci.yml/badge.svg)](https://github.com/PerryLink/dsh-mcp-panel/actions/workflows/ci.yml)
-[![dsh-plugin](https://img.shields.io/badge/ecosystem-dsh--plugin-8b5cf6)](https://github.com/topics/dsh-plugin)
+[![DSH plugin](https://img.shields.io/badge/dsh-plugin-✅-green)](https://github.com/topics/dsh-plugin)
+[![Node](https://img.shields.io/badge/node-%5E22.19%20%7C%7C%20%3E%3D24-brightgreen.svg)](#)
+[![CI](https://img.shields.io/github/actions/workflow/status/PerryLink/dsh-mcp-panel/ci.yml?branch=main&label=CI)](https://github.com/PerryLink/dsh-mcp-panel/actions)
+[![Version](https://img.shields.io/github/v/tag/PerryLink/dsh-mcp-panel?label=version)](https://github.com/PerryLink/dsh-mcp-panel/releases)
+[![npm version](https://img.shields.io/npm/v/dsh-mcp-panel)](https://www.npmjs.com/package/dsh-mcp-panel)
+[![npm downloads](https://img.shields.io/npm/dm/dsh-mcp-panel)](https://www.npmjs.com/package/dsh-mcp-panel)
 
-## आर्किटेक्चर: आधिकारिक क्लाइंट पुल है; यह प्लगइन कंसोल है
+[English](README.md) · [简体中文](README.zh.md) · [Español](README.es.md) · [Português](README.pt.md) · [हिन्दी](README.hi.md)
+
+</div>
+
+---
+
+## Compatibility
+
+| सतह | स्थिति |
+|---|---|
+| Harness | DeepSeek Harness `0.1.0-rc.5`–`0.1.0-rc.6` |
+| Node | `^22.19.0 \|\| >=24.0.0` |
+| प्लेटफ़ॉर्म | Web GUI (दोहरा चेहरा: host + browser) |
+| मॉडल | कोई भी (पैनल रीड-ओनली है; केवल `/mcp` आउटपुट मॉडल-पठनीय है) |
+
+## What you get
+
+`dsh-mcp-panel` आधिकारिक MCP क्लाइंट के ऊपर की अनुभव परत है: एक रीड-ओनली रनटाइम दृश्य और सुरक्षित, वापस लाने योग्य प्रोफ़ाइल लेखन।
+
+- **`/mcp` कमांड** — प्रति सर्वर एक पंक्ति: ट्रांसपोर्ट, लक्ष्य, टूल गिनती, कनेक्शन स्थिति (upstream seam से; अप्रेक्षित होने पर `unknown`), अंतिम त्रुटि, रीकनेक्ट — मॉडल-पठनीय, सत्र लॉग से पुनर्निर्माण योग्य, पाँच आउटपुट भाषाएँ।
+- **`/mcp <server> tools`** — मॉडल-दृश्य `mcp__*` टूल नाम व विवरण।
+- **`/mcp <server> health`** — व्युत्पन्न स्व-उपचार सुझाव (ENOENT → अनुपलब्ध निर्भरता, ECONNREFUSED, टाइमआउट, 401/403/404, DNS, दर सीमा, रीकनेक्ट समाप्त…); एग्ज़िट कोड / stderr पूँछ ईमानदारी से *upstream समर्थन की प्रतीक्षा में* चिह्नित।
+- **`/mcp <server> call <tool> [json]`** — **आधिकारिक टूल पाइपलाइन** (`ctx.tools.execute()`) से परीक्षण कॉल; प्री-एग्ज़ीक्यूट अनुमति नीति, अनुमोदन, guards और post-execute सब लागू।
+- **सेटिंग्स → प्लगइन्स → MCP टैब** — बैज, निदान और प्रोब वाले स्थिति कार्ड, साथ में सर्वर CRUD और टूल ट्रायल कंसोल।
+- **सर्वर CRUD** — जोड़/बदल/हटा फ़ॉर्म → `insert`/`set`/`set disabled` अंश → क्लिपबोर्ड कॉपी या अनुमोदित लेखन, स्वचालित बैकअप के साथ।
+- **टूल ट्रायल कंसोल** — सर्वर → `mcp__*` टूल → JSON तर्क → कैनोनिकल JSON परिणाम + रेंडर सामग्री; `trialMaxResultChars` से सीमित; केवल पैनल, मॉडल संदर्भ में कभी नहीं।
+
+## Architecture: official client = bridge, this plugin = console
 
 [`@deepseek-ai/dsh-mcp-client`](https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/mcp/mcp-client) **एकमात्र पुल** है: प्रति MCP सर्वर एक इंस्टेंस, हाथ से लिखी `cordis.yml` पंक्ति के रूप में, जो ट्रांसपोर्ट जोड़ता है, टूल सिंक करता है और `mcp__<server>__<tool>` नाम पंजीकृत करता है। यह प्लगइन उसे कभी नहीं बदलता: यह उसके ऊपर की **अनुभव परत** है:
 
+```text
+                    ┌────────────────────────────────────────────┐
+ profile            │  cordis.yml / cordis.patch.yml             │
+ संरचना             │   - id: mcp-github                          │
+ (प्रति सर्वर       │     name: '@deepseek-ai/dsh-mcp-client'     │
+  एक पंक्ति,        │     config: { serverName, transport, … }    │
+  हाथ से)           │   - id: mcp-panel                           │
+                    │     name: dsh-mcp-panel   ◄── यह प्लगइन     │
+                    └───────────────┬────────────────────────────┘
+                                    │
+        ┌───────────────────────────┴───────────────────────────┐
+        │                                                        │
+   ┌────▼──────────────┐        ┌───────────────────────────┐    │
+   │ @deepseek-ai/dsh- │        │ dsh-mcp-panel (कंसोल)     │    │
+   │ mcp-client        │        │                           │    │
+   │ • ट्रांसपोर्ट     │        │ • /mcp कमांड              │    │
+   │ • टूल सिंक        │        │ • सेटिंग्स → प्लगइन्स →   │    │
+   │ • mcp__* टूल      │◄──────►│   MCP: CRUD, ट्रायल       │    │
+   │ • mcp/status seam │ स्थिति │ • स्वास्थ्य निदान         │    │
+   └───────────────────┘        │ • प्रोब, क्षमताएँ         │    │
+                                └───────────────────────────┘    │
 ```
- profile/composition          dsh-mcp-client (पुल)         dsh-mcp-panel (कंसोल)
- - id: mcp-github             • ट्रांसपोर्ट                • /mcp कमांड
-   name: '@deepseek-ai/…'     • टूल सिंक                   • सेटिंग्स → प्लगइन्स → MCP:
-   config: { serverName, … }  • mcp__* टूल                   CRUD, ट्रायल कंसोल,
- - id: mcp-panel              • mcp/status seam ◄─स्थिति─►  निदान, प्रोब
-   name: dsh-mcp-panel
-```
 
-कंसोल `mcp/status` seam (इवेंट + `mcpStatus` सेवा), टूल रजिस्ट्री और loader से **पढ़ता** है; **लिखता** केवल प्रोफ़ाइल की patch परत में — केवल जोड़ता है, अनुमोदन के साथ, स्वचालित बैकअप के साथ। ट्रांसपोर्ट, OAuth और प्रोटोकॉल अछूते रहते हैं।
+कंसोल क्लाइंट को उसके `mcp/status` अवलोकन seam (इवेंट + `mcpStatus` क्वेरी सेवा), टूल रजिस्ट्री और loader से **पढ़ता** है; **लिखता** केवल प्रोफ़ाइल की patch परत में — केवल-जोड़ने वाला, अनुमोदित, हमेशा बैकअप सहित। ट्रांसपोर्ट, OAuth और प्रोटोकॉल अछूते रहते हैं।
 
-## कंसोल बनाम हाथ से लिखा cordis.yml
-
-| | हाथ से लिखा cordis.yml | dsh-mcp-panel कंसोल |
-|---|---|---|
-| सर्वर जोड़ें | YAML संपादित करें | फ़ॉर्म → patch अंश → **कॉपी** या **लिखें** (अनुमोदन + बैकअप) |
-| सर्वर बदलें | YAML संपादित करें, रीस्टार्ट करें | पहले से भरा फ़ॉर्म; बिना बदले सीक्रेट host पर ही रहते हैं |
-| सर्वर हटाएँ | पंक्ति मिटाएँ | `set disabled: true` ऑपरेशन (patch शब्दावली में remove नहीं है); कभी भी फिर से सक्षम करने योग्य |
-| स्थिति देखें | लॉग पढ़ें | बैज + रीकनेक्ट + अंतिम त्रुटि, `mcp/status` से लाइव |
-| टूल आज़माएँ | मॉडल से कहें | ट्रायल कंसोल → आधिकारिक `ctx.tools.execute()` पाइपलाइन (अनुमतियाँ और अनुमोदन लागू) |
-| निदान करें | लॉग grep करें | `/mcp <server> health` व्युत्पन्न सुझावों के साथ |
-
-## क्या मिलता है
-
-- **`/mcp`**: प्रति सर्वर एक पंक्ति — ट्रांसपोर्ट, लक्ष्य, टूल गिनती, कनेक्शन स्थिति (ईमानदार: upstream डेटा के बिना `unknown`), अंतिम त्रुटि, रीकनेक्ट; मॉडल-पठनीय, सत्र लॉग से पुनर्निर्माण योग्य, पाँच आउटपुट भाषाएँ।
-- **`/mcp <server> tools | health | call <tool> [json] | disable | enable`**: टूल सूची; व्युत्पन्न निदान (ENOENT → अनुपलब्ध निर्भरता, ECONNREFUSED, टाइमआउट, 401/403/404, DNS, दर सीमा, रीकनेक्ट समाप्त); **आधिकारिक पाइपलाइन** से परीक्षण कॉल (अनुमतियाँ + अनुमोदन लागू); सटीक patch सुझाव।
-- **सेटिंग्स → प्लगइन्स → MCP**: बैज और निदान वाले स्थिति कार्ड, **सर्वर CRUD** (`insert`/`set`/`set disabled` अंश, क्लिपबोर्ड कॉपी या अनुमोदन + `cordis.patch.yml.bak-<ts>` बैकअप के साथ लेखन), **टूल ट्रायल कंसोल** (कैनोनिकल JSON परिणाम + रेंडर सामग्री, `trialMaxResultChars` द्वारा सीमित, केवल पैनल) और **क्षमता बोर्ड**: Resources व Prompts *upstream समर्थन की प्रतीक्षा में* चिह्नित (आज आधिकारिक क्लाइंट केवल टूल जोड़ता है)।
-- **प्रोब**: एक-क्लिक या निष्क्रिय Streamable HTTP कनेक्टिविटी जाँच (परिणाम केवल पैनल)।
-
-## त्वरित शुरुआत
+## Quick start
 
 ```sh
-dsh plugin --profile web add github:PerryLink/dsh-mcp-panel#v0.4.0
-# या npm चैनल:
-dsh plugin --profile web add dsh-mcp-panel@0.4.0
+# 1. bundle को अपने profile में इंस्टॉल करें
+dsh plugin --profile web add "github:PerryLink/dsh-mcp-panel#main"
+
+# या npm से (प्रकाशित संस्करण)
+dsh plugin --profile web add dsh-mcp-panel
+
+# 2. रीस्टार्ट करें और पंक्ति की पुष्टि करें
+dsh --profile web --dump-config | grep -A3 'id: mcp-panel'
 ```
 
-रीस्टार्ट करें (या वेब सतह को `cordis.patch.yml` हॉट-रीलोड करने दें) और **सेटिंग्स → प्लगइन्स → MCP** खोलें, या `/mcp` चलाएँ।
+फिर **सेटिंग्स → प्लगइन्स → MCP** खोलें, या चलाएँ:
 
-## अनुबंध के अनुसार ईमानदार
+```text
+/mcp
+/mcp everything tools
+/mcp everything health
+/mcp everything call echo '{"message": "hi"}'
+```
 
-- **पुल पुल ही रहता है**: ट्रांसपोर्ट/OAuth/प्रोटोकॉल में कोई बदलाव नहीं।
-- **कोई नकली स्थिति नहीं**: upstream डेटा के बिना `unknown` / `—` और `statusSource: 'derived'`; एग्ज़िट कोड व stderr कभी गढ़े नहीं जाते (*upstream समर्थन की प्रतीक्षा में* चिह्नित)।
-- **सेनेटाइज़्ड प्रदर्शन**: URL क्रेडेंशियल, userinfo, हेडर मान, बियरर टोकन और JWT रिडैक्ट होते हैं; env/headers के **मान** कभी host से बाहर नहीं जाते (संपादक केवल कुंजियाँ देखता है)।
-- **लेखन केवल-जोड़ने वाला, अनुमोदित, बैकअप सहित**: कंसोल कभी `cordis.patch.yml` को दोबारा नहीं लिखता; अनुमोदन सेवा और खुले टर्न वाला एजेंट होने पर `ctx.approval` से पूछता है (केवल `allowed-once` आगे बढ़ता है); अन्यथा इंटरैक्टिव पुष्टि ही अनुमोदन माध्यम है। `writeEnabled: false` कठोर स्विच है।
-- **कोई प्रॉम्प्ट इंजेक्शन नहीं**: कंसोल कोई प्रॉम्प्ट अनुभाग पंजीकृत नहीं करता; केवल उसके दो टूल/कमांड विवरण, आधिकारिक क्लाइंट की न्यूनतम शैली में।
+## Install & uninstall
 
-## कॉन्फ़िगरेशन
+- **git चैनल** (नवीनतम `main`): `dsh plugin --profile web add "github:PerryLink/dsh-mcp-panel#main"` — `prepare` स्क्रिप्ट केवल production निर्भरताओं से बिल्ड करती है।
+- **npm चैनल** (प्रकाशित संस्करण): `dsh plugin --profile web add dsh-mcp-panel`।
+- **tarball चैनल**: इस repo में `pnpm pack`, फिर `dsh plugin --profile web add ./dsh-mcp-panel-<version>.tgz`।
+- **अनइंस्टॉल**: `cordis.patch.yml` से `mcp-panel` पंक्ति हटाएँ (वेब सतह इसे हॉट-रीलोड करती है), profile के `node_modules` से पैकेज हटाएँ, और `dsh web --dump-config` से पुष्टि करें कि कोई `mcp-panel` पंक्ति शेष नहीं है।
 
-| कुंजी | मान | विवरण |
+## Configuration
+
+सभी ट्यूनेबल Schemastery `Config` फ़ील्ड हैं (cordis.yml से बदले जा सकते हैं)। `cordis.patch.yml` हर कुंजी को इनलाइन दस्तावेज़ित करता है।
+
+| कुंजी | डिफ़ॉल्ट | अर्थ |
 |---|---|---|
-| `probeEnabled` / `probeTimeoutMs` / `maxProbes` | `true` / `10000` / `10` | प्रोब टूल, समय सीमा, दिखाए गए रिकॉर्ड |
-| `refreshIntervalMs` | `0` | सुझाया गया पैनल रीफ़्रेश (`0` = मांग पर) |
-| `outputLanguage` | `en` | `/mcp` भाषा: `en\|zh\|es\|pt\|hi` |
-| `passiveProbeEnabled` / `passiveProbeIntervalMs` | `false` / `60000` | निष्क्रिय प्रोब और अंतराल |
-| `trialEnabled` / `trialTimeoutMs` / `trialMaxResultChars` | `true` / `120000` / `60000` | ट्रायल कंसोल और उसकी सीमाएँ |
-| `writeEnabled` / `backupCount` | `true` / `5` | लेखन स्विच; रखे गए बैकअप |
+| `probeEnabled` | `true` | `mcp_probe` पृष्ठभूमि-कार्य टूल पंजीकृत करें (परिणाम केवल पैनल) |
+| `probeTimeoutMs` | `10000` | प्रति-प्रोब timeout (ms) |
+| `maxProbes` | `10` | पैनल में दिखाए गए प्रोब रिकॉर्ड |
+| `refreshIntervalMs` | `0` | सुझाया गया पैनल रीफ़्रेश (ms); `0` = माँग पर |
+| `outputLanguage` | `en` | `/mcp` आउटपुट भाषा: `en \| zh \| es \| pt \| hi` |
+| `passiveProbeEnabled` | `false` | streamable-http सर्वरों की आवधिक जाँच |
+| `passiveProbeIntervalMs` | `60000` | निष्क्रिय प्रोब अंतराल (ms) |
+| `trialEnabled` | `true` | टूल ट्रायल कंसोल (सेटिंग्स टैब + `/mcp call`) |
+| `trialTimeoutMs` | `120000` | प्रति ट्रायल कॉल पैनल-साइड समय सीमा (ms) |
+| `trialMaxResultChars` | `60000` | ट्रायल परिणाम payload की सीमा (वर्ण) |
+| `writeEnabled` | `true` | कठोर स्विच: `false` हर प्रोफ़ाइल लेखन अस्वीकार करता है (कॉपी फिर भी चलती है) |
+| `backupCount` | `5` | प्रति लेखन रखे गए `cordis.patch.yml` बैकअप |
 
-## Resources और Prompts
+## Tools & surfaces
 
-आधिकारिक क्लाइंट दस्तावेज़ कहता है "Tools are the only bridged MCP capability": दोनों स्थगित हैं। कंसोल प्रस्तावित कैटलॉग seam को फ़ीचर-डिटेक्ट करता है और उसके आते ही रीड-ओनली सूचियाँ दिखाएगा; तब तक क्षमता बोर्ड *upstream समर्थन की प्रतीक्षा में* दर्शाता है (harness के `docs/upstream-proposal.md` में अनुपूरक)।
+| सतह | प्रकार | टिप्पणियाँ |
+|---|---|---|
+| `/mcp` | command | प्रति-सर्वर स्थिति पंक्ति; मॉडल-पठनीय और लॉग-पुनर्निर्माण योग्य |
+| `/mcp <server> tools` | command | मॉडल-दृश्य `mcp__*` टूल नाम + विवरण |
+| `/mcp <server> health` | command | सैनिटाइज़्ड त्रुटि पाठ से व्युत्पन्न स्व-उपचार सुझाव |
+| `/mcp <server> call <tool> [json]` | command | आधिकारिक टूल पाइपलाइन से परीक्षण कॉल |
+| `mcp_probe` | tool | वैकल्पिक Streamable HTTP कनेक्टिविटी प्रोब (पृष्ठभूमि कार्य) |
+| सेटिंग्स → प्लगइन्स → MCP टैब | UI slot | स्थिति कार्ड, सर्वर CRUD और टूल ट्रायल कंसोल |
+| `mcpPanel` Typert Remote | service | रीड-ओनली स्नैपशॉट चैनल (host → client) |
 
-## योगदानकर्ता
+## Resources & Prompts
 
-समस्याएँ रिपोर्ट करने, समीक्षा करने या कोड योगदान देने वाले सभी का धन्यवाद — विशेष रूप से [xiaoyuyu6420](https://github.com/xiaoyuyu6420), जिन्होंने क्लीन-चेकआउट बिल्ड विफलताओं के पीछे की गुम client devDependencies का निदान किया (PR #5)।
+आधिकारिक क्लाइंट दस्तावेज़ कहता है कि *"Tools are the only bridged MCP capability"* — Resources और Prompts स्थगित हैं। कंसोल प्रस्तावित upstream catalog seam को फ़ीचर-डिटेक्ट करता है और उसके आते ही रीड-ओनली सूचियाँ दिखाएगा; तब तक क्षमता बोर्ड दोनों को **upstream समर्थन की प्रतीक्षा में** दर्शाता है।
 
-## लाइसेंस
+## Permissions & data
 
-Apache-2.0 — देखें [LICENSE](LICENSE)।
+- **अनुमतियाँ**: `dshWorkshop` manifest `network:outbound` और `native-code:none` घोषित करता है।
+- **डेटा**: पैनल रीड-ओनली है; यह केवल केवल-जोड़ने वाले `cordis.patch.yml` अंश लिखता है (अनुमोदित, बैकअप-प्रथम)। URL क्रेडेंशियल, userinfo पासवर्ड, हेडर मान, बियरर टोकन और JWT रेंडर से पहले रिडैक्ट होते हैं; कॉन्फ़िगर किए गए `headers` कभी किसी स्नैपशॉट में नहीं जाते, और env/header के **मान** कभी host से बाहर नहीं जाते (संपादक केवल कुंजियाँ देखता है)।
+
+## Security boundaries
+
+- **पुल पुल ही रहता है।** ट्रांसपोर्ट, OAuth या प्रोटोकॉल में कोई बदलाव नहीं; प्रति सर्वर एक mcp-client पंक्ति, ठीक हाथ से लिखी हुई।
+- **कोई नकली स्थिति नहीं।** बिना upstream अवलोकन वाले कनेक्शन फ़ील्ड `unknown` / `—` और `statusSource: 'derived'` पढ़ते हैं; एग्ज़िट कोड और stderr पूँछ कभी गढ़े नहीं जाते।
+- **लेखन केवल-जोड़ने वाला, अनुमोदित, बैकअप सहित।** कंसोल कभी `cordis.patch.yml` को दोबारा नहीं लिखता; यह जनरेट किए ऑपरेशन जोड़ता है और नवीनतम `backupCount` बैकअप रखता है।
+- **कोई प्रॉम्प्ट इंजेक्शन नहीं।** पैनल कोई प्रॉम्प्ट अनुभाग पंजीकृत नहीं करता; मॉडल को दिखने वाला उसका एकमात्र पाठ दो टूल/कमांड विवरण हैं।
+
+## Known limitations
+
+- **Resources और Prompts** upstream समर्थन की प्रतीक्षा में — आधिकारिक क्लाइंट केवल टूल जोड़ता है।
+- **एग्ज़िट कोड / stderr पूँछ** तब तक *upstream समर्थन की प्रतीक्षा में* चिह्नित रहते हैं जब तक क्लाइंट उन्हें उजागर न करे।
+- **रीड-ओनली पैनल** — कंसोल कभी कनेक्शन स्थिति नहीं गढ़ता; अप्रेक्षणीय फ़ील्ड `unknown` / `-1` / `—` पढ़ते हैं।
+
+## Development
+
+```sh
+pnpm run typecheck && pnpm run typecheck:ci && pnpm test && pnpm run build && pnpm run verify:self-contained && pnpm run verify:artifacts && pnpm pack
+```
+
+`scripts/verify-headless.mjs` वास्तविक web profile बूट करता है और `/mcp` का सटीक आउटपुट छापता है। प्रकाशन: `node scripts/release.mjs <x.y.z>` पूरी जाँच चलाता है, commit करता है और स्थानीय रूप से `v<x.y.z>` टैग करता है (कभी push नहीं करता)।
+
+## Topics
+
+`dsh`, `dsh-plugin`, `deepseek-harness`, `deepseek`, `cordis`, `mcp`, `mcp-client`, `observability`, `panel`
+
+## Contributors
+
+- [@PerryLink](https://github.com/PerryLink) — निर्माता और अनुरक्षक।
+- [@xiaoyuyu6420](https://github.com/xiaoyuyu6420) — क्लीन-चेकआउट बिल्ड विफलताओं के पीछे की गुम client devDependencies का निदान किया (PR #5)।
+
+## License
+
+[Apache License 2.0](LICENSE) © 2026 dsh-mcp-panel योगदानकर्ता
