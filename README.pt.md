@@ -70,6 +70,20 @@ O [`@deepseek-ai/dsh-mcp-client`](https://github.com/deepseek-ai/deepseek-harnes
 
 O console **lê** o cliente pelo seu seam de observabilidade `mcp/status` (evento + serviço de consulta `mcpStatus`), pelo registro de ferramentas e pelo loader; **escreve** apenas na camada de patches do perfil — somente-anexar, com aprovação e sempre com backup. Transporte, OAuth e protocolo permanecem intocados.
 
+## Console vs. hand-written cordis.yml
+
+| | cordis.yml à mão | Console dsh-mcp-panel |
+|---|---|---|
+| Adicionar servidor | Editar YAML, cuidar indentação/aspas | Formulário → fragmento de patch → **copiar** ou **gravar** (aprovação + backup) |
+| Editar servidor | Editar YAML, reiniciar/recarga a quente | Formulário pré-preenchido da linha ao vivo; segredos inalterados preservam o valor no host |
+| Remover servidor | Apagar a linha | Operação `set disabled: true` (o vocabulário de patches não tem remove) — re-habilitável |
+| Ver status | Ler logs | Selos + reconexões + último erro, ao vivo do `mcp/status` |
+| Testar uma ferramenta | Pedir ao modelo | Banco de testes → pipeline oficial `ctx.tools.execute()` (permissões e aprovação em vigor) |
+| Diagnosticar falhas | grep de logs | `/mcp <servidor> health` com sugestões derivadas |
+| Erros | Reverter à mão | Cada gravação é somente-anexar e deixa um backup com marca de tempo |
+
+A saída do console É o vocabulário do `cordis.patch.yml` — as mesmas linhas que você escreveria à mão, geradas, pré-visualizadas e aplicadas com segurança.
+
 ## Quick start
 
 ```sh
@@ -168,6 +182,29 @@ O `scripts/verify-headless.mjs` inicia o perfil web real e imprime a saída exat
 
 - [@PerryLink](https://github.com/PerryLink) — criador e mantenedor.
 - [@xiaoyuyu6420](https://github.com/xiaoyuyu6420) — diagnosticou as devDependencies de client ausentes por trás das falhas de build em checkouts limpos (PR #5).
+
+## PerryLink DSH Plugin Family
+
+Este projeto é um dos [plugins do DeepSeek Harness](https://github.com/PerryLink) mantidos por [PerryLink](https://github.com/PerryLink). Se este ajudar você, os outros provavelmente também ajudarão:
+
+| Plugin | Em uma linha |
+|---|---|
+| [dsh-mask](https://github.com/PerryLink/dsh-mask) | Middleware de mascaramento de PII: anonimiza no limite do modelo, restaura na camada de exibição |
+| **[dsh-mcp-panel](https://github.com/PerryLink/dsh-mcp-panel)** | Painel MCP somente leitura: comando /mcp + aba de configurações com status, ferramentas e erros |
+| [dsh-doublecheck](https://github.com/PerryLink/dsh-doublecheck) | Guarda de disciplina de engenharia: interrogatório de requisitos, portões de teste, revisão adversária |
+| [dsh-background-agents](https://github.com/PerryLink/dsh-background-agents) | Agentes filhos em segundo plano com barra lateral web, mensagens e interrupção |
+| [dsh-lsp-actions](https://github.com/PerryLink/dsh-lsp-actions) | Diagnóstico, formatação, autocompletar, ações de código e renomear via LSP |
+| [dsh-output-styles](https://github.com/PerryLink/dsh-output-styles) | Troca de estilo em runtime equivalente ao outputStyles do Claude Code |
+| [dsh-checkpoint-rewind](https://github.com/PerryLink/dsh-checkpoint-rewind) | Equivalente ao /rewind do Claude Code: snapshots, forks de sessão, restauração em um clique |
+| [dsh-permission-rules](https://github.com/PerryLink/dsh-permission-rules) | Regras de permissão declarativas allow/deny/ask estilo Claude Code, com auditoria |
+| [dsh-auto-review](https://github.com/PerryLink/dsh-auto-review) | Revisão automática de segundo modelo na cadeia de aprovação, fail-closed por padrão |
+| [dsh-memento](https://github.com/PerryLink/dsh-memento) | Memória entre sessões com aprovação: seam ctx.memory + SQLite + ferramenta memory |
+| [dsh-skill-pack-security](https://github.com/PerryLink/dsh-skill-pack-security) | Pacote de skills de auditoria de segurança: varredura de segredos, revisão de dependências e cadeia de suprimentos |
+| [dsh-session-pin](https://github.com/PerryLink/dsh-session-pin) | Fixa sessões na barra lateral web com ordenação durável |
+| [dsh-composer-history](https://github.com/PerryLink/dsh-composer-history) | Histórico de entrada estilo terminal para o compositor web: setas, busca Ctrl+R |
+| [dsh-github](https://github.com/PerryLink/dsh-github) | Integração de PR/issues do GitHub para DSH, toda escrita com aprovação |
+| [dsh-plugin-guide](https://github.com/PerryLink/dsh-plugin-guide) | Base de conhecimento de desenvolvimento de plugins como skill de agente sob demanda |
+| [dsh-claude-move](https://github.com/PerryLink/dsh-claude-move) | Migra sessões, memória, skills e CLAUDE.md do Claude Code para DSH |
 
 ## License
 
