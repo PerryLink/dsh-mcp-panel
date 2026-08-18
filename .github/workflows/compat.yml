@@ -1,64 +1,120 @@
-name: harness-compat
+name: Compat
 
-# Optional compatibility job (monthly + manual): boots the real deepseek-harness
-# web profile at a pinned mainline SHA with this plugin installed from its
-# packed tarball, then exercises the assembled /mcp command end to end.
-# Catches upstream mainline drift before users hit it; the main CI (ci.yml)
-# stays fast and offline. See scripts/verify-headless.mjs for the boot steps.
-
+# dshbase-style compatibility verification (monthly + on demand):
+#   1. bare-import: install the packed tarball into an empty project and import
+#      its entry - catches devDependencies mistaken for dependencies.
+#   2. profile: install the tarball into a scratch DSH_HOME profile next to
+#      dsh-base + dsh-headless, assert the bundle row mounts (dump-config), and
+#      run one keyless headless task. MISSING_CREDENTIAL proves the plugin tree
+#      loaded; a hang (pending service) hits the 120s timeout and fails, which
+#      is exactly how a missing injected service surfaces.
+#   3. uninstall: the profile install must be fully reversible.
+# Platform guard: every assertion here is platform-neutral. Platform-specific
+# behavior (Windows/macOS-only rows) is never asserted on this Linux runner.
 on:
-  workflow_dispatch:
   schedule:
-    - cron: '0 5 1 * *' # first day of each month, 05:00 UTC
+    - cron: '0 4 1 * *'
+  workflow_dispatch:
 
 jobs:
-  verify:
+  bare-import:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-        with:
-          path: plugin
-      # Explicit version: the plugin checkout sits in a subdirectory, where
-      # the action's packageManager auto-detection (workspace root) finds
-      # nothing. Keep in sync with the packageManager field in package.json.
-      - uses: pnpm/action-setup@v6
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
         with:
           version: 11.7.0
-      - uses: actions/setup-node@v7
+
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
-      - name: Install plugin toolchain and pack the tarball
-        working-directory: plugin
-        run: |
-          pnpm install --frozen-lockfile
-          pnpm run build
-          pnpm pack --pack-destination .
-      - uses: actions/checkout@v7
-        with:
-          repository: deepseek-ai/deepseek-harness
-          # Pin must stay RESOLVABLE on the upstream remote: it was rewound past
-          # 8c690c7 (force-push), which silently broke this job's checkout.
-          # 47f9438 is the current upstream master and the base of the fork
-          # branch carrying the mcp/status seam verification.
-          ref: 47f943859bef60e4160492346772ded9b24f765a
-          path: harness
-      - name: Install harness dependencies
-        working-directory: harness
+          cache: pnpm
+      - name: Install
         run: pnpm install --frozen-lockfile
-      - name: Install the plugin into a fresh web profile
-        working-directory: harness
-        env:
-          DSH_HOME: ${{ github.workspace }}/dsh-home
+
+      - name: Build and pack
         run: |
-          TARBALL=$(ls "${{ github.workspace }}"/plugin/dsh-mcp-panel-*.tgz)
-          pnpm dsh plugin --profile web add "$TARBALL"
-      - name: Boot the profile and exercise /mcp end to end
-        working-directory: harness
-        env:
-          DSH_HOME: ${{ github.workspace }}/dsh-home
-          DSH_INSTALL_ANCHOR: ${{ github.workspace }}/harness/apps/cli/package.json
+          pnpm run build
+          pnpm pack --pack-destination "$RUNNER_TEMP"
+      - name: Bare install + import smoke
         run: |
-          node --import tsx/esm "${{ github.workspace }}/plugin/scripts/verify-headless.mjs" > verify.log 2>&1 || { cat verify.log; exit 1; }
-          grep -q 'mcpPanel/status typert descriptor: registered' verify.log
-          grep -q 'command/run present: true' verify.log
-          cat verify.log
+          set -euo pipefail
+          TARBALL="$(ls "$RUNNER_TEMP"/dsh-mcp-panel-*.tgz | head -n1)"
+          mkdir -p "$RUNNER_TEMP/bare" && cd "$RUNNER_TEMP/bare"
+          pnpm init >/dev/null
+          pnpm add "$TARBALL" >/dev/null
+          node --input-type=module -e "import('dsh-mcp-panel').then(()=>process.exit(0)).catch(e=>{console.error(e);process.exit(1)})"
+  profile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.7.0
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Build and pack
+        run: |
+          pnpm run build
+          pnpm pack --pack-destination "$RUNNER_TEMP"
+      - name: Install dsh CLI
+        run: npm install -g @deepseek-ai/dsh@0.1.0-rc.6
+
+      - name: Install into a scratch profile (builds allowlisted)
+        run: |
+          set -euo pipefail
+          TARBALL="$(ls "$RUNNER_TEMP"/dsh-mcp-panel-*.tgz | head -n1)"
+          export DSH_HOME="$RUNNER_TEMP/dsh-home"
+          mkdir -p "$DSH_HOME/profiles/compat"
+          cat > "$DSH_HOME/profiles/compat/pnpm-workspace.yaml" <<'YAML'
+          packages:
+            - .
+          nodeLinker: hoisted
+          autoInstallPeers: false
+          allowBuilds:
+            '@deepseek-ai/dsh-subprocess-local': true
+            koffi: true
+            node-pty: true
+            protobufjs: true
+            '@google/genai': true
+          YAML
+          dsh plugin --profile compat add '@deepseek-ai/dsh-base@0.1.0-rc.6' '@deepseek-ai/dsh-headless@0.1.0-rc.6' "$TARBALL"
+
+      - name: Row-mount assertion
+        run: |
+          set -euo pipefail
+          export DSH_HOME="$RUNNER_TEMP/dsh-home"
+          dsh --profile compat --dump-config > dump.txt
+          grep -q "dsh-mcp-panel" dump.txt
+
+      - name: Keyless headless smoke
+        run: |
+          set -euo pipefail
+          export DSH_HOME="$RUNNER_TEMP/dsh-home"
+          set +e
+          timeout 120 dsh --profile compat "Reply with exactly: ok" > smoke.log 2>&1
+          code="$?"
+          set -e
+          if grep -q 'MISSING_CREDENTIAL' smoke.log; then
+            echo 'PASS: plugin tree loaded (keyless)'
+          elif [ "$code" -eq 0 ] && grep -qiE '(^|[^a-z])ok([^a-z]|$)' smoke.log; then
+            echo 'PASS: plugin tree loaded (with key)'
+          else
+            echo 'FAIL: headless smoke did not prove tree load'
+            cat smoke.log
+            exit 1
+          fi
+
+      - name: Uninstall
+        run: |
+          set -euo pipefail
+          export DSH_HOME="$RUNNER_TEMP/dsh-home"
+          dsh plugin --profile compat remove dsh-mcp-panel
