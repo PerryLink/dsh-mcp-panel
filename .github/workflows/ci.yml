@@ -25,6 +25,9 @@ jobs:
       # The local checkout typecheck (pnpm run typecheck) stays a dev-side gate.
       - run: pnpm run typecheck:ci
       - run: pnpm test
+      - run: pnpm run test:coverage
+      - run: pnpm run lint
+      - run: pnpm run check:readmes
       - run: pnpm run build
       - run: pnpm run verify:self-contained
       - run: pnpm run verify:artifacts
