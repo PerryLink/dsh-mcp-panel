@@ -65,7 +65,7 @@ export {
   type McpPatchResolution,
 } from './patch.ts'
 export { appendPatchFragment } from './write.ts'
-export { runTrialCall, validateTrialRequest, type McpTrialRequest, type McpTrialResult } from './trial.ts'
+export { createTrialCaller, validateTrialRequest, type McpTrialRequest, type McpTrialResult } from './trial.ts'
 export { MCP_STATUS_EVENT, type McpStatusPayload, type McpStatusQuery, type McpServerStatus } from './upstream.ts'
 export type * from './wire.ts'
 

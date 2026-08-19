@@ -59,9 +59,6 @@ export interface McpTrialLimits {
 /** Panel-owned marker prefix so trial callIds can never collide with model calls. */
 const TRIAL_CALL_PREFIX = 'mcp-panel-trial'
 
-/** Trial callId counter per service instance. */
-let trialCounter = 0
-
 /**
  * Validate one trial request structurally; returns an English error string
  * or null. Never throws on untrusted input.
@@ -83,50 +80,60 @@ export function validateTrialRequest(request: unknown): string | null {
 }
 
 /**
- * Run one trial call through the official tool pipeline.
- *
- * @param tools - the registry the call executes through.
- * @param agents - optional live agent registry for approval routing.
- * @param sessionId - optional current session id from the client.
- * @param request - the validated trial request.
- * @param limits - panel-side deadline and result cap.
- * @returns the wire result.
+ * Create the trial caller: one callId sequence per service instance, so a
+ * plugin reload never carries counter state across mounts.
+ * @returns the trial caller bound to its own sequence.
  */
-export async function runTrialCall(
-  tools: ToolRuntime,
-  agents: McpAgentRegistryFace | undefined,
-  sessionId: string | undefined,
-  request: McpTrialRequest,
-  limits: McpTrialLimits,
-): Promise<McpTrialResult> {
-  const { serverName, toolName } = request
-  const prefix = `mcp__${serverName}__`
-  if (!toolName.startsWith(prefix)) {
-    throw new Error(`tool "${toolName}" does not belong to server "${serverName}" (expected the ${prefix}… namespace)`)
+export function createTrialCaller() {
+  let trialCounter = 0
+  return {
+    /**
+     * Run one trial call through the official tool pipeline.
+     *
+     * @param tools - the registry the call executes through.
+     * @param agents - optional live agent registry for approval routing.
+     * @param sessionId - optional current session id from the client.
+     * @param request - the validated trial request.
+     * @param limits - panel-side deadline and result cap.
+     * @returns the wire result.
+     */
+    async runTrialCall(
+      tools: ToolRuntime,
+      agents: McpAgentRegistryFace | undefined,
+      sessionId: string | undefined,
+      request: McpTrialRequest,
+      limits: McpTrialLimits,
+    ): Promise<McpTrialResult> {
+      const { serverName, toolName } = request
+      const prefix = `mcp__${serverName}__`
+      if (!toolName.startsWith(prefix)) {
+        throw new Error(`tool "${toolName}" does not belong to server "${serverName}" (expected the ${prefix}… namespace)`)
+      }
+      if (tools.get(toolName) === undefined) {
+        throw new Error(`tool "${toolName}" is not registered — the server may be down or its sync failed`)
+      }
+      let argumentsValue: unknown
+      try {
+        argumentsValue = JSON.parse(request.argsJson)
+      } catch {
+        throw new Error('argsJson is not valid JSON')
+      }
+      const agent = sessionId === undefined || sessionId === '' ? undefined : agents?.get(sessionId)
+      const callId = `${TRIAL_CALL_PREFIX}-${++trialCounter}` as unknown as ToolExecutionInput['callId']
+      const started = Date.now()
+      const execution: ToolExecutionInput = {
+        callId,
+        name: toolName,
+        arguments: argumentsValue,
+        ...agent === undefined ? {} : { agent: agent as NonNullable<ToolExecutionInput['agent']> },
+        signal: AbortSignal.timeout(limits.timeoutMs),
+      }
+      const result = await tools.execute(execution)
+      const durationMs = Date.now() - started
+      const { json, truncated } = projectTrialResult(result, limits.maxResultChars)
+      return { callId: String(callId), isError: result.isError, truncated, durationMs, resultJson: json }
+    },
   }
-  if (tools.get(toolName) === undefined) {
-    throw new Error(`tool "${toolName}" is not registered — the server may be down or its sync failed`)
-  }
-  let argumentsValue: unknown
-  try {
-    argumentsValue = JSON.parse(request.argsJson)
-  } catch {
-    throw new Error('argsJson is not valid JSON')
-  }
-  const agent = sessionId === undefined || sessionId === '' ? undefined : agents?.get(sessionId)
-  const callId = `${TRIAL_CALL_PREFIX}-${++trialCounter}` as unknown as ToolExecutionInput['callId']
-  const started = Date.now()
-  const execution: ToolExecutionInput = {
-    callId,
-    name: toolName,
-    arguments: argumentsValue,
-    ...agent === undefined ? {} : { agent: agent as NonNullable<ToolExecutionInput['agent']> },
-    signal: AbortSignal.timeout(limits.timeoutMs),
-  }
-  const result = await tools.execute(execution)
-  const durationMs = Date.now() - started
-  const { json, truncated } = projectTrialResult(result, limits.maxResultChars)
-  return { callId: String(callId), isError: result.isError, truncated, durationMs, resultJson: json }
 }
 
 /** Project the registry outcome onto the lossless JSON the client renders. */

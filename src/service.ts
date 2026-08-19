@@ -50,7 +50,7 @@ import {
   type McpPatchResolution,
 } from './patch.ts'
 import { appendPatchFragment } from './write.ts'
-import { runTrialCall, validateTrialRequest, type McpAgentRegistryFace, type McpTrialRequest } from './trial.ts'
+import { createTrialCaller, validateTrialRequest, type McpAgentRegistryFace, type McpTrialRequest } from './trial.ts'
 import { probeEndpoint, probeJob, PROBE_KIND } from './probe.ts'
 import { sanitizeText } from './sanitize.ts'
 import type { McpServerStatus, McpStatusPhase } from './upstream.ts'
@@ -194,6 +194,9 @@ export class McpPanelService extends TypertRemoteService {
   private readonly observedAt = new Map<string, number>()
   /** Latest passive-probe reachability per server namespace. */
   private readonly probeStates = new Map<string, { state: 'reachable' | 'unreachable'; checkedAt: number }>()
+
+/** The trial caller with this instance's own callId sequence. */
+private readonly trialCaller = createTrialCaller()
   /** Passive-probe loop guard: one sweep at a time. */
   private passiveRunning = false
 
@@ -448,7 +451,7 @@ export class McpPanelService extends TypertRemoteService {
     }
     const problem = validateTrialRequest(request)
     if (problem !== null) throw new Error(`dsh-mcp-panel: ${problem}`)
-    return runTrialCall(
+    return this.trialCaller.runTrialCall(
       this.ctx.tools,
       agentsOf(this.ctx),
       sessionId,
