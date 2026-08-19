@@ -31,7 +31,7 @@ const INITIALIZE_PROTOCOL_VERSION = '2024-11-05'
 /** MCP clientInfo facts; protocol constants, not configuration. Exported so the
  * version-consistency tripwire (`tests/version.spec.ts`) can assert the
  * advertised version tracks the package version. */
-export const PROBE_CLIENT_INFO = { name: 'dsh-mcp-panel', version: '0.4.0' }
+export const PROBE_CLIENT_INFO = { name: 'dsh-mcp-panel', version: '0.4.1' }
 
 /** One settled probe: outcome status plus a sanitized one-line detail. */
 export interface ProbeOutcome {
