@@ -9,7 +9,10 @@
 // Isolation: by default DSH_HOME is pinned to a throwaway directory under
 // the OS temp root, overriding any shell-level or machine-scope value, so
 // the profile, sessions, and storages never land in the real dsh home. Pass
-// --use-real-home to boot against the default home (~/.dsh) deliberately.
+// --use-real-home to boot against the default home (~/.dsh) deliberately, or
+// set DSH_VERIFY_HOME to a pre-seeded sandbox (e.g. one where the plugin
+// tarball was installed into the profile first); an explicit sandbox is left
+// in place (only a home this script created is removed).
 import { loadProfile, loadOptionalPatches, composeEntries, boot, healProfilesModuleFallback } from '@deepseek-ai/dsh-app-boot'
 import { provideCmdline } from '@deepseek-ai/dsh-cmdline'
 import { resolveDshHome } from '@deepseek-ai/dsh-home-paths'
@@ -22,14 +25,17 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 const BIN = 'dsh-verify-headless'
 
 // The verification home: a fresh mkdtemp sandbox under the OS temp root
-// unless --use-real-home opts into the default home. The sandbox is created
-// before resolveDshHome() reads the environment, so no inherited DSH_HOME
-// (including machine-scope values) can redirect this script at real data.
+// unless --use-real-home opts into the default home or DSH_VERIFY_HOME names
+// a pre-seeded sandbox. The sandbox is created before resolveDshHome() reads
+// the environment, so no inherited DSH_HOME (including machine-scope values)
+// can redirect this script at real data.
 const useRealHome = process.argv.includes('--use-real-home')
-const sandboxHome = useRealHome ? undefined : mkdtempSync(join(tmpdir(), 'dsh-verify-headless-'))
+const explicitHome = process.env.DSH_VERIFY_HOME
+const ownsHome = !useRealHome && explicitHome === undefined
+const sandboxHome = useRealHome ? undefined : (explicitHome ?? mkdtempSync(join(tmpdir(), 'dsh-verify-headless-')))
 if (sandboxHome !== undefined) process.env.DSH_HOME = sandboxHome
 const home = resolveDshHome()
-console.log(`[home] ${home} (${useRealHome ? 'real home' : 'temp sandbox'})`)
+console.log(`[home] ${home} (${useRealHome ? 'real home' : ownsHome ? 'temp sandbox' : 'explicit sandbox, kept'})`)
 
 /**
  * Remove the verification sandbox, refusing any path outside the OS temp root.
@@ -130,5 +136,5 @@ try {
   console.log(`\n[log] command/run present: ${eventTypes.includes('command/run')}, command/done present: ${eventTypes.includes('command/done')}`)
 } finally {
   await ctx?.fiber.dispose()
-  if (sandboxHome !== undefined) removeSandboxHome(sandboxHome)
+  if (sandboxHome !== undefined && ownsHome) removeSandboxHome(sandboxHome)
 }
