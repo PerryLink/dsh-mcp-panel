@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented in this file.
 
+## [Unreleased]
+
+### Fixed
+
+- The trial console's callId counter now lives on a per-service-instance trial caller (`createTrialCaller`) instead of a module-level `let`, matching its documented per-instance semantics — a plugin reload no longer carries counter state across mounts. (`runTrialCall` is now exported through the caller factory.)
+
 ## [0.4.0] - 2026-08-16
 
 ### Added
