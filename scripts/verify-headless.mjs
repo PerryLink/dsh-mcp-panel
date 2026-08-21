@@ -120,7 +120,8 @@ try {
     send: () => undefined, followup: () => undefined, steer: () => undefined, inject: () => undefined,
   }
   const run = async (line) => {
-    const execution = await ctx.commands.execute(agent, line, new AbortController().signal)
+    // rc8 execute(agent, line, images, signal): plain invocations carry no images.
+    const execution = await ctx.commands.execute(agent, line, [], new AbortController().signal)
     return execution
   }
 

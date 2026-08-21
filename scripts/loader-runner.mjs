@@ -79,7 +79,8 @@ try {
 
   // Real behavior: /mcp through the real commands service on an empty
   // composition reports the empty-state line (English default).
-  const execution = await ctx.commands.execute(agent, '/mcp', new AbortController().signal)
+  // rc8 execute(agent, line, images, signal): plain invocations carry no images.
+  const execution = await ctx.commands.execute(agent, '/mcp', [], new AbortController().signal)
   const text = execution?.result?.text ?? ''
   if (!text.includes('No MCP servers configured')) {
     throw new Error(`Loader composition: /mcp returned ${JSON.stringify(execution?.result)}`)

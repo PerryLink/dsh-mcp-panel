@@ -111,7 +111,8 @@ export async function mountHarness(entries: FakeEntry[] = [], config: Record<str
 
 /** Run one slash command through the real commands service. */
 export function runCommand(harness: Harness, line: string) {
-  return harness.ctx.commands.execute(harness.agent, line, new AbortController().signal)
+  // rc8 execute(agent, line, images, signal): plain invocations carry no images.
+  return harness.ctx.commands.execute(harness.agent, line, [], new AbortController().signal)
 }
 
 /** Re-exported for specs that assemble loader rows directly. */
