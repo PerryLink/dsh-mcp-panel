@@ -2,6 +2,17 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.4.2] - 2026-08-21
+
+### Changed
+
+- All `@deepseek-ai/dsh-*` dependencies moved from the `0.1.0-rc.6` line to rc.8: the 15 devDependencies pin `0.1.0-rc.8` exactly, and the four peerDependencies (`dsh-commands` / `dsh-jobs` / `dsh-tools` / `dsh-typert-protocol`) now range `>=0.1.0-rc.8 <0.2.0`. `@deepseek-ai/cordis` and the non-dsh dependency lines are unchanged; the compatibility tables now claim `0.1.0-rc.8`–`0.2.0`.
+- The `/mcp` and `mcp_probe` surfaces are unchanged. The rc.8 `commands.execute(agent, line, images, signal)` signature carries a new image-attachment parameter; the internal call sites that drive plain invocations (test harness, loader runner, headless verifier) now pass an empty image list.
+
+### Engineering
+
+- `pnpm-lock.yaml` regenerated against the rc.8 graph so the client type faces (`dsh-typert-protocol`, `dsh-api-remotes`) resolve as one version, keeping the `mcpPanel` Remote namespace merge visible to `typecheck:ci`.
+
 ## [0.4.1] - 2026-08-19
 
 ### Fixed
