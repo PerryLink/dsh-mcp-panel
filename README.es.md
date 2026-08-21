@@ -24,7 +24,7 @@
 
 | Superficie | Estado |
 |---|---|
-| Harness | DeepSeek Harness `0.1.0-rc.5`–`0.1.0-rc.6` |
+| Harness | DeepSeek Harness `0.1.0-rc.8`–`0.2.0` |
 | Node | `^22.19.0 \|\| >=24.0.0` |
 | Plataformas | Web GUI (doble cara: host + navegador) |
 | Modelo | Cualquiera (el panel es de solo lectura; solo la salida de `/mcp` es legible por el modelo) |
