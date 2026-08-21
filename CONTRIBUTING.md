@@ -7,7 +7,7 @@ Thanks for your interest! PRs fixing bugs, improving tests, or tightening docs a
 ```sh
 pnpm install
 pnpm run typecheck        # local gate: requires a deepseek-harness checkout (see below)
-pnpm run typecheck:ci     # npm gate: published 0.1.0-rc.6 type faces, no checkout needed
+pnpm run typecheck:ci     # npm gate: published 0.1.0-rc.8 type faces, no checkout needed
 pnpm test
 pnpm run build
 pnpm run verify:self-contained
@@ -42,7 +42,7 @@ the client type faces to **relative paths into a deepseek-harness checkout**
 (`../../../packages/…`, `../../../vendor/cordis/…`), so the local `typecheck`
 gate sees the harness's freshest type faces. The npm-resolved gate
 (`typecheck:ci`, `tsconfig.ci.json` with the `paths` cleared) compiles the same
-sources against the published `0.1.0-rc.6` faces and is what CI runs, so a PR
+sources against the published `0.1.0-rc.8` faces and is what CI runs, so a PR
 cannot drift from the published type line. Consequences:
 
 - `pnpm run typecheck` works only when this repository sits at

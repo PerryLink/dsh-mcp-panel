@@ -20,7 +20,7 @@ jobs:
           node-version: ${{ matrix.node }}
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      # The npm-resolved typecheck: registry-published 0.1.0-rc.6 type faces
+      # The npm-resolved typecheck: registry-published 0.1.0-rc.8 type faces
       # (all @deepseek-ai/dsh-* devDeps), no checkout-relative tsconfig paths.
       # The local checkout typecheck (pnpm run typecheck) stays a dev-side gate.
       - run: pnpm run typecheck:ci
