@@ -116,7 +116,7 @@ describe('mcp_probe three interfaces', () => {
         properties: {
           server: {
             type: 'string',
-            description: 'serverName of a configured streamable-http MCP server (see /mcp for the list).',
+            description: 'serverName of a configured MCP server (see /mcp for the list); streamable-http and stdio transports are both supported.',
           },
         },
         required: ['server'],

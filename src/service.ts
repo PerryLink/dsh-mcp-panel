@@ -51,7 +51,7 @@ import {
 } from './patch.ts'
 import { appendPatchFragment } from './write.ts'
 import { createTrialCaller, validateTrialRequest, type McpAgentRegistryFace, type McpTrialRequest } from './trial.ts'
-import { probeEndpoint, probeJob, PROBE_KIND } from './probe.ts'
+import { probeJob, PROBE_KIND, type ProbeTarget } from './probe.ts'
 import { sanitizeText } from './sanitize.ts'
 import type { McpServerStatus, McpStatusPhase } from './upstream.ts'
 import type {
@@ -312,18 +312,18 @@ private readonly trialCaller = createTrialCaller()
   }
 
   /**
-   * Start a one-shot connectivity probe of one configured streamable-http
-   * server as an UNOWNED background job — panel-only, like the `mcp_probe`
-   * tool, but callable from the settings tab. Exported on the wire by the
-   * `mcpPanel/probe` invocation descriptor.
+   * Start a one-shot connectivity probe of one configured MCP server
+   * (streamable-http or stdio) as an UNOWNED background job — panel-only,
+   * like the `mcp_probe` tool, but callable from the settings tab. Exported
+   * on the wire by the `mcpPanel/probe` invocation descriptor.
    *
    * @param serverName - configured namespace.
    * @returns the started job id and where the result lands.
    */
   probe(serverName: string): ProbeStarted {
-    const target = this.rawEndpoint(serverName)
+    const target = this.probeSpec(serverName)
     if (target === undefined) {
-      throw new Error(`dsh-mcp-panel: "${serverName}" is not a configured streamable-http MCP server`)
+      throw new Error(`dsh-mcp-panel: "${serverName}" is not a configured MCP server (streamable-http or stdio)`)
     }
     const jobs = this.ctx.get('jobs')
     if (jobs === undefined) {
@@ -333,7 +333,7 @@ private readonly trialCaller = createTrialCaller()
       kind: PROBE_KIND,
       label: `mcp_probe ${serverName}`,
       // Unowned: no model completion notice, readable by the panel only.
-      run: () => probeJob(target.url, target.headers, this.config.probeTimeoutMs),
+      run: () => probeJob(target, this.config.probeTimeoutMs),
     })
     return {
       jobId,
@@ -486,7 +486,7 @@ private readonly trialCaller = createTrialCaller()
     return new Error(`dsh-mcp-panel: invalid patch operation — ${resolution.issues.map(issue => issue.text).join(' ')}`)
   }
 
-  /** One passive-probe sweep over every configured streamable-http server. */
+  /** One passive-probe sweep over every configured MCP server (both transports). */
   private async runPassiveProbes(): Promise<void> {
     if (this.passiveRunning) return
     this.passiveRunning = true
@@ -494,9 +494,9 @@ private readonly trialCaller = createTrialCaller()
       for (const entry of this.ctx.loader.entries()) {
         if (entry.options.name !== MCP_CLIENT_MODULE) continue
         const serverName = serverNameOf(entry.options.config, `entry:${entry.options.id}`)
-        const target = this.rawEndpoint(serverName)
+        const target = this.probeSpec(serverName)
         if (target === undefined) continue
-        const outcome = await probeEndpoint(target.url, target.headers, this.config.probeTimeoutMs, AbortSignal.timeout(this.config.probeTimeoutMs))
+        const outcome = await probeJob(target, this.config.probeTimeoutMs).done
         this.probeStates.set(serverName, { state: outcome.status === 'completed' ? 'reachable' : 'unreachable', checkedAt: Date.now() })
       }
     } finally {
@@ -505,15 +505,18 @@ private readonly trialCaller = createTrialCaller()
   }
 
   /**
-   * Resolve one server's raw endpoint for the probe tool. Credentials stay
-   * inside this return value and are used for the request only — they never
-   * reach a snapshot, a log, or a display.
+   * Resolve one configured server's probe spec. Credentials stay inside the
+   * returned value and are used for the probe only — they never reach a
+   * snapshot, a log, or a display. Streamable-http rows yield their raw
+   * endpoint + configured headers; stdio rows yield the launch spec
+   * (`command`/`args`, explicit `env` merged after the scrub, optional
+   * `cwd`) that the probe spawns.
    *
    * @param serverName - configured namespace.
-   * @returns the raw URL + configured headers, or `undefined` when the server
-   *   is not a configured streamable-http row.
+   * @returns the transport-tagged probe spec, or `undefined` when the server
+   *   is not a configured MCP row of either transport.
    */
-  rawEndpoint(serverName: string): { url: string; headers: Record<string, string> } | undefined {
+  probeSpec(serverName: string): ProbeTarget | undefined {
     for (const entry of this.ctx.loader.entries()) {
       if (entry.options.name !== MCP_CLIENT_MODULE) continue
       const config = entry.options.config
@@ -524,19 +527,58 @@ private readonly trialCaller = createTrialCaller()
       if (serverNameOf(config, `entry:${entry.options.id}`) !== serverName) continue
       if (typeof config !== 'object' || config === null || Array.isArray(config)) return undefined
       const row = config as Record<string, unknown>
-      if (row['transport'] !== 'streamable-http') return undefined
-      const url = row['url']
-      if (typeof url !== 'string' || url === '') return undefined
-      const headersValue = row['headers']
-      const headers: Record<string, string> = {}
-      if (typeof headersValue === 'object' && headersValue !== null && !Array.isArray(headersValue)) {
-        for (const [name, value] of Object.entries(headersValue as Record<string, unknown>)) {
-          if (typeof value === 'string') headers[name] = value
+      if (row['transport'] === 'streamable-http') {
+        const url = row['url']
+        if (typeof url !== 'string' || url === '') return undefined
+        const headersValue = row['headers']
+        const headers: Record<string, string> = {}
+        if (typeof headersValue === 'object' && headersValue !== null && !Array.isArray(headersValue)) {
+          for (const [name, value] of Object.entries(headersValue as Record<string, unknown>)) {
+            if (typeof value === 'string') headers[name] = value
+          }
         }
+        return { kind: 'http', url, headers }
       }
-      return { url, headers }
+      if (row['transport'] === 'stdio') {
+        const command = row['command']
+        if (typeof command !== 'string' || command === '') return undefined
+        const argsValue = row['args']
+        const args: string[] = []
+        if (Array.isArray(argsValue)) {
+          for (const value of argsValue) {
+            if (typeof value !== 'string') return undefined
+            args.push(value)
+          }
+        } else if (argsValue !== undefined) return undefined
+        const envValue = row['env']
+        const env: Record<string, string> = {}
+        if (typeof envValue === 'object' && envValue !== null && !Array.isArray(envValue)) {
+          for (const [name, value] of Object.entries(envValue as Record<string, unknown>)) {
+            if (typeof value !== 'string') return undefined
+            env[name] = value
+          }
+        } else if (envValue !== undefined) return undefined
+        const cwd = row['cwd']
+        if (cwd !== undefined && (typeof cwd !== 'string' || cwd === '')) return undefined
+        return { kind: 'stdio', command, args, env, ...(typeof cwd === 'string' ? { cwd } : {}) }
+      }
+      return undefined
     }
     return undefined
+  }
+
+  /**
+   * Resolve one server's raw endpoint for the streamable-http probe path.
+   * Credentials stay inside this return value and are used for the request
+   * only — they never reach a snapshot, a log, or a display.
+   *
+   * @param serverName - configured namespace.
+   * @returns the raw URL + configured headers, or `undefined` when the server
+   *   is not a configured streamable-http row.
+   */
+  rawEndpoint(serverName: string): { url: string; headers: Record<string, string> } | undefined {
+    const spec = this.probeSpec(serverName)
+    return spec?.kind === 'http' ? { url: spec.url, headers: { ...spec.headers } } : undefined
   }
 
   /** Unowned `mcp-probe` background jobs, newest first, sanitized for display. */

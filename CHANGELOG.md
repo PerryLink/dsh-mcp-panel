@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented in this file.
 
+## [Unreleased]
+
+### Added
+
+- `mcp_probe`, the panel probe action, `/mcp <server> probe`, and the passive probe now support **stdio** MCP servers: a probe on a stdio row spawns the configured `command`/`args` under the same `scrubbedParentEnv` base the mcp-client bridge uses (credential-shaped and `DSH_*` names never leak into the child implicitly) plus the row's explicit `env`/`cwd`, completes one MCP `initialize` handshake over stdin/stdout, and records the sanitized server name/version or a sanitized failure detail — still panel-only, with the same unowned-job semantics (cancel, per-probe timeout, display cap). `ProbeTarget` is now a `kind`-discriminated union (`http` | `stdio`) resolved by `McpPanelService.probeSpec`; streamable-http rows are probed exactly as before.
+
 ## [0.4.2] - 2026-08-21
 
 ### Changed

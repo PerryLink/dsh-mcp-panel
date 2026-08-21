@@ -242,13 +242,13 @@ describe('mcp_probe tool (optional)', () => {
     expect(jobs.started[0]!.owner).toBeUndefined()
   })
 
-  it('rejects unknown and stdio servers', async () => {
+  it('probes stdio servers and rejects unknown names', async () => {
     const harness = await mountHarness([mcpRow('mcp-github', GITHUB_CONFIG)], {}, fakeJobs() as never)
     const definition = harness.ctx.tools.get('mcp_probe')!
-    await expect(definition.execute({ server: 'github' }, { signal: new AbortController().signal } as never))
-      .rejects.toThrow('not a configured streamable-http MCP server')
+    const result = await definition.execute({ server: 'github' }, { signal: new AbortController().signal } as never) as { jobId: string }
+    expect(result.jobId).toBe('mcp-probe-1')
     await expect(definition.execute({ server: 'missing' }, { signal: new AbortController().signal } as never))
-      .rejects.toThrow('not a configured streamable-http MCP server')
+      .rejects.toThrow('not a configured MCP server (see /mcp)')
   })
 
   it('can be disabled by config', async () => {
@@ -268,11 +268,11 @@ describe('/mcp <server> probe command action', () => {
     expect(jobs.started).toEqual([{ kind: 'mcp-probe', label: 'mcp_probe web', owner: undefined }])
   })
 
-  it('reports stdio servers as an error result', async () => {
+  it('starts a stdio probe for stdio servers', async () => {
     const harness = await mountHarness([mcpRow('mcp-github', GITHUB_CONFIG)], {}, fakeJobs() as never)
     const result = await runCommand(harness, '/mcp github probe')
-    expect(result?.result.kind).toBe('error')
-    expect(text(result)).toContain('not a configured streamable-http MCP server')
+    expect(result?.result.kind).toBe('success')
+    expect(text(result)).toContain('Probe started for "github" (background job mcp-probe-1)')
   })
 
   it('reports a missing job registry as an error result', async () => {

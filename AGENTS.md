@@ -5,13 +5,13 @@ Standalone DeepSeek Harness plugin repository (`dsh-mcp-panel`). Development fol
 ## Layout
 
 - `src/index.ts` — function-plugin contract (`name`/`inject`/`Config`/`apply`; NO default export — the Loader unwraps `exports.default ?? exports`).
-- `src/service.ts` — `McpPanelService` (`TypertRemoteService`, namespace `mcpPanel`): read-only snapshot assembly from loader rows + tool registry + upstream status observations. Serves `mcpPanel/status` and starts panel-only probes through `mcpPanel/probe` (`probe(serverName)`; needs `ctx.jobs`, streamable-http rows only).
+- `src/service.ts` — `McpPanelService` (`TypertRemoteService`, namespace `mcpPanel`): read-only snapshot assembly from loader rows + tool registry + upstream status observations. Serves `mcpPanel/status` and starts panel-only probes through `mcpPanel/probe` (`probe(serverName)`; needs `ctx.jobs`, streamable-http and stdio rows).
 - `src/wire.ts` — the snapshot vocabulary, its zod v4 wire schema, and the single `mcpPanel/status` invocation descriptor shared verbatim by the host `./typert` manifest (`src/typert.host.ts`) and the client Remote contribution (`src/client/remote.ts`) — one canonical source so the two codecs can never drift.
 - `src/upstream.ts` — the proposed upstream `mcp/status` seam (event + query service face), declared here via cordis declaration merging and consumed with feature detection; when upstream ships it, its identical declarations merge cleanly and a conflicting signature fails this compile (intended tripwire). Proposal text: `docs/upstream-proposal.md` in the deepseek-harness repo.
 - `src/sanitize.ts` — display redaction (URL query credentials, userinfo passwords, header values, bearer tokens, JWTs). Pure; extreme-case tests in `tests/sanitize.spec.ts`.
 - `src/grouping.ts` / `src/aggregate.ts` — pure enumeration/grouping and status aggregation with missing-field tolerance.
 - `src/command.ts` — the `/mcp` command (standard `CommandResult`; logged via `command/run` + `command/done`).
-- `src/probe.ts` — optional `mcp_probe` background-job tool (unowned job: panel-only results).
+- `src/probe.ts` — optional `mcp_probe` background-job tool (unowned job: panel-only results). Both transports probe: streamable-http via one `initialize` POST; stdio via spawning the row's `command`/`args` under `scrubbedParentEnv` (the same base the mcp-client bridge uses, imported from `@deepseek-ai/dsh-subprocess`) + explicit `env`/`cwd`, one `initialize` handshake over stdin/stdout, sanitized serverInfo or failure detail.
 - `src/client/` — browser half: `$mount` the Remote contribution, register the `settings.plugins.tab` entry id `mcp`, pure presenter in `present.ts`, inline scoped stylesheet in `styles.ts` (standalone bundles cannot use the in-repo CSS-module pipeline).
 - `tests/` — vitest; REAL `Context` + `Session`/`ToolRuntime`/`CommandRuntime` from the `0.1.0-rc.8` peers, fake Loader face, fake Agent, optional fake jobs.
 

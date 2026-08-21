@@ -126,7 +126,8 @@
   "dependencies": {
     "tsdown": "^0.22.14",
     "typescript": "^7.0.0",
-    "zod": "^4.4.3"
+    "zod": "^4.4.3",
+    "@deepseek-ai/dsh-subprocess": ">=0.1.0-rc.8 <0.2.0"
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "^4.0.1",

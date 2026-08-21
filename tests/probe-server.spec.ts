@@ -80,7 +80,7 @@ describe('probeEndpoint against a sealed fake server', () => {
 
 describe('probeJob timeout against a sealed fake server', () => {
   it('aborts a hanging endpoint and settles the done hook as failed', async () => {
-    const hooks = probeJob(`${baseUrl}/hang`, {}, 50)
+    const hooks = probeJob({ kind: 'http', url: `${baseUrl}/hang`, headers: {} }, 50)
     const outcome = await hooks.done
     expect(outcome).toMatchObject({ status: 'failed' })
     expect(outcome.detail).toMatch(/timeout after 50ms or cancelled/)

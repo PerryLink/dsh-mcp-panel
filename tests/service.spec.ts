@@ -1,6 +1,6 @@
 /**
- * Host service tests: the panel probe action (streamable-http gating, jobs
- * gating, unowned job start), the probe-record cap, and passive-probe state
+ * Host service tests: the panel probe action (transport gating, jobs gating,
+ * unowned job start), the probe-record cap, and passive-probe state
  * aggregation. No network — the fetch path is covered in `probe.spec.ts`.
  *
  * @module dsh-mcp-panel/test/service.spec
@@ -50,10 +50,18 @@ describe('McpPanelService.probe', () => {
     expect(jobs.started).toEqual([{ kind: 'mcp-probe', label: 'mcp_probe web', owner: undefined }])
   })
 
-  it('rejects stdio servers and unknown names', async () => {
+  it('starts an unowned panel-only probe job for a stdio server', async () => {
+    const jobs = fakeJobs()
+    const harness = await mountHarness([mcpRow('mcp-cli', STDIO_CONFIG)], {}, jobs as never)
+    const result = harness.service.probe('cli')
+    expect(result.jobId).toBe('mcp-probe-1')
+    expect(result.note).toContain('panel-only')
+    expect(jobs.started).toEqual([{ kind: 'mcp-probe', label: 'mcp_probe cli', owner: undefined }])
+  })
+
+  it('rejects unknown names', async () => {
     const harness = await mountHarness([mcpRow('mcp-cli', STDIO_CONFIG)], {}, fakeJobs() as never)
-    expect(() => harness.service.probe('cli')).toThrow('not a configured streamable-http MCP server')
-    expect(() => harness.service.probe('missing')).toThrow('not a configured streamable-http MCP server')
+    expect(() => harness.service.probe('missing')).toThrow('not a configured MCP server (streamable-http or stdio)')
   })
 
   it('fails loudly when no job registry is composed', async () => {

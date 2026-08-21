@@ -1,14 +1,16 @@
 /**
- * Probe network-path tests: the `fetch` legs of `probeEndpoint` and the
- * `probeJob` cancel contract. The fetch global is stubbed per case — no real
- * network. Covers 2xx/JSON, 2xx/non-JSON, non-2xx, network failure
- * sanitization, abort, display truncation, and the never-rejecting done hook.
+ * Probe path tests: the `fetch` legs of `probeEndpoint`, the `probeJob`
+ * cancel contract, and the `probeStdio` handshake over real spawned children.
+ * The fetch global is stubbed per case — no real network. Covers 2xx/JSON,
+ * 2xx/non-JSON, non-2xx, network failure sanitization, abort, display
+ * truncation, the never-rejecting done hook, the stdio initialize handshake,
+ * and the child-exit/spawn-failure paths.
  *
  * @module dsh-mcp-panel/test/probe.spec
  */
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { probeEndpoint, probeJob } from '../src/probe.ts'
+import { probeEndpoint, probeJob, probeStdio } from '../src/probe.ts'
 
 /** Minimal fetch Response face the probe reads. */
 function fakeResponse(status: number, statusText: string, jsonBody?: unknown): Response {
@@ -106,7 +108,7 @@ describe('probeJob', () => {
         signal?.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')))
       })
     }))
-    const hooks = probeJob('https://example.com/mcp', {}, 1000)
+    const hooks = probeJob({ kind: 'http', url: 'https://example.com/mcp', headers: {} }, 1000)
     hooks.cancel()
     const outcome = await hooks.done
     expect(outcome.status).toBe('failed')
@@ -116,8 +118,41 @@ describe('probeJob', () => {
     vi.stubGlobal('fetch', vi.fn(async () => fakeResponse(200, 'OK', {
       result: { serverInfo: { name: 'srv', version: '0.1.0' } },
     })))
-    const hooks = probeJob('https://example.com/mcp', {}, 1000)
+    const hooks = probeJob({ kind: 'http', url: 'https://example.com/mcp', headers: {} }, 1000)
     const outcome = await hooks.done
     expect(outcome.status).toBe('completed')
+  })
+})
+
+describe('probeStdio', () => {
+  it('completes an initialize handshake over a real stdio child', async () => {
+    const script = 'const line = await new Promise((r) => process.stdin.once("data", (d) => r(d.toString())))'
+      + '; process.stdout.write(JSON.stringify({ jsonrpc: "2.0", id: 1, result: { serverInfo: { name: "fake-stdio", version: "9.9.9" } } }) + "\\n")'
+    const outcome = await probeStdio(
+      { kind: 'stdio', command: process.execPath, args: ['-e', script], env: {} },
+      5000,
+      NEVER_ABORTED,
+    )
+    expect(outcome.status).toBe('completed')
+    expect(outcome.detail).toContain('server fake-stdio 9.9.9')
+  })
+
+  it('reports failure when the child exits without responding', async () => {
+    const outcome = await probeStdio(
+      { kind: 'stdio', command: process.execPath, args: ['-e', 'process.exit(0)'], env: {} },
+      5000,
+      NEVER_ABORTED,
+    )
+    expect(outcome.status).toBe('failed')
+    expect(outcome.detail).toContain('process exited before initialize response')
+  })
+
+  it('reports a sanitized failure when the spawn itself fails', async () => {
+    const outcome = await probeStdio(
+      { kind: 'stdio', command: 'definitely-not-a-command-7f3e', args: [], env: {} },
+      5000,
+      NEVER_ABORTED,
+    )
+    expect(outcome.status).toBe('failed')
   })
 })
