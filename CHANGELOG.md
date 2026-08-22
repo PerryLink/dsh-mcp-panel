@@ -2,6 +2,17 @@
 
 All notable changes to this project are documented in this file.
 
+## [Unreleased]
+
+### Changed
+
+- All `@deepseek-ai/dsh-*` dependencies moved from the `0.1.0-rc.8` line to `0.1.1-rc.2`: the 15 devDependencies pin `0.1.1-rc.2` exactly, `@deepseek-ai/dsh-subprocess` (the one runtime dependency) pins `0.1.1-rc.2`, and the four peerDependencies (`dsh-commands` / `dsh-jobs` / `dsh-tools` / `dsh-typert-protocol`) keep their `>=0.1.0-rc.8 <0.2.0` range (no rc.2-exclusive API is used). `@deepseek-ai/cordis` and the non-dsh dependency lines are unchanged; the compatibility tables now claim `0.1.1-rc.2`–`0.2.0`, and the compat workflow pins the harness CLI and base/headless bundles to `0.1.1-rc.2`.
+- The `/mcp` and `mcp_probe` surfaces are unchanged: rc.2 keeps the `commands.execute(agent, line, images, signal)` signature and the single-`CommandInvocation` handler shape this package already drives, so no call-site edits were needed.
+
+### Engineering
+
+- `pnpm-lock.yaml` regenerated against the rc.2 graph; `minimumReleaseAgeExclude` collapses the stale per-package rc.6 list to a single `@deepseek-ai/*` wildcard so fresh harness releases install without a release-age delay.
+
 ## [0.5.0] - 2026-08-21
 
 ### Added

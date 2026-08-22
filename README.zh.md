@@ -24,7 +24,7 @@
 
 | 维度 | 状态 |
 |---|---|
-| Harness | DeepSeek Harness `0.1.0-rc.8`–`0.2.0` |
+| Harness | DeepSeek Harness `0.1.1-rc.2`–`0.2.0` |
 | Node | `^22.19.0 \|\| >=24.0.0` |
 | 平台 | Web GUI（双面：Host + 浏览器） |
 | 模型 | 任意（面板只读；仅 `/mcp` 输出对模型可见） |
