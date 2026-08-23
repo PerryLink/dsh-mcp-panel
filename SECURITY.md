@@ -37,4 +37,4 @@ Issues in DeepSeek Harness itself should be reported to
 
 ## Supported versions
 
-The latest published release (currently the 0.4.x line) receives security fixes.
+The latest published release (currently the 0.5.x line) receives security fixes.
