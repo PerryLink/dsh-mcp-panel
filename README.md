@@ -183,6 +183,7 @@ pnpm run typecheck && pnpm run typecheck:ci && pnpm test && pnpm run build && pn
 
 - [@PerryLink](https://github.com/PerryLink) — creator and maintainer.
 - [@xiaoyuyu6420](https://github.com/xiaoyuyu6420) — diagnosed the missing client devDependencies behind clean-checkout build failures (PR #5).
+- [@feiler0](https://github.com/feiler0) — contributed the stdio MCP server probe (one MCP initialize handshake over stdin/stdout) (PR #7, merged as PR #15).
 
 ## PerryLink DSH Plugin Family
 

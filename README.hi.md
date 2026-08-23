@@ -182,6 +182,7 @@ pnpm run typecheck && pnpm run typecheck:ci && pnpm test && pnpm run build && pn
 
 - [@PerryLink](https://github.com/PerryLink) — निर्माता और अनुरक्षक।
 - [@xiaoyuyu6420](https://github.com/xiaoyuyu6420) — क्लीन-चेकआउट बिल्ड विफलताओं के पीछे की गुम client devDependencies का निदान किया (PR #5)।
+- [@feiler0](https://github.com/feiler0) — stdio MCP सर्वर प्रोब (stdin/stdout पर एक MCP initialize हैंडशेक) का योगदान दिया (PR #7, PR #15 के रूप में मर्ज हुआ)।
 
 ## PerryLink DSH Plugin Family
 

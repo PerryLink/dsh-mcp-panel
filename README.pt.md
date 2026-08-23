@@ -182,6 +182,7 @@ O `scripts/verify-headless.mjs` inicia o perfil web real e imprime a saída exat
 
 - [@PerryLink](https://github.com/PerryLink) — criador e mantenedor.
 - [@xiaoyuyu6420](https://github.com/xiaoyuyu6420) — diagnosticou as devDependencies de client ausentes por trás das falhas de build em checkouts limpos (PR #5).
+- [@feiler0](https://github.com/feiler0) — contribuiu com a sonda de servidores MCP stdio (um handshake MCP initialize via stdin/stdout) (PR #7, mesclada como PR #15).
 
 ## PerryLink DSH Plugin Family
 
