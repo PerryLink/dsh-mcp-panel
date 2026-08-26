@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented in this file.
 
+## [Unreleased]
+
+### Added
+
+- Recommended MCP server catalog plus configuration JSON import/export.
+
 ## [0.5.1] - 2026-08-22
 
 ### Changed
