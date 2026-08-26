@@ -151,6 +151,30 @@ export interface McpCapabilityView {
   available: boolean
 }
 
+/** One recommended MCP server catalog entry (non-secret display view). */
+export interface McpCatalogEntryView {
+  /** Stable slug, also the `serverName`. */
+  id: string
+  /** Display name. */
+  name: string
+  /** One-line description. */
+  description: string
+  /** Declared transport. */
+  transport: 'stdio' | 'streamable-http'
+  /** stdio: executable. */
+  command?: string
+  /** stdio: argument list. */
+  args?: readonly string[]
+  /** streamable-http: endpoint URL. */
+  url?: string
+  /** Recommended env variable names (values are user-supplied, never shipped). */
+  envKeys?: readonly string[]
+  /** Recommended header names (values are user-supplied, never shipped). */
+  headerKeys?: readonly string[]
+  /** Discovery tags. */
+  tags?: readonly string[]
+}
+
 /** The complete panel snapshot served by `mcpPanel/status`. */
 export interface McpPanelSnapshot {
   /** True when the upstream `mcp/status` seam produced data this process. */
@@ -176,6 +200,8 @@ export interface McpPanelSnapshot {
   }
   /** Whether profile-patch writes are allowed at all (kill switch). */
   writeEnabled: boolean
+  /** Recommended MCP server directory (built-in + user overlay). */
+  catalog: readonly McpCatalogEntryView[]
 }
 
 /** Strict wire schema for {@link McpPanelSnapshot} (zod v4, both Typert faces). */
@@ -246,6 +272,18 @@ export const MCP_PANEL_SNAPSHOT_SCHEMA = z.object({
     maxResultChars: z.number().int(),
   }),
   writeEnabled: z.boolean(),
+  catalog: z.array(z.object({
+    id: z.string(),
+    name: z.string(),
+    description: z.string(),
+    transport: z.union([z.literal('stdio'), z.literal('streamable-http')]),
+    command: z.string().optional(),
+    args: z.array(z.string()).optional(),
+    url: z.string().optional(),
+    envKeys: z.array(z.string()).optional(),
+    headerKeys: z.array(z.string()).optional(),
+    tags: z.array(z.string()).optional(),
+  })),
 })
 
 /**

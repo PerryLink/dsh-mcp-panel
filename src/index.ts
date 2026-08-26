@@ -37,6 +37,7 @@ import { Config, resolveConfig } from './config.ts'
 import { mcpCommand } from './command.ts'
 import { mcpProbeTool } from './probe.ts'
 import { McpPanelService } from './service.ts'
+import { DEFAULT_CATALOG, mergeCatalog } from './catalog.ts'
 import { MCP_STATUS_EVENT, type McpStatusQuery } from './upstream.ts'
 
 export const name = 'mcp-panel'
@@ -67,6 +68,10 @@ export {
 export { appendPatchFragment } from './write.ts'
 export { createTrialCaller, validateTrialRequest, type McpTrialRequest, type McpTrialResult } from './trial.ts'
 export { MCP_STATUS_EVENT, type McpStatusPayload, type McpStatusQuery, type McpServerStatus } from './upstream.ts'
+export { DEFAULT_CATALOG, CATALOG_SCHEMA, mergeCatalog, catalogToConfigInput, catalogIssues, catalogOverlayIssues } from './catalog.ts'
+export type { CatalogEntry, CatalogIssue } from './catalog.ts'
+export { exportMcpConfigs, parseMcpConfigsImport, MCP_CONFIG_EXPORT_SCHEMA } from './config-io.ts'
+export type { McpConfigExportRow, McpConfigImportRow } from './config-io.ts'
 export type * from './wire.ts'
 
 /**
@@ -82,6 +87,7 @@ export async function apply(ctx: Context, config: Config): Promise<void> {
 
   // The service has injects, so its fiber activates asynchronously — await it
   // before reading the instance the command and probe closures capture.
+  const catalog = mergeCatalog(DEFAULT_CATALOG, resolved.catalogEntries)
   await ctx.plugin(McpPanelService, {
     probeTimeoutMs: resolved.probeTimeoutMs,
     maxProbes: resolved.maxProbes,
@@ -93,6 +99,7 @@ export async function apply(ctx: Context, config: Config): Promise<void> {
     trialMaxResultChars: resolved.trialMaxResultChars,
     writeEnabled: resolved.writeEnabled,
     backupCount: resolved.backupCount,
+    catalog,
   })
   const service = ctx.get('mcpPanel') as McpPanelService
 

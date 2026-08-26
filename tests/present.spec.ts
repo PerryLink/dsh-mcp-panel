@@ -46,6 +46,7 @@ const SNAPSHOT_BASE = {
   capabilities: { resources: { available: false }, prompts: { available: false } },
   trial: { enabled: true, timeoutMs: 120_000, maxResultChars: 60_000 },
   writeEnabled: true,
+  catalog: [],
 } as const
 
 describe('connectionBadge', () => {

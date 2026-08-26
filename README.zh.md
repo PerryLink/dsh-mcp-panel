@@ -131,6 +131,7 @@ dsh --profile web --dump-config | grep -A3 'id: mcp-panel'
 | `trialMaxResultChars` | `60000` | 试用结果载荷上限（字符） |
 | `writeEnabled` | `true` | 总开关：`false` 拒绝一切 profile 写入（仍可复制片段） |
 | `backupCount` | `5` | 每次写入保留的 `cordis.patch.yml` 备份数 |
+| `catalogEntries` | `[]` | 推荐服务器目录的用户覆盖：追加条目，同 `id` 的条目替换内置条目 |
 
 ## Tools & surfaces
 

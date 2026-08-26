@@ -131,6 +131,7 @@ dsh --profile web --dump-config | grep -A3 'id: mcp-panel'
 | `trialMaxResultChars` | `60000` | ट्रायल परिणाम payload की सीमा (वर्ण) |
 | `writeEnabled` | `true` | कठोर स्विच: `false` हर प्रोफ़ाइल लेखन अस्वीकार करता है (कॉपी फिर भी चलती है) |
 | `backupCount` | `5` | प्रति लेखन रखे गए `cordis.patch.yml` बैकअप |
+| `catalogEntries` | `[]` | अनुशंसित निर्देशिका के लिए उपयोगकर्ता ओवरले: प्रविष्टियाँ जोड़ता है; समान `id` वाली प्रविष्टि अंतर्निहित को बदल देती है |
 
 ## Tools & surfaces
 

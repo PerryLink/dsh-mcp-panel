@@ -53,8 +53,10 @@ import { appendPatchFragment } from './write.ts'
 import { createTrialCaller, validateTrialRequest, type McpAgentRegistryFace, type McpTrialRequest } from './trial.ts'
 import { probeJob, PROBE_KIND, type ProbeTarget } from './probe.ts'
 import { sanitizeText } from './sanitize.ts'
+import { exportMcpConfigs, parseMcpConfigsImport } from './config-io.ts'
 import type { McpServerStatus, McpStatusPhase } from './upstream.ts'
 import type {
+  McpCatalogEntryView,
   McpFiberPhase,
   McpPanelSnapshot,
   McpProbeView,
@@ -143,6 +145,8 @@ export interface McpPanelServiceConfig {
   writeEnabled: boolean
   /** Number of patch backups retained per write. */
   backupCount: number
+  /** Merged recommended MCP server directory (built-in + user overlay). */
+  catalog: readonly McpCatalogEntryView[]
 }
 
 /** Defaults for direct (non-Loader) service construction. */
@@ -157,6 +161,7 @@ const DEFAULT_SERVICE_CONFIG: McpPanelServiceConfig = {
   trialMaxResultChars: 60_000,
   writeEnabled: true,
   backupCount: 5,
+  catalog: [],
 }
 
 /** Whether one agent's session currently has an open turn (approval precondition). */
@@ -308,6 +313,7 @@ private readonly trialCaller = createTrialCaller()
         maxResultChars: this.config.trialMaxResultChars,
       },
       writeEnabled: this.config.writeEnabled,
+      catalog: this.config.catalog,
     })
   }
 
@@ -458,6 +464,37 @@ private readonly trialCaller = createTrialCaller()
       request as McpTrialRequest,
       { timeoutMs: this.config.trialTimeoutMs, maxResultChars: this.config.trialMaxResultChars },
     )
+  }
+
+  /**
+   * Export every configured MCP server as a versioned JSON document (backup or
+   * share). A row whose config carries a `!!js` expression (not plain JSON)
+   * exports as `{ config: null, reason }` — the expression is never evaluated.
+   * @returns the pretty-printed JSON export.
+   */
+  exportConfigs(): string {
+    const servers: Array<{ entryId: string; config: unknown }> = []
+    for (const entry of this.ctx.loader.entries()) {
+      if (entry.options.name !== MCP_CLIENT_MODULE) continue
+      servers.push({ entryId: entry.options.id, config: entry.options.config })
+    }
+    return exportMcpConfigs(servers)
+  }
+
+  /**
+   * Parse an MCP config export into per-server append-only `add` patch
+   * fragments WITHOUT touching any file. The client reviews the fragments and
+   * confirms a write through the existing `writePatch` gate.
+   * @param json - the export JSON text (untrusted).
+   * @returns `{ entryId, fragment }` per imported server, in document order.
+   */
+  importPreview(json: string): Array<{ entryId: string; fragment: string }> {
+    const rows = parseMcpConfigsImport(json)
+    return rows.map(({ entryId, config }) => {
+      const resolution = this.resolveOp(JSON.stringify({ kind: 'add', config }))
+      if (!resolution.ok) throw this.issueError(resolution)
+      return { entryId, fragment: renderPatchFragment(resolution.op) }
+    })
   }
 
   /** Resolve one wire op against the live loader facts. */

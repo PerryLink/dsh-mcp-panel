@@ -40,6 +40,8 @@
 - **`/mcp <server> call <tool> [json]`** — trial-call through the **official tool pipeline** (`ctx.tools.execute()`); pre-execute permission policy, approval, guards, and post-execute all apply.
 - **Settings → Plugins → MCP tab** — status cards with badges, diagnostics, and probes, plus the server CRUD and the tool trial console.
 - **Server CRUD** — add/edit/remove forms → `insert`/`set`/`set disabled` fragments → clipboard copy or approval-gated write with automatic backups.
+- **Recommended directory** — a built-in community MCP server catalog (filesystem, git, github, fetch, playwright, …) served in the snapshot; `catalogEntries` appends/overrides entries, and `catalogToConfigInput` turns one into a one-click add.
+- **Config import/export** — `exportConfigs()` serializes the server rows to a versioned JSON document (a `!!js` row exports as `null` with a reason), and `importPreview()` parses an export back into per-server `add` patch fragments for review.
 - **Tool trial console** — server → `mcp__*` tool → JSON args → canonical JSON result + rendered content; capped by `trialMaxResultChars`; panel-only, never model context.
 
 ## Architecture: official client = bridge, this plugin = console
@@ -132,6 +134,7 @@ All tunables are Schemastery `Config` fields (changeable from cordis.yml). `cord
 | `trialMaxResultChars` | `60000` | Cap on the trial result payload in chars |
 | `writeEnabled` | `true` | Kill switch: `false` rejects every profile write (copy still works) |
 | `backupCount` | `5` | `cordis.patch.yml` backups retained per write |
+| `catalogEntries` | `[]` | User overlay for the recommended server directory: entries append, an entry with the same `id` replaces the built-in one |
 
 ## Tools & surfaces
 

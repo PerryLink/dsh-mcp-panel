@@ -30,6 +30,7 @@ const CONSOLE_INPUT = {
   capabilities: { resources: { available: false }, prompts: { available: false } },
   trial: { enabled: true, timeoutMs: 120_000, maxResultChars: 60_000 },
   writeEnabled: true,
+  catalog: [],
 } as const
 
 describe('deriveTarget', () => {
@@ -190,6 +191,7 @@ describe('aggregateSnapshot', () => {
       capabilities: CONSOLE_INPUT.capabilities,
       trial: CONSOLE_INPUT.trial,
       writeEnabled: true,
+      catalog: [],
     })
   })
 })

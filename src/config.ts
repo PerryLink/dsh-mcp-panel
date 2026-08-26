@@ -8,6 +8,8 @@
  */
 
 import z from '@deepseek-ai/schemastery'
+import { catalogOverlayIssues } from './catalog.ts'
+import type { CatalogEntry } from './catalog.ts'
 
 /** Default per-probe timeout in milliseconds. */
 export const DEFAULT_PROBE_TIMEOUT_MS = 10_000
@@ -78,6 +80,8 @@ export interface Config {
   writeEnabled?: boolean
   /** Number of `cordis.patch.yml` backups retained per write (default 5). */
   backupCount?: number
+  /** User overlay for the recommended MCP server catalog: entries append to the built-in directory, and an entry with the same `id` replaces the built-in one. */
+  catalogEntries?: CatalogEntry[]
 }
 
 /** Fully resolved configuration captured at plugin load. */
@@ -106,6 +110,8 @@ export interface ResolvedConfig {
   writeEnabled: boolean
   /** Number of patch backups retained per write. */
   backupCount: number
+  /** User catalog overlay (validated; empty = built-in directory only). */
+  catalogEntries: readonly CatalogEntry[]
 }
 
 /** Schemastery schema for loader-validated configuration. */
@@ -122,6 +128,7 @@ export const Config: z<Config> = z.object({
   trialMaxResultChars: z.number().min(1_000).max(MAX_TRIAL_RESULT_CHARS).default(DEFAULT_TRIAL_MAX_RESULT_CHARS),
   writeEnabled: z.boolean().default(DEFAULT_WRITE_ENABLED),
   backupCount: z.number().min(1).max(MAX_BACKUP_COUNT).default(DEFAULT_BACKUP_COUNT),
+  catalogEntries: z.array(z.any()).default([]),
 })
 
 /**
@@ -179,6 +186,12 @@ export function resolveConfig(config: Config | undefined): ResolvedConfig {
   if (!Number.isInteger(backupCount) || backupCount < 1 || backupCount > MAX_BACKUP_COUNT) {
     throw new Error(`dsh-mcp-panel: config.backupCount must be an integer between 1 and ${MAX_BACKUP_COUNT}`)
   }
+  const catalogOverlay = config?.catalogEntries ?? []
+  const catalogIssues = catalogOverlayIssues(catalogOverlay)
+  if (catalogIssues.length > 0) {
+    throw new Error(`dsh-mcp-panel: config.catalogEntries invalid — ${catalogIssues.map(issue => `${issue.field}: ${issue.text}`).join(' ')}`)
+  }
+  const catalogEntries = catalogOverlay as CatalogEntry[]
   return Object.freeze({
     probeEnabled,
     probeTimeoutMs,
@@ -192,5 +205,6 @@ export function resolveConfig(config: Config | undefined): ResolvedConfig {
     trialMaxResultChars,
     writeEnabled,
     backupCount,
+    catalogEntries,
   })
 }

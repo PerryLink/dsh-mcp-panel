@@ -289,6 +289,8 @@ export interface McpAggregateInput {
   trial: McpPanelSnapshot['trial']
   /** Whether profile-patch writes are allowed at all. */
   writeEnabled: boolean
+  /** Recommended MCP server directory (built-in + user overlay). */
+  catalog: McpPanelSnapshot['catalog']
 }
 
 /**
@@ -299,7 +301,7 @@ export interface McpAggregateInput {
  * @returns the wire snapshot.
  */
 export function aggregateSnapshot(input: McpAggregateInput): McpPanelSnapshot {
-  const { rows, groups, facts, probes, patchFile, refreshIntervalMs, capabilities, trial, writeEnabled } = input
+  const { rows, groups, facts, probes, patchFile, refreshIntervalMs, capabilities, trial, writeEnabled, catalog } = input
   // One view per namespace: the enabled row wins; otherwise the first row.
   const rowsByName = new Map<string, McpLoaderRow>()
   for (const row of rows) {
@@ -321,5 +323,6 @@ export function aggregateSnapshot(input: McpAggregateInput): McpPanelSnapshot {
     capabilities,
     trial,
     writeEnabled,
+    catalog,
   }
 }

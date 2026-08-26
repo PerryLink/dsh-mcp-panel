@@ -131,6 +131,7 @@ Todas as opções são campos Schemastery `Config` (modificáveis a partir do co
 | `trialMaxResultChars` | `60000` | Teto do payload do resultado de teste em caracteres |
 | `writeEnabled` | `true` | Interruptor de segurança: `false` rejeita toda gravação (copiar continua funcionando) |
 | `backupCount` | `5` | Backups de `cordis.patch.yml` retidos por gravação |
+| `catalogEntries` | `[]` | Sobreposição do usuário para o diretório recomendado: anexa entradas; uma entrada com o mesmo `id` substitui a integrada |
 
 ## Tools & surfaces
 
