@@ -127,6 +127,20 @@
     "@deepseek-ai/dsh-client-runtime": ">=0.1.1-rc.2 <0.2.0",
     "@deepseek-ai/dsh-client-ui-settings": ">=0.1.1-rc.2 <0.2.0"
   },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/dsh-client-connection": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-client-locale": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-client-runtime": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-client-ui-settings": {
+      "optional": true
+    }
+  },
   "dependencies": {
     "tsdown": "^0.22.14",
     "typescript": "^7.0.0",
