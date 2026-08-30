@@ -2,6 +2,17 @@
 
 All notable changes to this project are documented in this file.
 
+## [Unreleased]
+
+### Fixed
+
+- Client half: `ClientContext` now aliases `@deepseek-ai/cordis` `Context`,
+  the `remote` service contract comes from
+  `@deepseek-ai/dsh-api-remotes/client`, and the slots registry is read
+  through a local structural contract — the browser bundle no longer imports
+  the removed `@deepseek-ai/dsh-client-runtime` and mounts again on harness
+  lines without the client runtime package.
+
 ## [0.6.1] - 2026-08-27
 
 ### Fixed

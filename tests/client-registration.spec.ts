@@ -9,7 +9,7 @@
  */
 
 import { describe, expect, it, vi } from 'vitest'
-import type { ClientContext } from '@deepseek-ai/dsh-client-runtime/client'
+import type { Context as ClientContext } from '@deepseek-ai/cordis'
 import { apply, NS } from '../src/client/index.ts'
 import { MCP_PANEL_REMOTE } from '../src/client/remote.ts'
 import { TYPERT } from '../src/typert.host.ts'
@@ -18,6 +18,13 @@ import { TYPERT } from '../src/typert.host.ts'
 function makeCtx(remoteStatus: () => Promise<unknown>, remoteProbe: (name: string) => Promise<unknown> = async () => ({ ok: true, value: { jobId: 'mcp-probe-1', note: 'x' } })) {
   const registered: Array<{ options: Record<string, unknown>; component: unknown }> = []
   const mounted: unknown[] = []
+  const slots = {
+    inject: vi.fn((_name: string, register: () => void) => { register() }),
+    register: vi.fn((options: Record<string, unknown>, component: unknown) => {
+      registered.push({ options, component })
+      return () => undefined
+    }),
+  }
   const ctx = {
     locale: {
       register: vi.fn(() => () => undefined),
@@ -30,18 +37,15 @@ function makeCtx(remoteStatus: () => Promise<unknown>, remoteProbe: (name: strin
       }),
       mcpPanel: { status: remoteStatus, probe: remoteProbe },
     },
-    slots: {
-      inject: vi.fn((_name: string, register: () => void) => { register() }),
-      register: vi.fn((options: Record<string, unknown>, component: unknown) => {
-        registered.push({ options, component })
-        return () => undefined
-      }),
-    },
+    slots,
     inject: vi.fn((_deps: string[], callback: (scope: unknown) => void) => { callback(ctx) }),
     effect: vi.fn((callback: () => unknown) => {
       callback()
       return () => undefined
     }),
+    // The client reads the slots registry through this service lookup; the
+    // sessions store stays absent here (the call sites degrade to undefined).
+    get: vi.fn((name: string) => (name === 'slots' ? slots : undefined)),
   }
   return { ctx: ctx as unknown as ClientContext, registered, mounted }
 }

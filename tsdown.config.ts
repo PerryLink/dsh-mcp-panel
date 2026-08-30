@@ -21,8 +21,7 @@ const PLUGIN_ID = 'dsh-mcp-panel'
 
 /**
  * Module specifiers the shell shares into the frozen browser module table
- * (packages/client/web/src/platform.ts) plus the runtime store exemption
- * (`@deepseek-ai/dsh-client-runtime/client`). Any value import outside this
+ * (packages/client/web/src/platform.ts). Any value import outside this
  * list must be inlined.
  */
 const PLATFORM_EXTERNALS: readonly string[] = [
@@ -36,7 +35,6 @@ const PLATFORM_EXTERNALS: readonly string[] = [
   '@deepseek-ai/dsh-client-ui-primitives',
   '@deepseek-ai/dsh-client-ui-attachment',
   '@deepseek-ai/dsh-client-schema-form',
-  '@deepseek-ai/dsh-client-runtime/client',
 ]
 
 export default defineConfig([

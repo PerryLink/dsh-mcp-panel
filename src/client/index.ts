@@ -10,7 +10,11 @@
  * @module dsh-mcp-panel/client
  */
 
-import type { ClientContext } from '@deepseek-ai/dsh-client-runtime/client'
+import type { Context as ClientContext } from '@deepseek-ai/cordis'
+// Type-only: the api-remotes client declares the 'remote' service on the
+// client Context (the shell graph owns the runtime value; this package reads
+// the merged contract).
+import type {} from '@deepseek-ai/dsh-api-remotes/client'
 import type {} from '@deepseek-ai/dsh-client-locale/client'
 // Type-only: pulls the 'settings.plugins.tab' SlotMap declaration into this
 // program so the tab registration typechecks against the real declaration.
@@ -54,6 +58,25 @@ export const name = 'dsh-mcp-panel'
 export const inject = ['slots', 'locale', 'remote', 'sessions']
 
 /**
+ * Minimal structural contract of the client slots registry this console tab
+ * registers into. Declared locally because the service's owner package moved
+ * across harness lines (rc.2's client runtime, then the UI renderer); the
+ * runtime contract is structural, so only the two call sites this client uses
+ * are named here.
+ */
+interface McpPanelSlots {
+  inject(slot: string, callback: () => unknown): void
+  register(options: {
+    name: 'settings.plugins.tab'
+    id: 'mcp'
+    order: number
+    label: () => string
+    locale: string
+    inject: () => McpPanelTabInjected
+  }, component: unknown): () => void
+}
+
+/**
  * Browser plugin body: dictionaries, the scoped stylesheet, the Remote
  * contribution mount, and the settings tab registration.
  *
@@ -68,6 +91,10 @@ export async function apply(ctx: ClientContext): Promise<void> {
   await ctx.remote.$mount(MCP_PANEL_REMOTE)
 
   ctx.inject(['remote.mcpPanel'], (scope) => {
+    // The slots service owner moved across harness lines (rc.2's client
+    // runtime, then the UI renderer); read it through the local structural
+    // contract so both lines compile against the same runtime shape.
+    const slots = scope.get('slots') as unknown as McpPanelSlots
     const t = scope.locale.bind(NS)
     const unwrap = <T>(result: RemoteResult<T>, method: string): T => {
       if (!result.ok) {
@@ -85,7 +112,7 @@ export async function apply(ctx: ClientContext): Promise<void> {
       unwrap<PatchWriteResult>(await scope.remote.mcpPanel.writePatch(opJson, confirmed, currentSessionId(scope.get('sessions'))), 'writePatch')
     const callTool: McpPanelTabInjected['callTool'] = async (requestJson) =>
       unwrap<McpTrialResultWire>(await scope.remote.mcpPanel.callTool(requestJson, currentSessionId(scope.get('sessions'))), 'callTool')
-    scope.slots.inject('settings.plugins.tab', () => scope.slots.register({
+    slots.inject('settings.plugins.tab', () => slots.register({
       name: 'settings.plugins.tab',
       id: 'mcp',
       order: 30,
