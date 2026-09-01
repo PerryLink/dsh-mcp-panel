@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented in this file.
 
+## [Unreleased]
+
+### Changed
+
+- Align the devDependency pins to the published dsh `0.1.2-alpha.3` line (11 `@deepseek-ai/dsh-*` packages), align `cordis`/`schemastery` to `^4.0.2`/`^3.18.2`, and raise the compat probe pins to `0.1.2-alpha.3`. No behavior change; the five-language READMEs record the alpha.3 fact.
+
 ## [0.6.2] - 2026-08-30
 
 ### Fixed
