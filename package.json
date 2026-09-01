@@ -1,6 +1,6 @@
 {
   "name": "dsh-mcp-panel",
-  "version": "0.6.2",
+  "version": "0.6.3",
   "description": "MCP management console for the official DeepSeek Harness MCP client: /mcp command with health diagnostics and pipeline trial calls, a Settings MCP tab with server CRUD (append-only profile-patch fragments, approval-gated writes with automatic backups), a tool trial console over the official tool pipeline, connection status, reconnect counts and sanitized tool inventory, plus an optional Streamable HTTP probe.",
   "repository": {
     "type": "git",
@@ -147,7 +147,8 @@
     "zod": "^4.4.3",
     "@deepseek-ai/dsh-subprocess": "0.1.1-rc.2"
   },
-  "devDependencies": {"@deepseek-ai/dsh-attachment": "0.1.2-alpha.3", 
+  "devDependencies": {
+    "@deepseek-ai/dsh-attachment": "0.1.2-alpha.3",
     "@deepseek-ai/cordis": "^4.0.2",
     "@deepseek-ai/cordis-plugin-include": "1.0.6",
     "@deepseek-ai/cordis-plugin-loader": "^1.0.2",
