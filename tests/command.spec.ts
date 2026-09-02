@@ -210,10 +210,10 @@ describe('/mcp command', () => {
   it('is reconstructable from the session log (command/run + command/done)', async () => {
     const harness = await mountHarness([mcpRow('mcp-github', GITHUB_CONFIG)])
     await runCommand(harness, '/mcp github')
-    const events = harness.session.events.map(event => event.type)
+    const events = harness.session.snapshotEvents().map(event => event.type)
     expect(events).toContain('command/run')
     expect(events).toContain('command/done')
-    const done = harness.session.events.find(event => event.type === 'command/done')
+    const done = harness.session.snapshotEvents().find(event => event.type === 'command/done')
     expect(done?.data).toMatchObject({ kind: 'success' })
   })
 })

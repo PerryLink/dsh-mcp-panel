@@ -284,6 +284,25 @@ describe('console actions', () => {
     }])
   })
 
+  it('detects an open turn through a real Session (alpha.5 snapshotEvents surface)', async () => {
+    const asked: Array<{ toolName: string; agent: unknown }> = []
+    const approval = { request: async (req: { toolName: string; agent: unknown }) => { asked.push(req); return 'allowed-once' } }
+    const dir = await mkdtemp(join(tmpdir(), 'dsh-mcp-panel-service-'))
+    const harness = await mountHarness([mcpRow('mcp-github', STDIO_CONFIG)])
+    ;(harness.ctx as { baseUrl?: string }).baseUrl = dir
+    harness.ctx.provide('approval', approval as never)
+    harness.session.append('turn/start', { turn: 1 })
+    harness.ctx.provide('agents', {
+      get: (id: string) => id === 's1' ? { session: harness.session } : undefined,
+    } as never)
+    const result = await harness.service.writePatch(JSON.stringify({
+      kind: 'add',
+      config: { serverName: 'new', transport: 'stdio', command: 'node' },
+    }), true, 's1')
+    expect(result.approvalPath).toBe('harness-approval')
+    expect(asked).toHaveLength(1)
+  })
+
   it('a rejected approval denies the write even when confirmed', async () => {
     const approval = { request: async () => 'rejected' }
     const dir = await mkdtemp(join(tmpdir(), 'dsh-mcp-panel-service-'))

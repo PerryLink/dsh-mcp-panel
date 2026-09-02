@@ -167,8 +167,12 @@ const DEFAULT_SERVICE_CONFIG: McpPanelServiceConfig = {
 /** Whether one agent's session currently has an open turn (approval precondition). */
 function hasOpenTurn(agent: unknown): boolean {
   try {
-    const session = (agent as { session?: { events?: readonly { type?: unknown }[] } } | null)?.session
-    const events = session?.events
+    const session = (agent as { session?: unknown } | null)?.session
+    if (session === undefined || session === null) return false
+    // alpha.5 renamed Session.events to snapshotEvents(); the peer floor
+    // (>=0.1.0-rc.8) still exposes .events, so detect at runtime.
+    const probe = session as { snapshotEvents?: () => readonly { type?: unknown }[]; events?: readonly { type?: unknown }[] }
+    const events = typeof probe.snapshotEvents === 'function' ? probe.snapshotEvents() : probe.events
     if (!Array.isArray(events)) return false
     for (let index = events.length - 1; index >= 0; index -= 1) {
       const type = events[index]?.type
