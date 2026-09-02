@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.6.5] - 2026-09-02
+
+### Docs
+
+- Sync the five-language READMEs to the 0.1.2-alpha.5 facts; no behavior change.
+
 ## [0.6.4] - 2026-09-02
 
 ### Changed
