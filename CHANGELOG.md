@@ -2,6 +2,13 @@
 
 All notable changes to this project are documented in this file.
 
+## [Unreleased]
+
+### Changed
+
+- Runtime `dependencies` entry `@deepseek-ai/dsh-subprocess` moved from `0.1.1-rc.2` to the published `0.1.2-alpha.5` line.
+- Dev pins `@deepseek-ai/cordis-plugin-loader ^1.0.3` / `@deepseek-ai/cordis-plugin-include ^1.0.7` aligned with the `cordis 4.0.2` peer ranges.
+
 ## [0.6.5] - 2026-09-02
 
 ### Docs
