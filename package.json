@@ -144,7 +144,7 @@
   "dependencies": {
     "tsdown": "^0.22.14",
     "typescript": "^7.0.0",
-    "zod": "^4.4.3",
+    "zod": "^4.5.4",
     "@deepseek-ai/dsh-subprocess": "0.1.2-rc.1"
   },
   "devDependencies": {
