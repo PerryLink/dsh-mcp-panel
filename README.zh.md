@@ -27,7 +27,7 @@
 
 | 维度 | 状态 |
 |---|---|
-| Harness | DeepSeek Harness `0.1.2-alpha.5`（2026-09-02 已适配）：会话信封保留 ignorable 字段但仅用于存量日志读取兼容——Session.append 仍无法盖章，门控行为不变。 |
+| Harness | DeepSeek Harness `0.1.2-rc.1`（2026-09-02 已适配）：会话信封保留 ignorable 字段但仅用于存量日志读取兼容——Session.append 仍无法盖章，门控行为不变。 |
 | Node | `^22.19.0 \|\| >=24.0.0` |
 | 平台 | Web GUI（双面：Host + 浏览器） |
 | 模型 | 任意（面板只读；仅 `/mcp` 输出对模型可见） |

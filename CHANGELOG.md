@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented in this file.
 
+## [Unreleased]
+
+### Changed
+
+- Align the devDependency pins and the runtime `@deepseek-ai/dsh-subprocess` pin to the published dsh `0.1.2-rc.1` line, move the compat CI probes from the stale `0.1.2-alpha.3` pins to `0.1.2-rc.1`, and correct the `mcp/status` upstream-seam wording (proposed, not yet shipped — feature-detected); no behavior change.
+
 ## [0.6.6] - 2026-09-03
 
 ### Changed

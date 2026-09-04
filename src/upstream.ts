@@ -1,6 +1,6 @@
 /**
  * The upstream observability seam of `@deepseek-ai/dsh-mcp-client`
- * (shipped: `mcp/status` event + `mcpStatus` query service, see
+ * (proposed: `mcp/status` event + `mcpStatus` query service, see
  * `packages/mcp/mcp-client/src/status.ts` in the deepseek-harness repo),
  * consumed here with feature detection, plus two PROPOSED extensions this
  * console documents in `docs/upstream-proposal.md` (deepseek-harness):

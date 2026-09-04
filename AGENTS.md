@@ -13,7 +13,7 @@ Standalone DeepSeek Harness plugin repository (`dsh-mcp-panel`). Development fol
 - `src/command.ts` — the `/mcp` command (standard `CommandResult`; logged via `command/run` + `command/done`).
 - `src/probe.ts` — optional `mcp_probe` background-job tool (unowned job: panel-only results). Both transports probe: streamable-http via one `initialize` POST; stdio via spawning the row's `command`/`args` under `scrubbedParentEnv` (the same base the mcp-client bridge uses, imported from `@deepseek-ai/dsh-subprocess`) + explicit `env`/`cwd`, one `initialize` handshake over stdin/stdout, sanitized serverInfo or failure detail.
 - `src/client/` — browser half: `$mount` the Remote contribution, register the `settings.plugins.tab` entry id `mcp`, pure presenter in `present.ts`, inline scoped stylesheet in `styles.ts` (standalone bundles cannot use the in-repo CSS-module pipeline).
-- `tests/` — vitest; REAL `Context` + `Session`/`ToolRuntime`/`CommandRuntime` from the `0.1.1-rc.2` peers, fake Loader face, fake Agent, optional fake jobs.
+- `tests/` — vitest; REAL `Context` + `Session`/`ToolRuntime`/`CommandRuntime` from the `0.1.2-rc.1` peers, fake Loader face, fake Agent, optional fake jobs.
 
 ## Hard rules applied here
 
@@ -33,7 +33,7 @@ Schema in `src/config.ts` (Schemastery, fail-loud bounds, explicit `resolveConfi
 
 ## Checks
 
-`pnpm run typecheck && pnpm run typecheck:ci && pnpm test && pnpm run build && pnpm run verify:self-contained && pnpm run verify:artifacts && pnpm pack`. The plain `typecheck` resolves the local harness checkout's fresh type faces through tsconfig `paths`; `typecheck:ci` resolves the npm-published `0.1.1-rc.2` faces (no paths) and is what CI runs — keep both green.
+`pnpm run typecheck && pnpm run typecheck:ci && pnpm test && pnpm run build && pnpm run verify:self-contained && pnpm run verify:artifacts && pnpm pack`. The plain `typecheck` resolves the local harness checkout's fresh type faces through tsconfig `paths`; `typecheck:ci` resolves the npm-published `0.1.2-rc.1` faces (no paths) and is what CI runs — keep both green.
 
 `scripts/verify-headless.mjs` boots the real web profile with this plugin installed (temp `DSH_HOME` + `dsh plugin --profile web add <tarball>`) and prints the exact `/mcp` output; `.github/workflows/compat.yml` runs the same flow monthly against a pinned harness SHA (set `DSH_INSTALL_ANCHOR` when plugin and harness are siblings).
 
@@ -48,4 +48,4 @@ Schema in `src/config.ts` (Schemastery, fail-loud bounds, explicit `resolveConfi
 
 ## Peer versions
 
-Peer deps range `>=0.1.0-rc.8 <0.2.0`; the package runs against harness installations ≥ rc.8 (the profile's hoisted module fallback resolves peers to the installation's own copies). `@types/node` deliberately tracks the `engines` floor (Node 22 line, `^22.19.0`): major bumps such as dependabot's 26.2.0 proposal describe APIs the supported runtime does not have and are declined (dependabot.yml ignores semver-major for it; rationale also on PR #3). Client type faces come from the five `@deepseek-ai/dsh-client-*` devDependencies (`connection`/`locale`/`runtime`/`ui-settings`/`ui-slots`, rc.2) — imports in `src/client` resolve against them, so a clean checkout typechecks with `typecheck:ci` alone.
+Peer deps range `>=0.1.0-rc.8 <0.2.0`; the package runs against harness installations ≥ rc.8 (the profile's hoisted module fallback resolves peers to the installation's own copies). `@types/node` deliberately tracks the `engines` floor (Node 22 line, `^22.19.0`): major bumps such as dependabot's 26.2.0 proposal describe APIs the supported runtime does not have and are declined (dependabot.yml ignores semver-major for it; rationale also on PR #3). Client type faces come from the five `@deepseek-ai/dsh-client-*` devDependencies (`connection`/`locale`/`ui-settings`/`ui-slots`, rc.1) — imports in `src/client` resolve against them, so a clean checkout typechecks with `typecheck:ci` alone.
