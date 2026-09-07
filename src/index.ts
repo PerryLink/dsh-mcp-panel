@@ -40,6 +40,7 @@ import { McpPanelService } from './service.ts'
 import { DEFAULT_CATALOG, mergeCatalog } from './catalog.ts'
 import { MCP_STATUS_EVENT, type McpStatusQuery } from './upstream.ts'
 
+// Service Definition — the panel contract: McpPanelService (Remote namespace mcpPanel), the snapshot wire schema, and the config schema.
 export const name = 'mcp-panel'
 
 /** Hard services: the facts the console reads. `commands`/`jobs` are optional children. */
@@ -85,6 +86,7 @@ export type * from './wire.ts'
 export async function apply(ctx: Context, config: Config): Promise<void> {
   const resolved = resolveConfig(config)
 
+  // Service Provider — mounts McpPanelService and registers the /mcp command and the probe tool through their registries.
   // The service has injects, so its fiber activates asynchronously — await it
   // before reading the instance the command and probe closures capture.
   const catalog = mergeCatalog(DEFAULT_CATALOG, resolved.catalogEntries)
@@ -103,6 +105,7 @@ export async function apply(ctx: Context, config: Config): Promise<void> {
   })
   const service = ctx.get('mcpPanel') as McpPanelService
 
+  // Consumer — consumes the shipped mcp/status seam (live events + one-shot query seed) and feeds observations to the panel service.
   // Consume the shipped upstream seam: live events plus a one-shot query
   // seed from the (optional) status service when it is already mounted.
   ctx.on(MCP_STATUS_EVENT, (payload) => { service.observe(payload) })
