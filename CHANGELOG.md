@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.6.11] - 2026-09-09
+
+### Fixed
+
+- Align the runtime `@deepseek-ai/dsh-subprocess` pin to `0.1.5-alpha.1` (it was still `0.1.2-rc.1` while the dev/test line had already moved to `0.1.5-alpha.1`): a pinned rc.1 runtime dependency shadows the host's own `0.1.5-alpha.1` tree when the tarball is installed into a `0.1.5-alpha.1` profile, so the stdio probe could resolve the wrong `@deepseek-ai/dsh-*` generation. The package stays a regular `dependencies` entry — `src/probe.ts` value-imports `scrubbedParentEnv` at runtime, so consumers really install it — and no peer range changes.
+
 ## [0.6.10] - 2026-09-09
 
 ### Changed
