@@ -148,3 +148,22 @@ until this PR lands). When neither produces data, the panel reports status as
 only) instead of fabricating a connection state. That keeps the panel honest
 both before and after this proposal lands.
 
+## Status check 2026-09-09 (0.1.5-alpha.1)
+
+> Measured read-only against `origin/master` = `5dda764e` (`0.1.5-alpha.1`).
+
+- **The seam is still missing.** `git grep -n 'McpStatus' origin/master --
+  packages/mcp` -> 0 hits (exit 1); `git grep -n 'mcp/status' origin/master
+  -- packages/mcp` -> 0 hits (exit 1). Neither the event, the service, nor
+  the vocabulary has landed upstream.
+- **Official package paths are unchanged.** The `packages/mcp` group still
+  contains exactly one package, `mcp-client`; every path this proposal
+  cites (`packages/mcp/mcp-client/src/connection.ts`, `src/index.ts`,
+  `src/tools.ts`, `src/transport.ts`) exists on master. The line numbers in
+  the emission-site table remain a proposal-time snapshot; re-check them
+  when the fork branch is rebased.
+- **Discussion #1300 remains the anchor** for the handoff and the
+  ready-to-open PR from
+  `PerryLink/deepseek-harness:feat/mcp-client-status-observability-seam`.
+- Everything else in this document stands as written.
+
