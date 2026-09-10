@@ -10,3 +10,11 @@ updates:
       # 26.x line would describe APIs the supported runtime does not have.
       - dependency-name: '@types/node'
         update-types: ['version-update:semver-major']
+      # The coverage provider's major must match the vitest major we run, and
+      # `vitest` stays on a caret range so that upgrade is deliberate. v5 removes
+      # the deprecated coverage options and requires `coverageFilesDirectory`,
+      # which vitest.config.ts does not set yet: dependabot PR #22 failed with
+      # "AssertionError: coverageFilesDirectory is required" (18 errors) and was
+      # closed. Drop this entry in the same commit as the v5 migration.
+      - dependency-name: '@vitest/coverage-v8'
+        update-types: ['version-update:semver-major']
