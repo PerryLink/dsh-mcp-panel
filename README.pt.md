@@ -26,7 +26,7 @@
 
 | Superfície | Status |
 |---|---|
-| Harness | DeepSeek Harness `dsh-v0.1.5-alpha.1` (tag do GitHub, verificado em 2026-09-09) (adaptado em 2026-09-09): o envelope de sessão mantém seu campo ignorable apenas para compatibilidade de leitura de logs armazenados - o Session.append ainda não consegue estampá-lo, então o comportamento da porta não muda. Verificado em 2026-09-09 contra o checkout master dsh-v0.1.5-alpha.1 (cadeia completa de portas + smoke de instalação de perfil). |
+| Harness | DeepSeek Harness `dsh-v0.1.5-rc.1` (tag do GitHub, verificado em 2026-09-10) (adaptado em 2026-09-09): o envelope de sessão mantém seu campo ignorable apenas para compatibilidade de leitura de logs armazenados - o Session.append ainda não consegue estampá-lo, então o comportamento da porta não muda. Verificado em 2026-09-10 contra o checkout master dsh-v0.1.5-rc.1 (cadeia completa de portas + smoke de instalação de perfil). |
 | Node | `^22.19.0 \|\| >=24.0.0` |
 | Plataformas | Web GUI (duas faces: host + navegador) |
 | Modelo | Qualquer (o painel é somente leitura; só a saída de `/mcp` é legível pelo modelo) |
