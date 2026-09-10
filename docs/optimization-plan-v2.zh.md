@@ -8,7 +8,7 @@
 
 1. **当前工作区是红灯状态**：上一版 Phase 2 功能（面板轮询、探测按钮、被动探测、/mcp i18n、探测上限、事件陈旧度）已写入源码但**未收口**——`pnpm run typecheck` 有 7 个错误、`pnpm test` 84 例中 1 例失败、15 个文件未提交、文档（5 语言 README / cordis.patch.yml / CHANGELOG / AGENTS.md）未同步。**第一优先级是完成收口并提交**（§2），而不是叠加新功能。
 2. **CI typecheck 可恢复**：上一版 A6 以"npm 类型包过旧"为由否决 CI typecheck；实测证据表明该前提已不成立——`@deepseek-ai/dsh-*` 全套 `0.1.0-rc.6` 已发布到 npm（`next` 标签），独立 spike 用纯 npm 类型闭包编译本仓库源码，错误输出与 checkout 版本**完全一致**（仅本仓库自身 7 错，无任何模块解析/类型闭包错误）。恢复 CI typecheck 可直接堵住当前这类"改一半"的回归（§3）。
-3. **上游 `mcp/status` seam 仍未落地**：grep 本地 harness checkout 全部 `packages/` 与 `docs/`，`mcp/status` 事件、`McpStatusService` 均不存在，`docs/upstream-proposal.md` 也未出现在 harness 仓库。插件当前全部连接字段仍走 `unknown + statusSource: derived` 降级。提案文档已完备（本仓库 `docs/upstream-proposal.md`，含 PR contents 清单），**提交上游 PR 是让插件核心价值完整化的最高杠杆动作**（§6）。
+3. **上游 `mcp/status` seam 仍未落地**：grep 本地 harness checkout 全部 `packages/` 与 `docs/`，`mcp/status` 事件、`McpStatusService` 均不存在，`docs/upstream-proposal.md` 也未出现在 harness 仓库。插件当前全部连接字段仍走 `unknown + statusSource: derived` 降级。提案文档已完备（本仓库 `docs/upstream-proposal.md`，含 PR contents 清单），但**上游不开放外部 PR 通道**——2026-09-10 复核 `GET /repos/deepseek-ai/deepseek-harness/pulls` 仍为 HTTP 404，与 §11 的 2026-08-14 证据一致。故当前最高杠杆动作是**维持 `src/upstream.ts` tripwire + 跟随锚点 Discussion [#1300](https://github.com/deepseek-ai/deepseek-harness/discussions/1300)**，而非提交 PR（详见 §11）。
 4. **新增产品与工程机会**已逐项核查（§4/§5），均不触碰只读契约与诚实性约束。
 
 ### 可行性总览
@@ -33,7 +33,7 @@
 | P2-7 | sanitizeUrl 补 URL fragment 凭据键脱敏 | ✅ | 无 | XS |
 | P2-8 | 配置事实展示（failOnStartupError / reconnect 策略，derived 标注） | ✅ | 需 locale 文案 | S |
 | P3-1 | 面板/命令扩展到 es/pt/hi（对齐 5 语言 README） | ✅ | 翻译 + 校对 | M–L |
-| P4-1 | 向 deepseek-harness 提交 mcp/status 上游 PR | ✅ 提案完备 | harness 仓库门禁（测试/Agent Note/双语） | L |
+| P4-1 | 上游 `mcp/status` seam 落地（PR 通道关闭 → 锚点 Discussion [#1300](https://github.com/deepseek-ai/deepseek-harness/discussions/1300)） | ⛔ 外部受阻（2026-09-10 复核仍 404） | 上游重开 PR 通道或采纳提案 | L |
 | P4-2 | 上游落地后回归 + tripwire 清理 | ✅ | 依赖 P4-1 合入 | S |
 
 ---
@@ -226,7 +226,7 @@ tests/aggregate.spec.ts > projects upstream status facts
 
 ## 6. Phase 4 —— 上游联动（可选，价值最高）
 
-### P4-1 · 向 deepseek-harness 提交 mcp/status PR
+### P4-1 · 上游 `mcp/status` seam：提案与通道状态
 
 - 现状：提案完备（本仓库 `docs/upstream-proposal.md` 含动机、面定义、6 个发射点、PR contents 清单、非目标）；harness 侧零落地。
 - 动作（在 harness 仓库执行，非本仓库）：
@@ -271,7 +271,7 @@ Phase 3 / Phase 4（可选，各自独立可插队）
 
 ## 9. 总结
 
-17 项全部可实施，无一受阻。**最关键的是 P0**：当前工作区处于"功能已写、门禁红灯、文档滞后"的半完成状态，先把 7 个类型错误与 1 个失败测试修掉、把 Phase 2 收口提交并同步五语言文档，再谈提升。之后 P1-1（CI typecheck 恢复，有 spike 证据背书）能永久堵住同类回归；P2 八项把面板/命令打磨到与功能集相称的完整度；P4-1 上游 PR 则决定插件的终极价值上限。
+17 项全部可实施，无一受阻。**最关键的是 P0**：当前工作区处于"功能已写、门禁红灯、文档滞后"的半完成状态，先把 7 个类型错误与 1 个失败测试修掉、把 Phase 2 收口提交并同步五语言文档，再谈提升。之后 P1-1（CI typecheck 恢复，有 spike 证据背书）能永久堵住同类回归；P2 八项把面板/命令打磨到与功能集相称的完整度；P4-1 受上游 PR 通道关闭所限，本轮只能停在「提案 + tripwire」（§11）。
 
 ---
 
@@ -309,6 +309,8 @@ Phase 3 / Phase 4（可选，各自独立可插队）
 - 三轮重试（共 7 次创建尝试 + 双通道探测）结果一致，条件未变化；fork 分支 tip 已钉死在 seam 提交 `e1611e9`（共享 checkout 上其他会话的后续提交不会进入该分支）。
 
 结论：上游仓库当前不向外部账号开放 Pull Requests 通道。手头交付物已就绪：fork 分支 + PR 正文（`Project/Plugins/pr-body-mcp-status-seam.md`）+ 交接说明（`Project/Plugins/pr-handoff.md`，含对比链接 `https://github.com/deepseek-ai/deepseek-harness/compare/master...PerryLink:feat/mcp-client-status-observability-seam`）——具备权限者可从网页一键开 PR；上游恢复 PR 通道后重跑 `gh pr create --repo deepseek-ai/deepseek-harness --head PerryLink:feat/mcp-client-status-observability-seam --base master`。**已获授权并完成 Discussions 移交**：https://github.com/deepseek-ai/deepseek-harness/discussions/1300（Show and tell 分类，含完整实现清单与一键 PR 链接）。
+
+**2026-09-10 复核（本轮）**：`GET /repos/deepseek-ai/deepseek-harness/pulls` 仍返回 HTTP 404；上游 `CONTRIBUTING.md` 现行文本为 "we cannot accept external pull requests at the moment"，并把开放通道收敛为「Discussions 报 bug / 提提案」+「生态插件」。因此 P4-1 的终局口径固定为：**提案（本仓库 `docs/upstream-proposal.md`）+ 消费侧 tripwire（`src/upstream.ts`）+ 锚点 Discussion #1300**；PR 通道恢复前不再重试创建。另按工作区现行纪律，上游 PR 只在「标准件 E」专用会话提交，且同时 open 的上游 PR ≤1。
 
 ## 12. v0.3.0 实施记录（2026-08-15）
 
