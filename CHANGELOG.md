@@ -6,7 +6,8 @@ All notable changes to this project are documented in this file.
 
 ### Changed
 
-- Bump the build toolchain to `tsdown@0.23` (dependabot #24) and the test toolchain to `vitest@5` together with its matching `@vitest/coverage-v8@5`. `vitest` and `@vitest/coverage-v8` must move in lockstep: vitest 5 changed the coverage payload contract, so leaving the provider at `4.1.10` crashed `pnpm run test:coverage` with `Expected string coverage payload, received object`.
+- Bump the runtime `zod` range from `^4.4.3` to `^4.5.4` (dependabot #19), which had been merged without a release.
+- Bump the build toolchain to `tsdown@0.23` (dependabot #24) and the test toolchain to `vitest@5` together with its matching `@vitest/coverage-v8@5` (#25). `vitest` and `@vitest/coverage-v8` must move in lockstep: vitest 5 changed the coverage payload contract, so leaving the provider at `4.1.10` crashed `pnpm run test:coverage` with `Expected string coverage payload, received object`.
 
 ## [0.6.12] - 2026-09-10
 
