@@ -48,7 +48,7 @@
 |---|---|---|
 | C1 entryId 修正 | ✅ 已做 | `src/service.ts:147` 用 `entry.options.id`；`tests/command.spec.ts:121` nestedMcpRow 用例 |
 | C2 提案入库 | ✅ 已做 | `docs/upstream-proposal.md`（随包分发）；README 已改相对链接 |
-| C3 README 五章×5 语言 | ✅ 已做 | README.md 含 Compatibility/Quick start/Uninstall/Honest by contract/Configuration/Permissions & data/Troubleshooting/Security；`README.zh.md` 章节结构一致 |
+| C3 README 五章×5 语言 | ✅ 已做 | README.md 含 Compatibility/Quick start/Uninstall/Honest by contract/Configuration/Permissions & data/Troubleshooting/Security；`README-zh.md` 章节结构一致 |
 | A3 v0.1.0 发布 | ⚠️ 部分 | CHANGELOG 有 0.1.0 条目、README 引 `#v0.1.0`；但本机 clone **无 remote**，tag/Release 无法本地验证（见 §1.5） |
 | A1 CI / A2 产物冒烟 / A4 probe 单测 / A5 客户端接线 / A7 dependabot | ✅ 已做 | `.github/workflows/ci.yml`、`scripts/verify-artifacts.mjs`、`tests/probe.spec.ts`（9 例）、`tests/client-registration.spec.ts`（6 例）、`.github/dependabot.yml` |
 | B1 轮询 / B3 探测按钮 / B5 过滤框 / B4 命令 i18n / B6 探测上限 / B7 陈旧度 / B2 被动探测 | ⚠️ 已写未收口 | 源码全部就位（`refreshIntervalMs`、`mcpPanel/probe` 描述符、`toolQuery`、`outputLanguage`、`maxProbes`、`observedAt`、`passiveProbe*`），但见 §1.2 红灯 |
