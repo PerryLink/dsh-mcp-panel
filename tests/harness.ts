@@ -19,12 +19,12 @@ import type { McpPanelService } from '../src/service.ts'
 export interface FakeEntry {
   /** Loader-composed id (may carry an enclosing group prefix such as `include:`). */
   readonly id: string
-  readonly disabled: boolean
+  disabled: boolean
   readonly fiber: { readonly state: number } | undefined
   readonly options: {
     readonly id: string
     readonly name: string
-    readonly config?: unknown
+    config?: unknown
   }
 }
 
@@ -81,6 +81,12 @@ export interface Harness {
   readonly session: Session
   readonly agent: Agent
   readonly service: McpPanelService
+  /**
+   * The LIVE fake-loader row array: the loader face iterates it on every
+   * read, so a test can mutate it to simulate the web profile's live patch
+   * reload (e.g. the loader re-applying a written override).
+   */
+  readonly loaderEntries: FakeEntry[]
 }
 
 /**
@@ -106,7 +112,7 @@ export async function mountHarness(entries: FakeEntry[] = [], config: Record<str
   const plugin = await import('../src/index.ts')
   await ctx.plugin(plugin as unknown as import('@deepseek-ai/cordis').Plugin, config)
   const service = ctx.get('mcpPanel') as McpPanelService
-  return { ctx, session, agent: makeAgent(session), service }
+  return { ctx, session, agent: makeAgent(session), service, loaderEntries: entries }
 }
 
 /** Run one slash command through the real commands service. */

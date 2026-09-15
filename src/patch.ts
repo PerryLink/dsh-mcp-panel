@@ -2,12 +2,13 @@
  * Profile-patch fragment generation for the MCP server CRUD console.
  *
  * The console NEVER rewrites the profile's patch file: every edit is rendered
- * as one append-only loader patch OPERATION in the same vocabulary the
- * existing enable/disable suggestions use (`insert` for add, `set` for edit,
- * `set … disabled: true` for delete — the harness patch vocabulary has no
- * remove, so disabling a row IS the canonical removal). Appending keeps user
- * comments and unrelated rows byte-for-byte untouched; the Loader applies
- * later operations over earlier ones.
+ * as one append-only loader patch OPERATION in the harness's actual patch
+ * dialect — `insert` for add, and an id-targeted override (`- id:` + `name:` +
+ * `disabled:`/`config:`) for edit/disable/enable. The loader dialect has no
+ * `set` and no remove, so disabling a row IS the canonical removal (issue #27:
+ * the previous `- set:` emission was silently skipped upstream). Appending
+ * keeps user comments and unrelated rows byte-for-byte untouched; the Loader
+ * applies later operations over earlier ones.
  *
  * Security rules enforced here:
  * - configured `env`/`headers` VALUES never enter a snapshot: the editor sees
@@ -414,13 +415,20 @@ export function renderPatchFragment(op: ResolvedPatchOp, now = new Date()): stri
       return lines.join('\n')
     }
     case 'edit': {
-      lines.push('- set:', `    id: ${yamlScalar(op.entryId)}`, `    name: ${yamlScalar(MCP_CLIENT_MODULE)}`)
-      emitBlock(lines, '    config:', op.rowConfig, 6)
+      lines.push(
+        `- id: ${yamlScalar(op.entryId)}`,
+        `  name: ${yamlScalar(MCP_CLIENT_MODULE)}`,
+      )
+      emitBlock(lines, '  config:', op.rowConfig, 4)
       return lines.join('\n')
     }
     case 'disable':
     case 'enable': {
-      lines.push(`- set: { id: ${yamlScalar(op.entryId)}, name: ${yamlScalar(MCP_CLIENT_MODULE)}, disabled: ${op.kind === 'disable' ? 'true' : 'false'} }`)
+      lines.push(
+        `- id: ${yamlScalar(op.entryId)}`,
+        `  name: ${yamlScalar(MCP_CLIENT_MODULE)}`,
+        `  disabled: ${op.kind === 'disable' ? 'true' : 'false'}`,
+      )
       return lines.join('\n')
     }
   }

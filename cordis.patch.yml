@@ -32,5 +32,10 @@
         # Kill switch for profile-patch writes: false rejects every write
         # (fragments stay copyable).
         # writeEnabled: true
+        # Verify each write against the loader's re-applied state before
+        # reporting success (a skipped patch must not read as success).
+        # writeVerifyEnabled: true
+        # Polling budget for write verification in milliseconds.
+        # writeVerifyTimeoutMs: 3000
         # Number of cordis.patch.yml backups retained per write.
         # backupCount: 5

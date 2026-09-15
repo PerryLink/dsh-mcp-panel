@@ -41,14 +41,15 @@ describe('/mcp output language', () => {
     expect(unknown).toContain('已配置：github')
   })
 
-  it('keeps the patch suggestion line machine-identical across languages', async () => {
+  it('keeps the patch suggestion lines machine-identical across languages', async () => {
     const en = await mountHarness([mcpRow('mcp-github', GITHUB_CONFIG)])
     const zh = await mountHarness([mcpRow('mcp-github', GITHUB_CONFIG)], { outputLanguage: 'zh' })
     const enText = text(await runCommand(en, '/mcp github disable'))
     const zhText = text(await runCommand(zh, '/mcp github disable'))
-    const patchLine = "- set: { id: mcp-github, name: '@deepseek-ai/dsh-mcp-client', disabled: true }"
-    expect(enText).toContain(patchLine)
-    expect(zhText).toContain(patchLine)
+    const patchLines = "- id: mcp-github\n  name: '@deepseek-ai/dsh-mcp-client'\n  disabled: true"
+    expect(enText).toContain(patchLines)
+    expect(zhText).toContain(patchLines)
+    expect(enText).not.toContain('- set:')
   })
 
   it('defaults to English output', async () => {

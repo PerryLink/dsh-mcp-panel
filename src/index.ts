@@ -67,7 +67,7 @@ export {
   type McpPatchResolution,
 } from './patch.ts'
 export { appendPatchFragment } from './write.ts'
-export { createTrialCaller, validateTrialRequest, type McpTrialRequest, type McpTrialResult } from './trial.ts'
+export { createTrialCaller, validateTrialRequest, RESOURCE_TOOL_NAMES, RESOURCE_TOOL_SET, type McpTrialRequest, type McpTrialResult } from './trial.ts'
 export { MCP_STATUS_EVENT, type McpStatusPayload, type McpStatusQuery, type McpServerStatus } from './upstream.ts'
 export { DEFAULT_CATALOG, CATALOG_SCHEMA, mergeCatalog, catalogToConfigInput, catalogIssues, catalogOverlayIssues } from './catalog.ts'
 export type { CatalogEntry, CatalogIssue } from './catalog.ts'
@@ -100,6 +100,8 @@ export async function apply(ctx: Context, config: Config): Promise<void> {
     trialTimeoutMs: resolved.trialTimeoutMs,
     trialMaxResultChars: resolved.trialMaxResultChars,
     writeEnabled: resolved.writeEnabled,
+    writeVerifyEnabled: resolved.writeVerifyEnabled,
+    writeVerifyTimeoutMs: resolved.writeVerifyTimeoutMs,
     backupCount: resolved.backupCount,
     catalog,
   })

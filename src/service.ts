@@ -48,9 +48,10 @@ import {
   renderPatchFragment,
   resolvePatchOp,
   type McpPatchResolution,
+  type ResolvedPatchOp,
 } from './patch.ts'
 import { appendPatchFragment } from './write.ts'
-import { createTrialCaller, validateTrialRequest, type McpAgentRegistryFace, type McpTrialRequest } from './trial.ts'
+import { createTrialCaller, validateTrialRequest, RESOURCE_TOOL_NAMES, RESOURCE_TOOL_SET, type McpAgentRegistryFace, type McpTrialRequest } from './trial.ts'
 import { probeJob, PROBE_KIND, type ProbeTarget } from './probe.ts'
 import { sanitizeText } from './sanitize.ts'
 import { exportMcpConfigs, parseMcpConfigsImport } from './config-io.ts'
@@ -143,6 +144,10 @@ export interface McpPanelServiceConfig {
   trialMaxResultChars: number
   /** Whether profile-patch writes are allowed at all. */
   writeEnabled: boolean
+  /** Whether each write is verified against the loader's re-applied state before success. */
+  writeVerifyEnabled: boolean
+  /** Polling budget for write verification in ms. */
+  writeVerifyTimeoutMs: number
   /** Number of patch backups retained per write. */
   backupCount: number
   /** Merged recommended MCP server directory (built-in + user overlay). */
@@ -160,6 +165,8 @@ const DEFAULT_SERVICE_CONFIG: McpPanelServiceConfig = {
   trialTimeoutMs: 120_000,
   trialMaxResultChars: 60_000,
   writeEnabled: true,
+  writeVerifyEnabled: true,
+  writeVerifyTimeoutMs: 3_000,
   backupCount: 5,
   catalog: [],
 }
@@ -294,7 +301,17 @@ private readonly trialCaller = createTrialCaller()
     const schemas = this.ctx.tools.schemas()
     const configuredNames = rows.map(row => serverNameOf(row.config, `entry:${row.entryId}`))
     const groups = groupMcpTools(schemas, configuredNames)
-    const catalog = this.ctx.get('mcpCatalog') as { listResources?: unknown; listPrompts?: unknown } | undefined
+    // Resources are bridged by the SHIPPED `@deepseek-ai/dsh-mcp-resources`
+    // service (mounted by the base bundle): the official client registers each
+    // connection's provider, and the package owns the three shared tools. The
+    // console feature-detects the service AND the registered tools; Prompts
+    // remain deferred upstream, so their capability stays false.
+    const schemaList = Array.from(schemas)
+    const registeredResourceTools = schemaList
+      .filter(schema => RESOURCE_TOOL_SET.has(schema.name))
+      .map(schema => schema.name)
+    const resourcesAvailable = this.ctx.get('mcpResources') !== undefined
+      && RESOURCE_TOOL_NAMES.every(name => registeredResourceTools.includes(name))
     return aggregateSnapshot({
       rows,
       groups,
@@ -308,8 +325,8 @@ private readonly trialCaller = createTrialCaller()
       patchFile: this.patchFile(),
       refreshIntervalMs: this.config.refreshIntervalMs,
       capabilities: {
-        resources: { available: typeof catalog?.listResources === 'function' },
-        prompts: { available: typeof catalog?.listPrompts === 'function' },
+        resources: { available: resourcesAvailable },
+        prompts: { available: false },
       },
       trial: {
         enabled: this.config.trialEnabled,
@@ -428,6 +445,15 @@ private readonly trialCaller = createTrialCaller()
     }
 
     const { backupPath, bytes } = await appendPatchFragment(file, fragment, this.config.backupCount)
+    // Issue #27 hardening: the loader dialect previously skipped the emitted
+    // `- set:` fragments silently. The web profile hot-reloads patch edits, so
+    // verify the loader actually re-applied the operation before reporting
+    // success; a skipped patch (wrong dialect, a row living in a layer this
+    // file cannot target, or a name mismatch) reads as a failure with the
+    // backup kept.
+    if (this.config.writeVerifyEnabled) {
+      await this.verifyWrite(resolution.op)
+    }
     return {
       file,
       backupPath,
@@ -525,6 +551,59 @@ private readonly trialCaller = createTrialCaller()
   /** Render validation issues as one actionable error. */
   private issueError(resolution: Extract<McpPatchResolution, { ok: false }>): Error {
     return new Error(`dsh-mcp-panel: invalid patch operation — ${resolution.issues.map(issue => issue.text).join(' ')}`)
+  }
+
+  /** The loader row for one entry id, or undefined when absent or foreign. */
+  private entryOf(entryId: string): { disabled: boolean; config: unknown } | undefined {
+    for (const entry of this.ctx.loader.entries()) {
+      if (entry.options.id !== entryId || entry.options.name !== MCP_CLIENT_MODULE) continue
+      return { disabled: entry.disabled, config: entry.options.config }
+    }
+    return undefined
+  }
+
+  /**
+   * Verify that the loader actually re-applied an appended patch operation.
+   * The web profile hot-reloads `cordis.patch.yml` edits, so a valid override
+   * becomes observable on the live entry within the budget; anything else
+   * (a skipped patch, a row inserted by a later-composed layer such as
+   * `$DSH_HOME/cordis.patch.yml`, or a name mismatch) leaves the loader
+   * unchanged and must not read as success.
+   *
+   * @param op - the operation that was appended.
+   * @param budgetMs - polling budget; the loop checks every 250 ms.
+   */
+  private async verifyWrite(op: ResolvedPatchOp, budgetMs = this.config.writeVerifyTimeoutMs): Promise<void> {
+    const deadline = Date.now() + budgetMs
+    for (;;) {
+      if (this.writeVerified(op)) return
+      if (Date.now() >= deadline) {
+        throw new Error(
+          `dsh-mcp-panel: the fragment was appended (backup kept), but the loader did not apply it within ${budgetMs}ms — `
+          + 'the row may live in a layer a profile patch cannot reach (e.g. inserted by $DSH_HOME/cordis.patch.yml), '
+          + 'or the patch was skipped; inspect with dsh --profile web --dump-config',
+        )
+      }
+      await new Promise(resolve => setTimeout(resolve, 250))
+    }
+  }
+
+  /** Whether the loader currently reflects the intent of one applied op. */
+  private writeVerified(op: ResolvedPatchOp): boolean {
+    const entry = this.entryOf(op.entryId)
+    switch (op.kind) {
+      case 'add': return entry !== undefined
+      case 'disable': return entry?.disabled === true
+      case 'enable': return entry !== undefined && entry.disabled === false
+      case 'edit': {
+        if (entry === undefined) return false
+        const current = entry.config as Record<string, unknown> | undefined
+        for (const [key, value] of Object.entries(op.rowConfig)) {
+          if (current === undefined || JSON.stringify(current[key]) !== JSON.stringify(value)) return false
+        }
+        return true
+      }
+    }
   }
 
   /** One passive-probe sweep over every configured MCP server (both transports). */

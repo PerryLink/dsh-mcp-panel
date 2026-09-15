@@ -27,7 +27,7 @@
 
 | Superfície | Status |
 |---|---|
-| Harness | DeepSeek Harness `dsh-v0.1.5-rc.2` (tag do GitHub, verificado em 2026-09-11) (adaptado em 2026-09-09): o envelope de sessão mantém seu campo ignorable apenas para compatibilidade de leitura de logs armazenados - o Session.append ainda não consegue estampá-lo, então o comportamento da porta não muda. Verificado em 2026-09-11 contra o checkout master dsh-v0.1.5-rc.2 (cadeia completa de portas + smoke de instalação de perfil). |
+| Harness | DeepSeek Harness `dsh-v0.1.6-alpha.1` (tag do GitHub, verificado em 2026-09-16): cadeia completa de portas (typecheck / typecheck:ci / test / build / verify / package) mais smoke de instalação de perfil contra o checkout 0.1.6-alpha.1. O serviço `@deepseek-ai/dsh-mcp-resources` agora pontua Resources, que o console detecta e navega somente leitura. Linha de base anterior: `dsh-v0.1.5-rc.2` (verificado em 2026-09-11). |
 | Node | `^22.19.0 \|\| >=24.0.0` |
 | Plataformas | Web GUI (duas faces: host + navegador) |
 | Modelo | Qualquer (o painel é somente leitura; só a saída de `/mcp` é legível pelo modelo) |
@@ -41,7 +41,8 @@ O `dsh-mcp-panel` é a camada de experiência sobre o cliente MCP oficial: uma v
 - **`/mcp <servidor> health`** — sugestões de autorreparo derivadas (ENOENT → dependência ausente, ECONNREFUSED, timeouts, 401/403/404, DNS, rate limit, reconexão esgotada…); código de saída / cauda de stderr rotulados honestamente como *aguardando suporte upstream*.
 - **`/mcp <servidor> call <tool> [json]`** — chamada de teste pelo **pipeline oficial de ferramentas** (`ctx.tools.execute()`); política de permissão pré-execução, aprovação, guards e pós-execução, tudo em vigor.
 - **Configurações → Plugins → MCP** — cartões de status com selos, diagnósticos e sondas, mais o CRUD de servidores e o banco de testes de ferramentas.
-- **CRUD de servidores** — formulários de adicionar/editar/remover → fragmentos `insert`/`set`/`set disabled` → cópia para a área de transferência ou gravação com aprovação e backups automáticos.
+- **CRUD de servidores** — formulários de adicionar/editar/remover → `insert` para adicionar e anulações dirigidas por id (`- id:` + `name:` + `disabled:`/`config:`) para editar/remover → cópia para a área de transferência ou gravação com aprovação, backups automáticos e re-verificação contra o loader.
+- **Navegação de Resources** — listagem de recursos, listagem de templates e leituras de URI somente leitura pelas ferramentas oficiais `list_mcp_resources` / `list_mcp_resource_templates` / `read_mcp_resource` (ponteadas pelo serviço `@deepseek-ai/dsh-mcp-resources`); os resultados aparecem apenas na aba, nunca no contexto do modelo.
 - **Banco de testes de ferramentas** — servidor → ferramenta `mcp__*` → argumentos JSON → resultado JSON canônico + conteúdo renderizado; limitado por `trialMaxResultChars`; somente painel, nunca contexto do modelo.
 
 ## Architecture: official client = bridge, this plugin = console
@@ -79,7 +80,7 @@ O console **lê** o cliente pelo seu seam de observabilidade `mcp/status` (event
 |---|---|---|
 | Adicionar servidor | Editar YAML, cuidar indentação/aspas | Formulário → fragmento de patch → **copiar** ou **gravar** (aprovação + backup) |
 | Editar servidor | Editar YAML, reiniciar/recarga a quente | Formulário pré-preenchido da linha ao vivo; segredos inalterados preservam o valor no host |
-| Remover servidor | Apagar a linha | Operação `set disabled: true` (o vocabulário de patches não tem remove) — re-habilitável |
+| Remover servidor | Apagar a linha | Anulação `- id:` + `disabled: true` (o vocabulário de patches não tem remove) — re-habilitável |
 | Ver status | Ler logs | Selos + reconexões + último erro, ao vivo do `mcp/status` |
 | Testar uma ferramenta | Pedir ao modelo | Banco de testes → pipeline oficial `ctx.tools.execute()` (permissões e aprovação em vigor) |
 | Diagnosticar falhas | grep de logs | `/mcp <servidor> health` com sugestões derivadas |
@@ -133,6 +134,8 @@ Todas as opções são campos Schemastery `Config` (modificáveis a partir do co
 | `trialTimeoutMs` | `120000` | Prazo do painel por chamada de teste em ms |
 | `trialMaxResultChars` | `60000` | Teto do payload do resultado de teste em caracteres |
 | `writeEnabled` | `true` | Interruptor de segurança: `false` rejeita toda gravação (copiar continua funcionando) |
+| `writeVerifyEnabled` | `true` | Re-verifica cada gravação contra o estado re-aplicado do loader antes de reportar sucesso |
+| `writeVerifyTimeoutMs` | `3000` | Orçamento de sondagem para a verificação de gravação em ms |
 | `backupCount` | `5` | Backups de `cordis.patch.yml` retidos por gravação |
 | `catalogEntries` | `[]` | Sobreposição do usuário para o diretório recomendado: anexa entradas; uma entrada com o mesmo `id` substitui a integrada |
 
@@ -150,7 +153,9 @@ Todas as opções são campos Schemastery `Config` (modificáveis a partir do co
 
 ## Resources & Prompts
 
-O cliente oficial documenta que *"Tools are the only bridged MCP capability"* — Resources e Prompts estão adiados. O console detecta um seam de catálogo proposto e exibirá listas somente leitura no dia em que for enviado; até lá o painel de capacidades marca ambos **aguardando suporte upstream**.
+Resources JÁ são ponteados upstream: o bundle base monta `@deepseek-ai/dsh-mcp-resources`, o cliente oficial registra o provider de recursos de cada conexão em `ctx.mcpResources`, e esse pacote possui as três ferramentas compartilhadas (`list_mcp_resources`, `list_mcp_resource_templates`, `read_mcp_resource`). O console detecta o serviço e as ferramentas registradas, e oferece um navegador de Resources somente leitura (lista / templates / leitura de URI) em cada cartão de servidor — cada chamada passa pelo pipeline OFICIAL de ferramentas e os resultados nunca entram no contexto do modelo.
+
+**Templates de prompts** e **assinaturas de recursos** permanecem adiados upstream; o painel de capacidades marca Prompts **aguardando suporte upstream**.
 
 ## Permissions & data
 
@@ -161,14 +166,15 @@ O cliente oficial documenta que *"Tools are the only bridged MCP capability"* �
 
 - **A ponte continua sendo a ponte.** Sem mudanças de transporte, OAuth ou protocolo; uma linha mcp-client por servidor, exatamente como à mão.
 - **Sem status falso.** Campos de conexão sem observações upstream leem `unknown` / `—` com `statusSource: 'derived'`; códigos de saída e stderr nunca são inventados.
-- **Gravações somente-anexar, com aprovação e backup.** O console nunca reescreve o `cordis.patch.yml`; anexa operações geradas e conserva os `backupCount` backups mais recentes.
+- **Gravações somente-anexar, com aprovação e backup.** O console nunca reescreve o `cordis.patch.yml`; anexa operações geradas, conserva os `backupCount` backups mais recentes e re-verifica cada gravação contra o estado re-aplicado do loader antes de reportar sucesso (um patch omitido nunca aparece como sucesso).
 - **Sem injeção de prompts.** O painel não registra seções de prompt; seu único texto visível ao modelo são as duas descrições de ferramenta/comando.
 
 ## Known limitations
 
-- **Resources e Prompts** aguardam suporte upstream — o cliente oficial só pontua ferramentas.
+- **Templates de prompts e assinaturas de recursos** aguardam suporte upstream — o cliente oficial pontua ferramentas e recursos, mas não prompts nem assinaturas.
 - **Códigos de saída / caudas de stderr** são rotulados *aguardando suporte upstream* até o cliente expô-los.
 - **Painel somente leitura** — o console nunca falsifica um estado de conexão; campos não observáveis leem `unknown` / `-1` / `—`.
+- **Gravações são verificadas, não garantidas** — o console re-verifica cada gravação contra o estado re-aplicado do loader e falha honestamente quando o loader não a aplicou (ex.: uma linha inserida por `$DSH_HOME/cordis.patch.yml`, que um patch de camada de perfil não alcança).
 
 ## Development
 

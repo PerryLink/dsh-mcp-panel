@@ -225,7 +225,7 @@ describe('console actions', () => {
 
   it('writePatch appends with a backup and reports the interactive approval path', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'dsh-mcp-panel-service-'))
-    const harness = await mountHarness([mcpRow('mcp-github', STDIO_CONFIG)])
+    const harness = await mountHarness([mcpRow('mcp-github', STDIO_CONFIG)], { writeVerifyEnabled: false })
     ;(harness.ctx as { baseUrl?: string }).baseUrl = dir
     const result = await harness.service.writePatch(JSON.stringify({
       kind: 'add',
@@ -266,7 +266,7 @@ describe('console actions', () => {
     const asked: Array<{ toolName: string; agent: unknown }> = []
     const approval = { request: async (req: { toolName: string; agent: unknown }) => { asked.push(req); return 'allowed-once' } }
     const dir = await mkdtemp(join(tmpdir(), 'dsh-mcp-panel-service-'))
-    const harness = await mountHarness([mcpRow('mcp-github', STDIO_CONFIG)])
+    const harness = await mountHarness([mcpRow('mcp-github', STDIO_CONFIG)], { writeVerifyEnabled: false })
     ;(harness.ctx as { baseUrl?: string }).baseUrl = dir
     harness.ctx.provide('approval', approval as never)
     harness.ctx.provide('agents', {
@@ -288,7 +288,7 @@ describe('console actions', () => {
     const asked: Array<{ toolName: string; agent: unknown }> = []
     const approval = { request: async (req: { toolName: string; agent: unknown }) => { asked.push(req); return 'allowed-once' } }
     const dir = await mkdtemp(join(tmpdir(), 'dsh-mcp-panel-service-'))
-    const harness = await mountHarness([mcpRow('mcp-github', STDIO_CONFIG)])
+    const harness = await mountHarness([mcpRow('mcp-github', STDIO_CONFIG)], { writeVerifyEnabled: false })
     ;(harness.ctx as { baseUrl?: string }).baseUrl = dir
     harness.ctx.provide('approval', approval as never)
     harness.session.append('turn/start', { turn: 1 })
@@ -354,5 +354,65 @@ describe('console actions', () => {
     const disabled = await mountHarness([mcpRow('mcp-demo', { serverName: 'demo', transport: 'stdio', command: 'node' })], { trialEnabled: false })
     await expect(disabled.service.callTool(JSON.stringify({ serverName: 'demo', toolName: 'mcp__demo__echo', argsJson: '{}' }), undefined))
       .rejects.toThrow('trialEnabled')
+  })
+
+  it('callTool injects the server into shared resource tools and forbids conflicts', async () => {
+    const harness = await mountHarness([mcpRow('mcp-demo', { serverName: 'demo', transport: 'stdio', command: 'node' })])
+    const seen: unknown[] = []
+    harness.ctx.tools.register({
+      name: 'list_mcp_resources',
+      description: 'List MCP resources',
+      parameters: {},
+      output: { schema: { type: 'null' }, render: () => [] },
+      execute: (args: unknown) => { seen.push(args); return Promise.resolve(null) },
+    })
+    const result = await harness.service.callTool(JSON.stringify({
+      serverName: 'demo',
+      toolName: 'list_mcp_resources',
+      argsJson: '{}',
+    }), undefined)
+    expect(result.isError).toBe(false)
+    expect(seen).toEqual([{ server: 'demo' }])
+    await expect(harness.service.callTool(JSON.stringify({
+      serverName: 'demo',
+      toolName: 'list_mcp_resources',
+      argsJson: '{"server":"other"}',
+    }), undefined)).rejects.toThrow('targets "demo"')
+    await expect(harness.service.callTool(JSON.stringify({
+      serverName: 'demo',
+      toolName: 'list_mcp_resources',
+      argsJson: '[]',
+    }), undefined)).rejects.toThrow('JSON object argument')
+  })
+
+  it('writePatch verifies a disable against the loader and fails honestly when it is skipped', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'dsh-mcp-panel-service-'))
+    const entries = [mcpRow('mcp-github', STDIO_CONFIG)]
+    const harness = await mountHarness(entries, { writeVerifyTimeoutMs: 100 })
+    ;(harness.ctx as { baseUrl?: string }).baseUrl = dir
+    // The fake loader never re-applies the appended fragment (as if the row
+    // lived in a layer a profile patch cannot reach): no false success.
+    await expect(harness.service.writePatch(JSON.stringify({
+      kind: 'disable',
+      entryId: 'mcp-github',
+      serverName: 'github',
+    }), true, undefined)).rejects.toThrow('loader did not apply')
+  })
+
+  it('writePatch succeeds once the loader re-applies the fragment (live reload)', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'dsh-mcp-panel-service-'))
+    const entries = [mcpRow('mcp-github', STDIO_CONFIG)]
+    const harness = await mountHarness(entries, { writeVerifyTimeoutMs: 5_000 })
+    ;(harness.ctx as { baseUrl?: string }).baseUrl = dir
+    const write = harness.service.writePatch(JSON.stringify({
+      kind: 'disable',
+      entryId: 'mcp-github',
+      serverName: 'github',
+    }), true, undefined)
+    // Simulate the web profile's live patch reload: the loader applies the
+    // override shortly after the append, so verification passes.
+    setTimeout(() => { entries[0]!.disabled = true }, 0)
+    const result = await write
+    expect(result.approvalPath).toBe('interactive-confirmation')
   })
 })

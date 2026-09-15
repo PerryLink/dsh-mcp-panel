@@ -2,6 +2,20 @@
 
 All notable changes to this project are documented in this file.
 
+## [Unreleased]
+
+### Fixed
+
+- **Issue #27 — `disable` / `enable` / `edit` emitted `- set:` fragments the loader dialect does not implement (silent no-op).** Both renderers (`renderPatchFragment` and the `/mcp <server> disable|enable` suggestion) now emit the loader's real dialect: `- id: <entryId>` + `name:` + `disabled:` (or a full `config:` block for edits). `appendPatchFragment` reads the file back to confirm the appended block survived, and `writePatch` re-verifies every write against the loader's re-applied state before reporting success — a skipped patch (wrong dialect, a row living in a layer a profile patch cannot reach such as `$DSH_HOME/cordis.patch.yml`, or a name mismatch) now fails honestly instead of reading "written". New config: `writeVerifyEnabled` (default true) and `writeVerifyTimeoutMs` (default 3000).
+
+### Added
+
+- **Read-only Resources browser.** The shipped `@deepseek-ai/dsh-mcp-resources` service now bridges MCP resources upstream; the console feature-detects the service + the three registered shared tools and offers list / templates / URI read per server card through the OFFICIAL tool pipeline (results stay panel-only). `callTool` now accepts the three shared resource tools and injects the requested `server` into their arguments (conflicts fail closed). Capability detection no longer probes the never-shipped `mcpCatalog` face; Prompts stays `available: false` until upstream bridges prompt templates.
+
+### Changed
+
+- Compatibility baseline raised to `dsh-v0.1.6-alpha.1`: all `@deepseek-ai/dsh-*` dev/test pins and the runtime `dsh-subprocess` pin moved to `0.1.6-alpha.1`; `dshWorkshop.compatibility.dshVersions` gains `0.1.6-alpha.1`; the five-language READMEs now document the id-override CRUD dialect, the Resources browser, the write-verification hardening, and the corrected capabilities wording (Prompts + resource subscriptions pending).
+
 ## [0.6.14] - 2026-09-12
 
 ### Changed

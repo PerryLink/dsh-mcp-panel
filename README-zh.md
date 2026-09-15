@@ -29,7 +29,7 @@
 
 | 维度 | 状态 |
 |---|---|
-| Harness | DeepSeek Harness `dsh-v0.1.5-rc.2`（GitHub tag，2026-09-11 已核验）（2026-09-09 已适配）：会话信封保留 ignorable 字段但仅用于存量日志读取兼容——Session.append 仍无法盖章，门控行为不变。已于 2026-09-11 对照 dsh-v0.1.5-rc.2 master checkout 核验（全量门禁链 + profile 安装冒烟）。 |
+| Harness | DeepSeek Harness `dsh-v0.1.6-alpha.1`（GitHub tag，2026-09-16 已核验）：全量门禁链（typecheck / typecheck:ci / test / build / verify / package）+ 对照 0.1.6-alpha.1 checkout 的 profile 安装冒烟。上游 `@deepseek-ai/dsh-mcp-resources` 现已桥接 Resources，控制台特征探测后提供只读浏览。上一基线：`dsh-v0.1.5-rc.2`（2026-09-11 已核验）。 |
 | Node | `^22.19.0 \|\| >=24.0.0` |
 | 平台 | Web GUI（双面：Host + 浏览器） |
 | 模型 | 任意（面板只读；仅 `/mcp` 输出对模型可见） |
@@ -43,7 +43,8 @@
 - **`/mcp <server> health`** —— 派生自愈建议（ENOENT → 依赖缺失、ECONNREFUSED、超时、401/403/404、DNS、限流、重连耗尽…）；退出码 / stderr 尾部如实标注*待官方支持*。
 - **`/mcp <server> call <tool> [json]`** —— 经**官方工具管线**（`ctx.tools.execute()`）试用调用；pre-execute 权限策略、审批、guard、post-execute 全部生效。
 - **设置 → 插件 → MCP 页** —— 状态卡片（徽章、诊断、探测），加 server CRUD 与工具试用台。
-- **Server CRUD** —— 增删改表单 → `insert`/`set`/`set disabled` 片段 → 剪贴板复制或审批写入，自动备份。
+- **Server CRUD** —— 增删改表单 → 添加用 `insert`，编辑/删除用 id 定向覆盖（`- id:` + `name:` + `disabled:`/`config:`）→ 剪贴板复制或审批写入，自动备份，并在报成功前对照 loader 复验。
+- **Resources 浏览** —— 经官方 `list_mcp_resources` / `list_mcp_resource_templates` / `read_mcp_resource` 工具只读列出资源、模板与 URI 读取（由上游 `@deepseek-ai/dsh-mcp-resources` 服务桥接）；结果只显示在本页、绝不进入模型上下文。
 - **工具试用台** —— 选 server → 选 `mcp__*` 工具 → JSON 填参 → 规范 JSON 结果 + render 内容；按 `trialMaxResultChars` 截断；仅面板可见、永不进入模型上下文。
 
 ## Architecture: official client = bridge, this plugin = console
@@ -81,7 +82,7 @@
 |---|---|---|
 | 添加服务器 | 改 YAML，注意缩进与引号 | 表单 → patch 片段 → **一键复制**或**写入**（审批 + 自动备份） |
 | 修改服务器 | 改 YAML，重启/热重载 | 表单预填当前行；未改动的密钥在 host 侧保留原值 |
-| 删除服务器 | 删掉该行 | 追加 `set disabled: true` 操作（patch 词汇表没有 remove）——可随时重新启用 |
+| 删除服务器 | 删掉该行 | 追加 `- id:` + `disabled: true` 覆盖操作（patch 词汇表没有 remove）——可随时重新启用 |
 | 查看状态 | 翻日志 | 徽章 + 重连次数 + 最近错误，来自 `mcp/status` seam 实时数据 |
 | 试用工具 | 让模型调用 | 试用台 → 官方 `ctx.tools.execute()` 管线（权限与审批全程生效） |
 | 排查故障 | grep 日志 | `/mcp <server> health` 派生自愈建议 |
@@ -135,6 +136,8 @@ dsh --profile web --dump-config | grep -A3 'id: mcp-panel'
 | `trialTimeoutMs` | `120000` | 每次试用调用的面板侧截止时间（ms） |
 | `trialMaxResultChars` | `60000` | 试用结果载荷上限（字符） |
 | `writeEnabled` | `true` | 总开关：`false` 拒绝一切 profile 写入（仍可复制片段） |
+| `writeVerifyEnabled` | `true` | 每次写入在报成功前对照 loader 重放后的状态复验 |
+| `writeVerifyTimeoutMs` | `3000` | 写入复验的轮询预算（毫秒） |
 | `backupCount` | `5` | 每次写入保留的 `cordis.patch.yml` 备份数 |
 | `catalogEntries` | `[]` | 推荐服务器目录的用户覆盖：追加条目，同 `id` 的条目替换内置条目 |
 
@@ -152,7 +155,9 @@ dsh --profile web --dump-config | grep -A3 'id: mcp-panel'
 
 ## Resources & Prompts
 
-官方 client 明确记载 *"Tools 是当前唯一桥接的 MCP 能力"*——Resources 与 Prompts 处于 deferred 状态。控制台特征探测了上游提案中的 catalog seam，一旦落地即可只读展示列表；在此之前，能力一览中二者均标注**待官方支持**。
+Resources 已由上游桥接：base bundle 默认挂载 `@deepseek-ai/dsh-mcp-resources`，官方 client 把每个连接的资源 provider 注册进 `ctx.mcpResources`，该包拥有三个共享工具（`list_mcp_resources`、`list_mcp_resource_templates`、`read_mcp_resource`）。控制台特征探测该服务与已注册工具，并在每个 server 卡上提供只读 Resources 浏览（列表 / 模板 / URI 读取）——每次调用都走**官方工具管线**，结果只显示在本页、绝不进入模型上下文。
+
+MCP **prompt 模板**与**资源订阅**仍待上游；能力一览中 Prompts 标注**待官方支持**。
 
 ## Permissions & data
 
@@ -163,14 +168,15 @@ dsh --profile web --dump-config | grep -A3 'id: mcp-panel'
 
 - **桥接层仍是桥接层。** 不改传输、OAuth、协议；每个 server 一行 mcp-client，与你手写完全一致。
 - **不伪造状态。** 无上游观测时连接字段显示 `unknown` / `—` 并标注 `statusSource: 'derived'`；退出码与 stderr 尾部绝不臆造。
-- **写入只追加、走审批、先备份。** 控制台从不改写 `cordis.patch.yml`：只追加生成的操作，并保留最新 `backupCount` 份备份。
+- **写入只追加、走审批、先备份。** 控制台从不改写 `cordis.patch.yml`：只追加生成的操作，保留最新 `backupCount` 份备份，并在报成功前对照 loader 重放后的状态复验（被跳过的补丁绝不显示为成功）。
 - **零提示词注入。** 本插件不注册任何提示词段落；对模型可见的文本只有两个工具/命令描述。
 
 ## Known limitations
 
-- **Resources 与 Prompts** 待官方支持——官方 client 仅桥接工具。
+- **prompt 模板与资源订阅** 待官方支持——官方 client 桥接工具与资源，但未桥接 prompts 与订阅。
 - **退出码 / stderr 尾部** 在 client 暴露前如实标注*待官方支持*。
 - **只读面板** —— 控制台从不伪造连接状态；不可观测字段显示 `unknown` / `-1` / `—`。
+- **写入复验而非保证** —— 控制台对照 loader 重放后的状态复验每次写入；loader 未应用时（例如该行由 `$DSH_HOME/cordis.patch.yml` 插入、profile 层补丁够不着）如实报失败。
 
 ## Development
 

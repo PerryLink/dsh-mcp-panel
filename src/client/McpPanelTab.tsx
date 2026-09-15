@@ -40,6 +40,37 @@ type ViewState =
   | { readonly status: 'error'; readonly message: string }
   | { readonly status: 'ready'; readonly snapshot: McpPanelSnapshot }
 
+/** One resources-browse outcome per server card. */
+type ResourceBrowseState =
+  | { readonly kind: 'loading' }
+  | { readonly kind: 'error'; readonly message: string }
+  | { readonly kind: 'done'; readonly result: McpTrialResultWire }
+
+/** Pretty-print one result JSON; unparseable (truncated) text renders raw. */
+function prettyResultJson(json: string): string {
+  try {
+    return JSON.stringify(JSON.parse(json), null, 2)
+  } catch {
+    return json
+  }
+}
+
+/** Render one resources-browse outcome (loading / error / done). */
+function resourceBrowseBlock(state: ResourceBrowseState | undefined, t: McpPanelTabProps['t']): ReactNode {
+  if (state === undefined) return null
+  if (state.kind === 'loading') return <p className="dmcp-status">{t('trialRunning')}</p>
+  if (state.kind === 'error') return <p className="dmcp-error-text" role="alert">{state.message}</p>
+  return (
+    <div className="dmcp-trial-result">
+      <p className="dmcp-trial-meta">
+        <span>{t('trialDuration').replace('{ms}', String(state.result.durationMs))}</span>
+        {state.result.truncated ? <span className="dmcp-warn-text">{t('trialTruncated')}</span> : null}
+      </p>
+      <pre className="dmcp-fragment dmcp-trial-json">{prettyResultJson(state.result.resultJson)}</pre>
+    </div>
+  )
+}
+
 /** Localized label for one server badge code. */
 function badgeLabel(badge: PresentedServerRow['badge'], t: McpPanelTabProps['t']): string {
   switch (badge) {
@@ -99,6 +130,20 @@ export function McpPanelTab({ status, probe, previewPatch, writePatch, callTool,
   // Armed removal (a disable-patch write) per server namespace.
   const [removeArm, setRemoveArm] = useState<string | null>(null)
   const [removeError, setRemoveError] = useState<string | null>(null)
+  // Resources browser state: per-server URI input + last browse outcome.
+  const [resourceUri, setResourceUri] = useState<Record<string, string>>({})
+  const [resourceState, setResourceState] = useState<Record<string, ResourceBrowseState>>({})
+
+  /** Browse one server's resources through the OFFICIAL shared tools. */
+  const runResource = (serverName: string, toolName: string, argsJson: string): void => {
+    setResourceState(current => ({ ...current, [serverName]: { kind: 'loading' } }))
+    void Promise.resolve().then(() => callTool(JSON.stringify({ serverName, toolName, argsJson }))).then(
+      (outcome) => { setResourceState(current => ({ ...current, [serverName]: { kind: 'done', result: outcome } })) },
+      (failure: unknown) => {
+        setResourceState(current => ({ ...current, [serverName]: { kind: 'error', message: failure instanceof Error ? failure.message : String(failure) } }))
+      },
+    )
+  }
 
   const reload = (): void => {
     setRequest(value => value + 1)
@@ -346,6 +391,40 @@ export function McpPanelTab({ status, probe, previewPatch, writePatch, callTool,
                               </ul>
                             </>
                           )}
+                          {model.capabilities.resources.available && row.view.entryId !== '' ? (
+                            <div className="dmcp-resources">
+                              <p className="dmcp-health-title">{t('resources')} <span className="dmcp-tool-description">{t('resourceHint')}</span></p>
+                              <div className="dmcp-editor-actions">
+                                <button type="button" className="dmcp-action" onClick={() => { runResource(row.view.serverName, 'list_mcp_resources', '{}') }}>
+                                  {t('resourceList')}
+                                </button>
+                                <button type="button" className="dmcp-action" onClick={() => { runResource(row.view.serverName, 'list_mcp_resource_templates', '{}') }}>
+                                  {t('resourceTemplates')}
+                                </button>
+                                <input
+                                  type="text"
+                                  className="dmcp-resource-uri"
+                                  value={resourceUri[row.view.serverName] ?? ''}
+                                  placeholder={t('resourceUri')}
+                                  aria-label={t('resourceUri')}
+                                  onChange={(event) => {
+                                    setResourceUri(current => ({ ...current, [row.view.serverName]: event.currentTarget.value }))
+                                  }}
+                                />
+                                <button
+                                  type="button"
+                                  className="dmcp-action"
+                                  disabled={(resourceUri[row.view.serverName] ?? '').trim() === ''}
+                                  onClick={() => {
+                                    runResource(row.view.serverName, 'read_mcp_resource', JSON.stringify({ uri: (resourceUri[row.view.serverName] ?? '').trim() }))
+                                  }}
+                                >
+                                  {t('resourceRead')}
+                                </button>
+                              </div>
+                              {resourceBrowseBlock(resourceState[row.view.serverName], t)}
+                            </div>
+                          ) : null}
                         </div>
                       ) : null}
                     </li>

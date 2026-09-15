@@ -379,7 +379,11 @@ export function renderPatchSuggestion(
   messages: CommandMessages = EN_MESSAGES,
 ): string {
   const disabled = action === 'disable'
-  const patch = `- set: { id: ${view.entryId}, name: '@deepseek-ai/dsh-mcp-client', disabled: ${disabled} }`
+  const patch = [
+    `- id: ${view.entryId}`,
+    `  name: '@deepseek-ai/dsh-mcp-client'`,
+    `  disabled: ${disabled}`,
+  ].join('\n')
   const lines = [
     messages.patchIntro(action, view.serverName, view.entryId, patchFile),
     '',
@@ -520,9 +524,9 @@ export function mcpCommand(service: McpPanelService, language: CommandLanguage =
         }
         case 'disable':
         case 'enable': {
-          // Leftover namespaces have no loader row: a patch suggestion with an
-          // empty entry id would be malformed, so refuse instead of emitting
-          // `- set: { id: , … }`.
+          // Leftover namespaces have no loader row: an id-targeted override
+          // with an empty entry id would be malformed, so refuse instead of
+          // emitting `- id: , …`.
           if (view.entryId === '') return { kind: 'error', text: messages.noPatchForLeftover(parsed.server) }
           return { kind: 'success', text: renderPatchSuggestion(view, parsed.action, snapshot.patchFile, messages) }
         }

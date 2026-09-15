@@ -60,6 +60,20 @@ export interface McpTrialLimits {
 const TRIAL_CALL_PREFIX = 'mcp-panel-trial'
 
 /**
+ * The official shared resource tools (`@deepseek-ai/dsh-mcp-resources`).
+ * They live OUTSIDE the `mcp__<server>__` namespace and take `{ server, … }`;
+ * the trial console injects the requested server name into their arguments.
+ */
+export const RESOURCE_TOOL_NAMES = Object.freeze([
+  'list_mcp_resources',
+  'list_mcp_resource_templates',
+  'read_mcp_resource',
+] as const)
+
+/** Membership set for {@link RESOURCE_TOOL_NAMES}. */
+export const RESOURCE_TOOL_SET: ReadonlySet<string> = new Set(RESOURCE_TOOL_NAMES)
+
+/**
  * Validate one trial request structurally; returns an English error string
  * or null. Never throws on untrusted input.
  *
@@ -106,17 +120,29 @@ export function createTrialCaller() {
     ): Promise<McpTrialResult> {
       const { serverName, toolName } = request
       const prefix = `mcp__${serverName}__`
-      if (!toolName.startsWith(prefix)) {
-        throw new Error(`tool "${toolName}" does not belong to server "${serverName}" (expected the ${prefix}… namespace)`)
-      }
-      if (tools.get(toolName) === undefined) {
-        throw new Error(`tool "${toolName}" is not registered — the server may be down or its sync failed`)
-      }
       let argumentsValue: unknown
       try {
         argumentsValue = JSON.parse(request.argsJson)
       } catch {
         throw new Error('argsJson is not valid JSON')
+      }
+      if (RESOURCE_TOOL_SET.has(toolName)) {
+        // Shared resource tools take `{ server, … }` outside the mcp__*
+        // namespace; the console injects the requested server and refuses a
+        // conflicting explicit one (fail closed).
+        if (typeof argumentsValue !== 'object' || argumentsValue === null || Array.isArray(argumentsValue)) {
+          throw new Error(`resource tool "${toolName}" expects a JSON object argument (\`{}\` is valid)`)
+        }
+        const explicit = (argumentsValue as Record<string, unknown>)['server']
+        if (explicit !== undefined && explicit !== serverName) {
+          throw new Error(`resource tool "${toolName}" was called with server "${String(explicit)}" but the console targets "${serverName}"`)
+        }
+        argumentsValue = { server: serverName, ...argumentsValue as Record<string, unknown> }
+      } else if (!toolName.startsWith(prefix)) {
+        throw new Error(`tool "${toolName}" does not belong to server "${serverName}" (expected the ${prefix}… namespace)`)
+      }
+      if (tools.get(toolName) === undefined) {
+        throw new Error(`tool "${toolName}" is not registered — the server may be down or its sync failed`)
       }
       const agent = sessionId === undefined || sessionId === '' ? undefined : agents?.get(sessionId)
       const callId = `${TRIAL_CALL_PREFIX}-${++trialCounter}` as unknown as ToolExecutionInput['callId']

@@ -187,7 +187,7 @@ export interface McpPanelSnapshot {
   servers: readonly McpServerView[]
   /** Connectivity probes this process, newest first. */
   probes: readonly McpProbeView[]
-  /** Resources/Prompts availability (the official client exposes neither yet). */
+  /** Resources availability (bridged by the shipped `dsh-mcp-resources` service) and Prompts (still deferred upstream). */
   capabilities: {
     resources: McpCapabilityView
     prompts: McpCapabilityView
@@ -287,6 +287,26 @@ export const MCP_PANEL_SNAPSHOT_SCHEMA = z.object({
 })
 
 /**
+ * Dual-shape strict Typert codec, compatible with BOTH published codec
+ * generations: every published harness line (through `0.1.6-alpha.1`) reads
+ * `codec.schema` (a zod v4 instance), while current master reads
+ * `codec.create()` (a schema factory). Carrying both fields keeps the same
+ * built bundle working on either loader; each loader ignores the field it
+ * does not read.
+ *
+ * @param typeSymbol - generated type identity for diagnostics.
+ * @param schema - the zod v4 schema that validates the boundary value.
+ */
+function strictCodec(typeSymbol: string, schema: z.ZodType): {
+  readonly mode: 'strict'
+  readonly typeSymbol: string
+  readonly schema: z.ZodType
+  readonly create: () => z.ZodType
+} {
+  return { mode: 'strict', typeSymbol, schema, create: () => schema }
+}
+
+/**
  * The `mcpPanel/status` invocation descriptor, shared verbatim by the host
  * `TYPERT` manifest (`src/typert.host.ts`) and the client
  * `TypertRemoteContribution` (`src/client/remote.ts`). Hand-written in the
@@ -300,11 +320,7 @@ export const MCP_PANEL_STATUS_DESCRIPTOR = Object.freeze({
   method: 'status',
   invocation: Object.freeze({ kind: 'direct' }),
   parameters: Object.freeze([]),
-  result: Object.freeze({
-    mode: 'strict',
-    typeSymbol: 'dsh-mcp-panel/types#McpPanelSnapshot',
-    schema: MCP_PANEL_SNAPSHOT_SCHEMA,
-  }),
+  result: Object.freeze(strictCodec('dsh-mcp-panel/types#McpPanelSnapshot', MCP_PANEL_SNAPSHOT_SCHEMA)),
   sourceLocation: Object.freeze({ file: 'src/wire.ts', line: 1, column: 1 }),
 } as const) satisfies InvocationDescriptor
 
@@ -336,17 +352,9 @@ export const MCP_PANEL_PROBE_DESCRIPTOR = Object.freeze({
     name: 'serverName',
     wire: 'serverName',
     source: 'json',
-    codec: Object.freeze({
-      mode: 'strict',
-      typeSymbol: 'dsh-mcp-panel/types#ProbeRequestServerName',
-      schema: z.string(),
-    }),
+    codec: strictCodec('dsh-mcp-panel/types#ProbeRequestServerName', z.string()),
   } satisfies InvocationDescriptor['parameters'][number])]),
-  result: Object.freeze({
-    mode: 'strict',
-    typeSymbol: 'dsh-mcp-panel/types#ProbeStarted',
-    schema: PROBE_STARTED_SCHEMA,
-  }),
+  result: strictCodec('dsh-mcp-panel/types#ProbeStarted', PROBE_STARTED_SCHEMA),
   sourceLocation: Object.freeze({ file: 'src/wire.ts', line: 1, column: 1 }),
 } as const) satisfies InvocationDescriptor
 
@@ -378,17 +386,9 @@ export const MCP_PANEL_PREVIEW_DESCRIPTOR = Object.freeze({
     name: 'opJson',
     wire: 'opJson',
     source: 'json',
-    codec: Object.freeze({
-      mode: 'strict',
-      typeSymbol: 'dsh-mcp-panel/types#PatchOpJson',
-      schema: z.string(),
-    }),
+    codec: strictCodec('dsh-mcp-panel/types#PatchOpJson', z.string()),
   } satisfies InvocationDescriptor['parameters'][number])]),
-  result: Object.freeze({
-    mode: 'strict',
-    typeSymbol: 'dsh-mcp-panel/types#PatchPreview',
-    schema: PATCH_PREVIEW_SCHEMA,
-  }),
+  result: strictCodec('dsh-mcp-panel/types#PatchPreview', PATCH_PREVIEW_SCHEMA),
   sourceLocation: Object.freeze({ file: 'src/wire.ts', line: 1, column: 1 }),
 } as const) satisfies InvocationDescriptor
 
@@ -430,39 +430,23 @@ export const MCP_PANEL_WRITE_DESCRIPTOR = Object.freeze({
       name: 'opJson',
       wire: 'opJson',
       source: 'json',
-      codec: Object.freeze({
-        mode: 'strict',
-        typeSymbol: 'dsh-mcp-panel/types#PatchOpJson',
-        schema: z.string(),
-      }),
+      codec: strictCodec('dsh-mcp-panel/types#PatchOpJson', z.string()),
     } satisfies InvocationDescriptor['parameters'][number]),
     Object.freeze({
       name: 'confirmed',
       wire: 'confirmed',
       source: 'json',
-      codec: Object.freeze({
-        mode: 'strict',
-        typeSymbol: 'dsh-mcp-panel/types#PatchWriteConfirmed',
-        schema: z.boolean(),
-      }),
+      codec: strictCodec('dsh-mcp-panel/types#PatchWriteConfirmed', z.boolean()),
     } satisfies InvocationDescriptor['parameters'][number]),
     Object.freeze({
       name: 'sessionId',
       wire: 'sessionId',
       source: 'json',
-      codec: Object.freeze({
-        mode: 'strict',
-        typeSymbol: 'dsh-mcp-panel/types#PatchWriteSessionId',
-        schema: z.string(),
-      }),
+      codec: strictCodec('dsh-mcp-panel/types#PatchWriteSessionId', z.string()),
       acceptsUndefined: true,
     } satisfies InvocationDescriptor['parameters'][number]),
   ]),
-  result: Object.freeze({
-    mode: 'strict',
-    typeSymbol: 'dsh-mcp-panel/types#PatchWriteResult',
-    schema: PATCH_WRITE_RESULT_SCHEMA,
-  }),
+  result: strictCodec('dsh-mcp-panel/types#PatchWriteResult', PATCH_WRITE_RESULT_SCHEMA),
   sourceLocation: Object.freeze({ file: 'src/wire.ts', line: 1, column: 1 }),
 } as const) satisfies InvocationDescriptor
 
@@ -501,29 +485,17 @@ export const MCP_PANEL_CALLTOOL_DESCRIPTOR = Object.freeze({
       name: 'requestJson',
       wire: 'requestJson',
       source: 'json',
-      codec: Object.freeze({
-        mode: 'strict',
-        typeSymbol: 'dsh-mcp-panel/types#TrialRequestJson',
-        schema: z.string(),
-      }),
+      codec: strictCodec('dsh-mcp-panel/types#TrialRequestJson', z.string()),
     } satisfies InvocationDescriptor['parameters'][number]),
     Object.freeze({
       name: 'sessionId',
       wire: 'sessionId',
       source: 'json',
-      codec: Object.freeze({
-        mode: 'strict',
-        typeSymbol: 'dsh-mcp-panel/types#TrialSessionId',
-        schema: z.string(),
-      }),
+      codec: strictCodec('dsh-mcp-panel/types#TrialSessionId', z.string()),
       acceptsUndefined: true,
     } satisfies InvocationDescriptor['parameters'][number]),
   ]),
-  result: Object.freeze({
-    mode: 'strict',
-    typeSymbol: 'dsh-mcp-panel/types#McpTrialResultWire',
-    schema: MCP_TRIAL_RESULT_SCHEMA,
-  }),
+  result: strictCodec('dsh-mcp-panel/types#McpTrialResultWire', MCP_TRIAL_RESULT_SCHEMA),
   sourceLocation: Object.freeze({ file: 'src/wire.ts', line: 1, column: 1 }),
 } as const) satisfies InvocationDescriptor
 

@@ -69,6 +69,12 @@ async function appendFragment(filePath: string, fragment: string): Promise<numbe
   const normalized = content.endsWith('\n') ? content : `${content}\n`
   const block = normalized.endsWith('\n\n') ? `${fragment}\n` : `\n${fragment}\n`
   await writeFile(filePath, `${normalized}${block}`, 'utf8')
+  // Readback: the appended block must survive exactly as written — a partial
+  // write would otherwise surface as a "written" success (issue #27 hardening).
+  const after = await readFile(filePath, 'utf8')
+  if (!after.includes(fragment)) {
+    throw new Error('dsh-mcp-panel: the appended patch fragment could not be read back — the write is suspect; inspect the file before retrying')
+  }
   return Buffer.byteLength(block, 'utf8')
 }
 

@@ -167,3 +167,12 @@ both before and after this proposal lands.
   `PerryLink/deepseek-harness:feat/mcp-client-status-observability-seam`.
 - Everything else in this document stands as written.
 
+## Status check 2026-09-16 (0.1.6-alpha.1)
+
+> Measured read-only against `origin/master` = `0d1f5000` (`0.1.6-alpha.1`, a 666-commit interval since the previous baseline).
+
+- **The `mcp/status` seam is still missing.** `mcp/status` / `mcpStatus` / `McpStatus` -> 0 hits across `packages`; the mcp-client still exposes no per-server status/observability surface, so the panel keeps its feature-detected, derived-status fallback. The proposal and its tripwire remain unchanged.
+- **Resources shipped differently than proposed.** The upstream bridge now provides Resources through a NEW package, `@deepseek-ai/dsh-mcp-resources` (mounted by `packages/bundle/base/cordis.patch.yml:471-472`): the client registers each connection's provider into `ctx.mcpResources`, and the package owns three shared tools (`list_mcp_resources`, `list_mcp_resource_templates`, `read_mcp_resource`). The console's old "catalog seam" idea (`mcpCatalog`) is therefore retired — the panel feature-detects `ctx.mcpResources` + the registered tools and browses resources through the OFFICIAL tools (`src/upstream.ts`, `src/service.ts`, `src/trial.ts`).
+- **Prompts and resource subscriptions remain deferred** (`packages/mcp/mcp-client/README.md:209` documents prompts as unsupported); the capabilities board keeps Prompts `available: false`.
+- The `dsh-mcp-panel` package now runs its full gate chain against `0.1.6-alpha.1` (compatibility baseline raised from `0.1.5-rc.2`).
+

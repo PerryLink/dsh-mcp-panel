@@ -465,4 +465,22 @@ const PANEL_CSS = `
   gap: 8px;
   flex-wrap: wrap;
 }
+[data-dsh-mcp-panel] .dmcp-resources {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--dmcp-border, rgba(127, 127, 127, 0.25));
+}
+[data-dsh-mcp-panel] .dmcp-resources .dmcp-editor-actions {
+  flex-wrap: wrap;
+}
+[data-dsh-mcp-panel] .dmcp-resource-uri {
+  flex: 1 1 220px;
+  min-width: 160px;
+  padding: 4px 6px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.85em;
+}
 `

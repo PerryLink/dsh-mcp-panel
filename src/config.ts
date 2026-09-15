@@ -78,6 +78,10 @@ export interface Config {
   trialMaxResultChars?: number
   /** Whether profile-patch writes are allowed at all (kill switch). Default true. */
   writeEnabled?: boolean
+  /** Verify each write against the loader's re-applied state before reporting success (default true; issue #27 hardening — a skipped patch must not read as success). */
+  writeVerifyEnabled?: boolean
+  /** Polling budget for write verification in ms (default 3000). */
+  writeVerifyTimeoutMs?: number
   /** Number of `cordis.patch.yml` backups retained per write (default 5). */
   backupCount?: number
   /** User overlay for the recommended MCP server catalog: entries append to the built-in directory, and an entry with the same `id` replaces the built-in one. */
@@ -108,6 +112,10 @@ export interface ResolvedConfig {
   trialMaxResultChars: number
   /** Whether profile-patch writes are allowed at all. */
   writeEnabled: boolean
+  /** Whether each write is verified against the loader before reporting success. */
+  writeVerifyEnabled: boolean
+  /** Polling budget for write verification in ms. */
+  writeVerifyTimeoutMs: number
   /** Number of patch backups retained per write. */
   backupCount: number
   /** User catalog overlay (validated; empty = built-in directory only). */
@@ -127,6 +135,8 @@ export const Config: z<Config> = z.object({
   trialTimeoutMs: z.number().min(1).max(MAX_TRIAL_TIMEOUT_MS).default(DEFAULT_TRIAL_TIMEOUT_MS),
   trialMaxResultChars: z.number().min(1_000).max(MAX_TRIAL_RESULT_CHARS).default(DEFAULT_TRIAL_MAX_RESULT_CHARS),
   writeEnabled: z.boolean().default(DEFAULT_WRITE_ENABLED),
+  writeVerifyEnabled: z.boolean().default(true),
+  writeVerifyTimeoutMs: z.number().min(100).max(30_000).default(3_000),
   backupCount: z.number().min(1).max(MAX_BACKUP_COUNT).default(DEFAULT_BACKUP_COUNT),
   catalogEntries: z.array(z.any()).default([]),
 })
@@ -182,6 +192,14 @@ export function resolveConfig(config: Config | undefined): ResolvedConfig {
   if (typeof writeEnabled !== 'boolean') {
     throw new TypeError('dsh-mcp-panel: config.writeEnabled must be a boolean')
   }
+  const writeVerifyEnabled = config?.writeVerifyEnabled ?? true
+  if (typeof writeVerifyEnabled !== 'boolean') {
+    throw new TypeError('dsh-mcp-panel: config.writeVerifyEnabled must be a boolean')
+  }
+  const writeVerifyTimeoutMs = config?.writeVerifyTimeoutMs ?? 3_000
+  if (!Number.isInteger(writeVerifyTimeoutMs) || writeVerifyTimeoutMs < 100 || writeVerifyTimeoutMs > 30_000) {
+    throw new Error('dsh-mcp-panel: config.writeVerifyTimeoutMs must be an integer between 100 and 30000')
+  }
   const backupCount = config?.backupCount ?? DEFAULT_BACKUP_COUNT
   if (!Number.isInteger(backupCount) || backupCount < 1 || backupCount > MAX_BACKUP_COUNT) {
     throw new Error(`dsh-mcp-panel: config.backupCount must be an integer between 1 and ${MAX_BACKUP_COUNT}`)
@@ -204,6 +222,8 @@ export function resolveConfig(config: Config | undefined): ResolvedConfig {
     trialTimeoutMs,
     trialMaxResultChars,
     writeEnabled,
+    writeVerifyEnabled,
+    writeVerifyTimeoutMs,
     backupCount,
     catalogEntries,
   })

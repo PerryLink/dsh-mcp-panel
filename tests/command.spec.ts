@@ -116,10 +116,13 @@ describe('/mcp command', () => {
     expect(output).toContain('No tools registered for "github"')
   })
 
-  it('suggests the exact patch line for disable without editing anything', async () => {
+  it('suggests the exact patch lines for disable without editing anything', async () => {
     const harness = await mountHarness([mcpRow('mcp-github', GITHUB_CONFIG)])
     const output = text(await runCommand(harness, '/mcp github disable'))
-    expect(output).toContain("- set: { id: mcp-github, name: '@deepseek-ai/dsh-mcp-client', disabled: true }")
+    expect(output).toContain('- id: mcp-github')
+    expect(output).toContain("name: '@deepseek-ai/dsh-mcp-client'")
+    expect(output).toContain('disabled: true')
+    expect(output).not.toContain('- set:')
     expect(output).toContain('has no runtime toggle')
     expect(output).toContain('never edits your config')
     // The loader row is untouched: the command only suggested a patch.
@@ -130,7 +133,8 @@ describe('/mcp command', () => {
   it('suggests the enable patch for a disabled row', async () => {
     const harness = await mountHarness([mcpRow('mcp-github', GITHUB_CONFIG, 2, true)])
     const output = text(await runCommand(harness, '/mcp github enable'))
-    expect(output).toContain("- set: { id: mcp-github, name: '@deepseek-ai/dsh-mcp-client', disabled: false }")
+    expect(output).toContain('- id: mcp-github')
+    expect(output).toContain('disabled: false')
   })
 
   it('suggests the user-writable id for rows nested under a loader group', async () => {
@@ -141,7 +145,7 @@ describe('/mcp command', () => {
     expect(listOutput).toContain('- github [mcp-github] stdio')
     expect(listOutput).not.toContain('include:mcp-github')
     const output = text(await runCommand(harness, '/mcp github disable'))
-    expect(output).toContain("- set: { id: mcp-github, name: '@deepseek-ai/dsh-mcp-client', disabled: true }")
+    expect(output).toContain('- id: mcp-github')
     expect(output).not.toContain('include:mcp-github')
   })
 

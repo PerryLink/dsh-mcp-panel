@@ -29,7 +29,7 @@
 
 | Surface | Status |
 |---|---|
-| Harness | DeepSeek Harness `dsh-v0.1.5-rc.2` (GitHub tag, verified 2026-09-11) (adapted 2026-09-09): the session envelope keeps its ignorable field for stored-log read compatibility only - Session.append still cannot stamp it, so audit-gate behavior is unchanged. Verified 2026-09-11 against the dsh-v0.1.5-rc.2 master checkout (full gate chain + profile install smoke). |
+| Harness | DeepSeek Harness `dsh-v0.1.6-alpha.1` (GitHub tag, verified 2026-09-16): full gate chain (typecheck / typecheck:ci / test / build / verify / package) plus a profile install smoke against the 0.1.6-alpha.1 checkout. The shipped `@deepseek-ai/dsh-mcp-resources` service now bridges Resources, which the console feature-detects and browses read-only. Previous baseline: `dsh-v0.1.5-rc.2` (verified 2026-09-11). |
 | Node | `^22.19.0 \|\| >=24.0.0` |
 | Platforms | Web GUI (dual-face: host + browser) |
 | Model | Any (the panel is read-only; only `/mcp` output is model-readable) |
@@ -45,7 +45,8 @@
 - **`/mcp <server> probe`** — one Streamable HTTP connectivity probe for that server (background job).
 - **`/mcp <server> call <tool> [json]`** — trial-call through the **official tool pipeline** (`ctx.tools.execute()`); pre-execute permission policy, approval, guards, and post-execute all apply.
 - **Settings → Plugins → MCP tab** — status cards with badges, diagnostics, and probes, plus the server CRUD and the tool trial console.
-- **Server CRUD** — add/edit/remove forms → `insert`/`set`/`set disabled` fragments → clipboard copy or approval-gated write with automatic backups.
+- **Server CRUD** — add/edit/remove forms → `insert` for add and id-targeted overrides (`- id:` + `name:` + `disabled:`/`config:`) for edit/remove → clipboard copy or approval-gated write with automatic backups and loader re-verification.
+- **Resources browse** — read-only resource listing, template listing, and URI reads through the official `list_mcp_resources` / `list_mcp_resource_templates` / `read_mcp_resource` tools (bridged by the shipped `@deepseek-ai/dsh-mcp-resources` service); results are shown in the tab only, never in model context.
 - **Recommended directory** — a built-in community MCP server catalog (filesystem, git, github, fetch, playwright, …) served in the snapshot; `catalogEntries` appends/overrides entries, and `catalogToConfigInput` turns one into a one-click add.
 - **Config import/export** — `exportConfigs()` serializes the server rows to a versioned JSON document (a `!!js` row exports as `null` with a reason), and `importPreview()` parses an export back into per-server `add` patch fragments for review.
 - **Tool trial console** — server → `mcp__*` tool → JSON args → canonical JSON result + rendered content; capped by `trialMaxResultChars`; panel-only, never model context.
@@ -85,7 +86,7 @@ The console **reads** the client through its proposed `mcp/status` observability
 |---|---|---|
 | Add a server | Edit YAML, mind indent/quoting | Form → patch fragment → **copy** or **write** (approval + auto backup) |
 | Edit a server | Edit YAML, restart/hot-reload | Form pre-filled from the live row; unchanged secrets keep their raw values host-side |
-| Remove a server | Delete the row | `set disabled: true` operation (the patch vocabulary has no remove) — re-enableable anytime |
+| Remove a server | Delete the row | `- id:` + `disabled: true` override (the patch vocabulary has no remove) — re-enableable anytime |
 | See status | Read logs | Badges + reconnects + last error, live from the `mcp/status` seam |
 | Try a tool | Ask the model to call it | Trial console → official `ctx.tools.execute()` pipeline (permission & approval stay in force) |
 | Diagnose failures | Grep logs | `/mcp <server> health` with derived self-heal suggestions |
@@ -139,6 +140,8 @@ All tunables are Schemastery `Config` fields (changeable from cordis.yml). `cord
 | `trialTimeoutMs` | `120000` | Panel-side deadline per trial call in ms |
 | `trialMaxResultChars` | `60000` | Cap on the trial result payload in chars |
 | `writeEnabled` | `true` | Kill switch: `false` rejects every profile write (copy still works) |
+| `writeVerifyEnabled` | `true` | Re-verify each write against the loader's re-applied state before reporting success |
+| `writeVerifyTimeoutMs` | `3000` | Polling budget for write verification in ms |
 | `backupCount` | `5` | `cordis.patch.yml` backups retained per write |
 | `catalogEntries` | `[]` | User overlay for the recommended server directory: entries append, an entry with the same `id` replaces the built-in one |
 
@@ -158,7 +161,9 @@ All tunables are Schemastery `Config` fields (changeable from cordis.yml). `cord
 
 ## Resources & Prompts
 
-The official client documents that *"Tools are the only bridged MCP capability"* — Resources and Prompts are deferred. The console feature-detects a proposed upstream catalog seam and will show read-only lists the day it ships; until then the capabilities board marks both **pending upstream support**.
+Resources ARE bridged upstream: the base bundle mounts `@deepseek-ai/dsh-mcp-resources`, the official client registers each connection's resource provider into `ctx.mcpResources`, and that package owns the three shared tools (`list_mcp_resources`, `list_mcp_resource_templates`, `read_mcp_resource`). The console feature-detects the service and the registered tools, and offers a read-only Resources browser (list / templates / URI read) on every server card — each call runs through the OFFICIAL tool pipeline, and results never enter model context.
+
+MCP **prompt templates** and **resource subscriptions** remain deferred upstream; the capabilities board marks Prompts **pending upstream support**.
 
 ## Permissions & data
 
@@ -169,14 +174,15 @@ The official client documents that *"Tools are the only bridged MCP capability"*
 
 - **The bridge stays the bridge.** No transport, OAuth, or protocol changes; one mcp-client row per server, exactly as hand-written.
 - **No fake status.** Connection fields without upstream observations read `unknown` / `—` with `statusSource: 'derived'`; exit codes and stderr tails are never invented.
-- **Writes are append-only, approval-gated, and backed up.** The console never rewrites `cordis.patch.yml`; it appends generated operations and keeps the newest `backupCount` backups.
+- **Writes are append-only, approval-gated, and backed up.** The console never rewrites `cordis.patch.yml`; it appends generated operations, keeps the newest `backupCount` backups, and re-verifies every write against the loader's re-applied state before reporting success (a skipped patch never reads as success).
 - **No prompt injection.** The panel registers **no prompt sections**; its only model-facing text is the two tool/command descriptions.
 
 ## Known limitations
 
-- **Resources & Prompts** are pending upstream support — the official client bridges tools only.
+- **Prompt templates & resource subscriptions** are pending upstream support — the official client bridges tools and resources, but not prompts or subscriptions.
 - **Exit codes / stderr tails** are labeled *pending upstream support* until the client exposes them.
 - **Read-only panel** — the console never fakes a connection state; unobservable fields read `unknown` / `-1` / `—`.
+- **Writes are verified, not guaranteed** — the console re-verifies each write against the loader's re-applied state and fails honestly when the loader did not apply it (e.g. a row inserted by `$DSH_HOME/cordis.patch.yml`, which a profile-layer patch cannot reach).
 
 ## Development
 
