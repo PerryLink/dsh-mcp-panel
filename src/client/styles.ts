@@ -8,15 +8,35 @@
  * @module dsh-mcp-panel/client/styles
  */
 
-/** One `<style>` installation; returns the exact disposer that removes it. */
+/** Live installations of the panel stylesheet (one element, many mounts). */
+let liveInstalls = 0
+
+/**
+ * One `<style>` installation; returns the exact disposer that releases it.
+ * Ownership is counted across mounts: the element is created once, any live
+ * install keeps it, and only the last disposer removes it — an earlier unmount
+ * can no longer pull the sheet out from under a surviving mount, and the
+ * disposer is idempotent.
+ */
 export function installPanelStyles(): () => void {
-  const existing = document.querySelector('style[data-dsh-mcp-panel]')
-  if (existing !== null) return () => {}
-  const element = document.createElement('style')
-  element.dataset.dshMcpPanel = ''
-  element.textContent = PANEL_CSS
-  document.head.append(element)
-  return () => { element.remove() }
+  let disposed = false
+  liveInstalls += 1
+  let element = document.querySelector<HTMLStyleElement>('style[data-dsh-mcp-panel]')
+  if (element === null) {
+    element = document.createElement('style')
+    element.dataset.dshMcpPanel = ''
+    element.textContent = PANEL_CSS
+    document.head.append(element)
+  }
+  return () => {
+    if (disposed) return
+    disposed = true
+    liveInstalls -= 1
+    if (liveInstalls <= 0) {
+      liveInstalls = 0
+      element?.remove()
+    }
+  }
 }
 
 /** The panel stylesheet, scoped and token-driven. */
