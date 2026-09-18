@@ -2,6 +2,23 @@
 
 All notable changes to this project are documented in this file.
 
+## [Unreleased]
+
+### Fixed
+
+- **The approval gate no longer reads the session event log.** `writePatch` decided whether to route a profile write through `ctx.approval` by scanning the session's events for `turn/start`/`turn/end` through the synchronous event-snapshot read, which the 0.1.6 line marks `@deprecated` ("new calls are prohibited"). It now reads the published `agent.status === 'running'`; the approval seam must still be present, so a host without it falls back to the explicit UI confirmation path instead of silently treating the write as pre-approved. Regression tests cover running (asks), idle (never asks), and unbound-agent (never asks).
+
+- **The panel's "current session" works again where `SessionListState.current` was removed.** The client read `getSnapshot().current` through a structural cast, which returned `undefined` on the 0.1.6 line and left the panel without a current session; the id is now derived from the per-session retention facts (`retainedBy.mainView > 0`, the upstream `ui-session` pattern), with the legacy field still winning where a host publishes it.
+
+- **Panel styles survive a remount.** The stylesheet installer returned an empty disposer when the `<style>` element already existed, so unmounting the first of two live mounts pulled the sheet out from under the survivor and orphaned the node. Installations are now counted: any live install keeps the element, and only the last disposer removes it (idempotent).
+
+- **A disposed mount no longer registers into a dead fiber.** Mounting the service opens an await window inside `apply`; the status listener, `/mcp` command and probe tool are now registered only when the fiber survived that await (A02).
+
+### Changed
+
+- Declare `dsh.manifestVersion: 1` and the canonical three-clause `engines.dsh` (G-3).
+- **Canary duty (this is the family's only canary repo):** the dev/test pins moved to `0.1.6-alpha.2` and both typecheck rulers are green on that face. No new errors surfaced from the raise, so there is no canary warning to forward to the other 31 repositories this round.
+
 ## [0.6.15] - 2026-09-15
 
 ### Fixed

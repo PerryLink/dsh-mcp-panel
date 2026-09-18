@@ -29,7 +29,7 @@
 
 | 维度 | 状态 |
 |---|---|
-| Harness | DeepSeek Harness `dsh-v0.1.6-alpha.1`（GitHub tag，2026-09-16 已核验）：全量门禁链（typecheck / typecheck:ci / test / build / verify / package）+ 对照 0.1.6-alpha.1 checkout 的 profile 安装冒烟。上游 `@deepseek-ai/dsh-mcp-resources` 现已桥接 Resources，控制台特征探测后提供只读浏览。上一基线：`dsh-v0.1.5-rc.2`（2026-09-11 已核验）。 |
+| Harness | DeepSeek Harness `dsh-v0.1.6-alpha.2`（2026-09-18 核验）：双 typecheck 尺子在 `0.1.6-alpha.2` dev/test 面上双绿（本仓是全族金丝雀，抬线未暴露新错误）、174 项测试、全量门禁链（typecheck / typecheck:ci / test / build / verify / package）。`writePatch` 的写入复验断言在该线上成立。上一基线：`dsh-v0.1.6-alpha.1`（2026-09-16 已核验）。 |
 | Node | `^22.19.0 \|\| >=24.0.0` |
 | 平台 | Web GUI（双面：Host + 浏览器） |
 | 模型 | 任意（面板只读；仅 `/mcp` 输出对模型可见） |
