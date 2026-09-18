@@ -27,7 +27,7 @@
 
 | Superfície | Status |
 |---|---|
-| Harness | DeepSeek Harness `dsh-v0.1.6-alpha.1` (tag do GitHub, verificado em 2026-09-16): cadeia completa de portas (typecheck / typecheck:ci / test / build / verify / package) mais smoke de instalação de perfil contra o checkout 0.1.6-alpha.1. O serviço `@deepseek-ai/dsh-mcp-resources` agora pontua Resources, que o console detecta e navega somente leitura. Linha de base anterior: `dsh-v0.1.5-rc.2` (verificado em 2026-09-11). |
+| Harness | DeepSeek Harness `dsh-v0.1.6-alpha.2` (verificado em 2026-09-18): as duas réguas de typecheck verdes na face `0.1.6-alpha.2` (este repositório é o canário da família: nenhum erro novo apareceu), 174 testes e a cadeia completa de portas (typecheck / typecheck:ci / test / build / verify / package). A re-verificação do `writePatch` vale nesta linha. Linha de base anterior: `dsh-v0.1.6-alpha.1` (verificado em 2026-09-16). |
 | Node | `^22.19.0 \|\| >=24.0.0` |
 | Plataformas | Web GUI (duas faces: host + navegador) |
 | Modelo | Qualquer (o painel é somente leitura; só a saída de `/mcp` é legível pelo modelo) |

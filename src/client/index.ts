@@ -124,8 +124,12 @@ export async function apply(ctx: ClientContext): Promise<void> {
 }
 
 /**
- * Read the current session id from the sessions store face (structural:
- * the store shape differs across harness lines, so only the leaf is read).
+ * Read the current session id from the sessions store face (structural: the
+ * store shape differs across harness lines, so only the leaves are read).
+ * `SessionListState.current` was removed on the 0.1.6 line, so the session the
+ * main view retains is derived from the per-session retention facts (the
+ * upstream `ui-session` pattern); a host that still publishes `current` wins,
+ * so both lines agree.
  */
 function currentSessionId(sessions: unknown): string | undefined {
   try {
@@ -133,8 +137,18 @@ function currentSessionId(sessions: unknown): string | undefined {
     if (typeof list !== 'object' || list === null) return undefined
     const getSnapshot = (list as { getSnapshot?: unknown }).getSnapshot
     if (typeof getSnapshot !== 'function') return undefined
-    const current = (getSnapshot as () => { current?: unknown })().current
-    return typeof current === 'string' ? current : undefined
+    const snapshot = (getSnapshot as () => {
+      current?: unknown
+      byId?: Record<string, { retainedBy?: { mainView?: number } } | undefined>
+    })()
+    const current = snapshot.current
+    if (typeof current === 'string' && current !== '') return current
+    const byId = snapshot.byId
+    if (byId === null || typeof byId !== 'object') return undefined
+    for (const [id, entry] of Object.entries(byId)) {
+      if ((entry?.retainedBy?.mainView ?? 0) > 0) return id
+    }
+    return undefined
   } catch {
     return undefined
   }
