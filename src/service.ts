@@ -171,25 +171,24 @@ const DEFAULT_SERVICE_CONFIG: McpPanelServiceConfig = {
   catalog: [],
 }
 
-/** Whether one agent's session currently has an open turn (approval precondition). */
-function hasOpenTurn(agent: unknown): boolean {
+/**
+ * Whether the agent is running a turn right now (approval precondition).
+ *
+ * The previous implementation scanned the session event log for
+ * `turn/start`/`turn/end` through the deprecated synchronous event-snapshot
+ * read, which the 0.1.6 line prohibits for new calls; `agent.status` publishes
+ * the same fact without touching the log API. The condition stays
+ * conservative: the caller additionally requires the approval seam to be
+ * present, so a host without that seam never silently becomes "no approval
+ * needed" — it falls back to the explicit UI confirmation path instead.
+ */
+function isAgentRunning(agent: unknown): boolean {
   try {
-    const session = (agent as { session?: unknown } | null)?.session
-    if (session === undefined || session === null) return false
-    // alpha.5 renamed Session.events to snapshotEvents(); the peer floor
-    // (>=0.1.0-rc.8) still exposes .events, so detect at runtime.
-    const probe = session as { snapshotEvents?: () => readonly { type?: unknown }[]; events?: readonly { type?: unknown }[] }
-    const events = typeof probe.snapshotEvents === 'function' ? probe.snapshotEvents() : probe.events
-    if (!Array.isArray(events)) return false
-    for (let index = events.length - 1; index >= 0; index -= 1) {
-      const type = events[index]?.type
-      if (type === 'turn/start') return true
-      if (type === 'turn/end') return false
-    }
+    return (agent as { status?: unknown } | null)?.status === 'running'
   } catch {
-    // A hostile agent shape must never crash the gate — treat as no open turn.
+    // A hostile agent shape must never crash the gate — treat as not running.
+    return false
   }
-  return false
 }
 
 /** MCP management console service, exported over the `mcpPanel` Remote namespace. */
@@ -421,7 +420,7 @@ private readonly trialCaller = createTrialCaller()
     const agents = this.ctx.get('agents') as McpAgentRegistryFace | undefined
     const agent = sessionId === undefined || sessionId === '' ? undefined : agents?.get(sessionId)
     let approvalPath: PatchWriteResult['approvalPath'] | null = null
-    if (approval !== undefined && agent !== undefined && hasOpenTurn(agent)) {
+    if (approval !== undefined && agent !== undefined && isAgentRunning(agent)) {
       const outcome = await approval.request({
         agent,
         toolName: 'mcp-panel/writePatch',

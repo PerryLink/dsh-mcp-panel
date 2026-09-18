@@ -262,15 +262,16 @@ describe('console actions', () => {
     }), true, undefined)).rejects.toThrow('writeEnabled')
   })
 
-  it('routes the write through ctx.approval when an agent with an open turn exists', async () => {
+  it('routes the write through ctx.approval when the agent is running a turn', async () => {
     const asked: Array<{ toolName: string; agent: unknown }> = []
     const approval = { request: async (req: { toolName: string; agent: unknown }) => { asked.push(req); return 'allowed-once' } }
     const dir = await mkdtemp(join(tmpdir(), 'dsh-mcp-panel-service-'))
     const harness = await mountHarness([mcpRow('mcp-github', STDIO_CONFIG)], { writeVerifyEnabled: false })
     ;(harness.ctx as { baseUrl?: string }).baseUrl = dir
     harness.ctx.provide('approval', approval as never)
+    const running = { status: 'running' }
     harness.ctx.provide('agents', {
-      get: (id: string) => id === 's1' ? { session: { events: [{ type: 'turn/start' }] } } : undefined,
+      get: (id: string) => id === 's1' ? running : undefined,
     } as never)
     const result = await harness.service.writePatch(JSON.stringify({
       kind: 'add',
@@ -280,27 +281,40 @@ describe('console actions', () => {
     expect(asked).toEqual([{
       toolName: 'mcp-panel/writePatch',
       reason: 'append a dsh-mcp-panel operation (add) to the profile patch layer',
-      agent: { session: { events: [{ type: 'turn/start' }] } },
+      agent: running,
     }])
   })
 
-  it('detects an open turn through a real Session (alpha.5 snapshotEvents surface)', async () => {
-    const asked: Array<{ toolName: string; agent: unknown }> = []
-    const approval = { request: async (req: { toolName: string; agent: unknown }) => { asked.push(req); return 'allowed-once' } }
+  it('does not ask for approval when the agent is idle, and falls back to the confirm path', async () => {
+    const asked: unknown[] = []
+    const approval = { request: async (req: unknown) => { asked.push(req); return 'allowed-once' } }
     const dir = await mkdtemp(join(tmpdir(), 'dsh-mcp-panel-service-'))
     const harness = await mountHarness([mcpRow('mcp-github', STDIO_CONFIG)], { writeVerifyEnabled: false })
     ;(harness.ctx as { baseUrl?: string }).baseUrl = dir
     harness.ctx.provide('approval', approval as never)
-    harness.session.append('turn/start', { turn: 1 })
-    harness.ctx.provide('agents', {
-      get: (id: string) => id === 's1' ? { session: harness.session } : undefined,
-    } as never)
+    harness.ctx.provide('agents', { get: (id: string) => id === 's1' ? { status: 'idle' } : undefined } as never)
+    // Confirmed without an approval ask: the harness channel is not consulted.
     const result = await harness.service.writePatch(JSON.stringify({
       kind: 'add',
       config: { serverName: 'new', transport: 'stdio', command: 'node' },
     }), true, 's1')
-    expect(result.approvalPath).toBe('harness-approval')
-    expect(asked).toHaveLength(1)
+    expect(asked).toHaveLength(0)
+    expect(result.approvalPath).toBe('interactive-confirmation')
+  })
+
+  it('asks nobody when no agent is bound to the session (no turn to attribute)', async () => {
+    const asked: unknown[] = []
+    const approval = { request: async (req: unknown) => { asked.push(req); return 'allowed-once' } }
+    const dir = await mkdtemp(join(tmpdir(), 'dsh-mcp-panel-service-'))
+    const harness = await mountHarness([mcpRow('mcp-github', STDIO_CONFIG)], { writeVerifyEnabled: false })
+    ;(harness.ctx as { baseUrl?: string }).baseUrl = dir
+    harness.ctx.provide('approval', approval as never)
+    harness.ctx.provide('agents', { get: () => undefined } as never)
+    await harness.service.writePatch(JSON.stringify({
+      kind: 'add',
+      config: { serverName: 'new', transport: 'stdio', command: 'node' },
+    }), true, 's1')
+    expect(asked).toHaveLength(0)
   })
 
   it('a rejected approval denies the write even when confirmed', async () => {
@@ -309,7 +323,7 @@ describe('console actions', () => {
     const harness = await mountHarness([mcpRow('mcp-github', STDIO_CONFIG)])
     ;(harness.ctx as { baseUrl?: string }).baseUrl = dir
     harness.ctx.provide('approval', approval as never)
-    harness.ctx.provide('agents', { get: () => ({ session: { events: [{ type: 'turn/start' }] } }) } as never)
+    harness.ctx.provide('agents', { get: () => ({ status: 'running' }) } as never)
     await expect(harness.service.writePatch(JSON.stringify({
       kind: 'add',
       config: { serverName: 'new', transport: 'stdio', command: 'node' },
