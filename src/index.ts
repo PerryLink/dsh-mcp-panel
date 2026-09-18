@@ -105,6 +105,11 @@ export async function apply(ctx: Context, config: Config): Promise<void> {
     backupCount: resolved.backupCount,
     catalog,
   })
+  // A02: mounting the service opens an await window inside `apply`. If this
+  // fiber was disposed while it resolved, stop here — a listener or tool
+  // registration now would either throw INACTIVE_EFFECT or leak into a dead
+  // fiber (a remount runs this whole path again).
+  if (ctx.fiber.uid === null) return
   const service = ctx.get('mcpPanel') as McpPanelService
 
   // Consumer — consumes the shipped mcp/status seam (live events + one-shot query seed) and feeds observations to the panel service.
