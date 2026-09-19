@@ -173,11 +173,11 @@
     "@deepseek-ai/dsh-typert-protocol": "0.1.6-alpha.2",
     "@deepseek-ai/schemastery": "^3.18.2",
     "@types/node": "^22.20.3",
-    "@types/react": "19.2.18",
+    "@types/react": "19.3.0",
     "@vitest/coverage-v8": "5.0.0",
     "jsdom": "^30.0.1",
     "oxlint": "1.83.0",
-    "react": "19.2.8",
+    "react": "19.3.0",
     "react-dom": "19.2.8",
     "vitest": "^5.0.0"
   },
