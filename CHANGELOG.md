@@ -2,6 +2,19 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.6.17] - 2026-09-23
+
+### Fixed
+
+- The `Config` face compiles against the checkout ruler again. `pnpm run typecheck` failed with TS2375 at the `export const Config: z<Config>` annotation; reported at the top level as an `exactOptionalPropertyTypes` mismatch, the chain ended in `Type 'SchemaOutput<boolean, SetRequired<Mode, true>>' is not assignable to type 'boolean'` / `Type 'Volatile<boolean>' is not assignable to type 'boolean'` — even though this schema never calls `.volatile()`. Root cause: the installed schema generation and the compile ruler disagreed. `@deepseek-ai/schemastery` was held on a line with no `Mode` type parameter and no `volatile()` at all, while the checkout ruler (tsconfig `paths`) pulled the newer `vendor/schemastery` into the same program through the aliased `@deepseek-ai/cordis` and `@deepseek-ai/dsh-client-*` faces. Two conflicting declarations of the same global `Schemastery` namespace merged, and the newer `default(value)` signature leaked `Volatile<T>` out of the still-unresolved `Mode` of the older interface. The `Volatile` face was therefore an artifact of two Schemastery copies in one program, not a property of this schema — which is why the same source compiled cleanly under `typecheck:ci` (single Schemastery copy) all along. Putting the whole dependency line on the `0.1.7-alpha.2` ruler leaves a single Schemastery generation in play. **No source change was required**: every field of this Config schema is genuinely NOT volatile, and the plain `Config` interface is already exactly what the schema produces. No cast was introduced, no assertion was weakened, and no field gained or lost a `.volatile()` mark, so the Host's generated settings form and the config-file format are unchanged.
+
+### Changed
+
+- Move every `@deepseek-ai/dsh-*` dependency and devDependency — including the `@deepseek-ai/dsh-subprocess` runtime dependency — to `0.1.7-alpha.2`, and the `@deepseek-ai/schemastery` / `@deepseek-ai/cordis` dev carets to the versions that line declares, so one Schemastery generation is in the program.
+- Every declared host range — `engines.dsh` and the eight `peerDependencies` bands — gains the `|| >=0.1.7-0 <0.2.0` arm, so the bands now admit the `0.1.7` prerelease line. Under semver's prerelease rule a range whose only prerelease comparators sit on earlier version tuples cannot admit a later alpha, so the previous three-clause form excluded the very host this release targets. The `peerDependencies` carets for cordis and schemastery already admitted the installed versions and are unchanged. No existing arm was removed or narrowed.
+- `dshWorkshop.compatibility.dshVersions` gains `0.1.7-alpha.2`, and all five READMEs name the verified line.
+- The compat workflow now installs the `0.1.7-alpha.2` host instead of `0.1.6-alpha.2`, so the scheduled end-to-end run exercises the line this package declares.
+
 ## [0.6.16] - 2026-09-18
 
 ### Fixed
