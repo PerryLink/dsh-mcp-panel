@@ -32,7 +32,7 @@
 
 | Surface | Status |
 |---|---|
-| Harness | DeepSeek Harness `dsh-v0.1.7-alpha.2` (verified 2026-09-18): dual typecheck rulers green on the `0.1.6-alpha.2` dev/test face (this repo is the family's canary — no new errors surfaced), 174 tests, and the full gate chain (typecheck / typecheck:ci / test / build / verify / package). The `writePatch` re-verification assertion stands on this line. Previous baseline: `dsh-v0.1.7-alpha.1` (verified 2026-09-16). |
+| Harness | DeepSeek Harness `dsh-v0.1.7-rc.1` (verified 2026-09-24): dual typecheck rulers green on the `0.1.6-alpha.2` dev/test face (this repo is the family's canary — no new errors surfaced), 174 tests, and the full gate chain (typecheck / typecheck:ci / test / build / verify / package). The `writePatch` re-verification assertion stands on this line. Previous baseline: `dsh-v0.1.7-alpha.1` (verified 2026-09-16). |
 | Node | `^22.19.0 \|\| >=24.0.0` |
 | Platforms | Web GUI (dual-face: host + browser) |
 | Model | Any (the panel is read-only; only `/mcp` output is model-readable) |
