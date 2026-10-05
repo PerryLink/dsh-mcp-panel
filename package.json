@@ -176,7 +176,7 @@
     "@deepseek-ai/dsh-tools": "0.2.1-alpha.1",
     "@deepseek-ai/dsh-typert-protocol": "0.2.1-alpha.1",
     "@deepseek-ai/schemastery": "^3.18.5-alpha.1",
-    "@types/node": "^22.20.3",
+    "@types/node": "^22.20.5",
     "@types/react": "19.3.0",
     "@vitest/coverage-v8": "5.0.0",
     "jsdom": "^30.0.1",
