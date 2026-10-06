@@ -28,6 +28,8 @@
 
 ---
 
+**📖 Ecosystem knowledge base** — measured data, not marketing: [plugin development guide · plugin-selection data · maintenance criteria](https://perrylink.github.io/dsh-plugin-guide/).
+
 <!-- star-cta -->
 ## ⭐ 如果它帮到了你
 
