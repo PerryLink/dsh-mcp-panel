@@ -25,7 +25,14 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 22
-          registry-url: https://registry.npmjs.org
+          # No `registry-url` on purpose. It makes setup-node write a
+          # `//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}` line, and any
+          # configured bearer token is preferred over the OIDC exchange — the
+          # registry then answers 404 on PUT instead of letting npm do the
+          # exchange. Worse, npm words a FAILED OIDC exchange as a 404 too, so the
+          # existence probe below cannot tell "not published yet" from "not
+          # authorised" and would silently skip a real publish. Trusted publishing
+          # reads no secret, and the probe is now a hard gate.
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - name: Refuse mismatched tag/version
@@ -40,17 +47,26 @@ jobs:
           pnpm pack
       - name: Publish to npm
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          # npm's OIDC exchange swallows its own failures: without verbose they
+          # surface only as ENEEDAUTH with no reason.
+          NPM_CONFIG_LOGLEVEL: verbose
         run: |
-          # Idempotent: a manual publish of the same version (or a re-run after
-          # a flaky step) must not fail the release — the goal (this exact
-          # version on the registry) is already met. The existence check uses
-          # plain anonymous HTTP, immune to the empty-token npmrc that
-          # setup-node writes while NPM_TOKEN is unset.
+          # Idempotent: a manual publish of the same version (or a re-run after a
+          # flaky step) must not fail the release. The existence check is an
+          # ANONYMOUS read, so it is independent of whatever credentials npm
+          # holds; a 200 means the version really is on the registry.
+          #
+          # The earlier shape fed `NODE_AUTH_TOKEN: secrets.NPM_TOKEN` plus
+          # `registry-url`. That made the bearer path win over trusted publishing,
+          # and npm words BOTH a bad bearer token and a failed OIDC exchange as a
+          # 404 on PUT — which this probe would read as "already published" and
+          # skip. Trusted publishing (id-token: write, no secret) removes the
+          # ambiguity; retire the NPM_TOKEN secret so it cannot come back.
           if curl -fsS "https://registry.npmjs.org/dsh-mcp-panel/$(node -p "require('./package.json').version")" >/dev/null 2>&1; then
             echo "version already on the registry; skipping publish"
           else
             pnpm publish --provenance --no-git-checks
+            echo "published dsh-mcp-panel through trusted publishing"
           fi
       - name: Build release notes from the changelog section
         run: node scripts/changelog-section.mjs "${GITHUB_REF_NAME#v}" > release-notes.md
