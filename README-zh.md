@@ -36,6 +36,14 @@
 
 *English:* part of a 40+ plugin family for DeepSeek Harness. If it is useful, **a star helps the next person find it** — nothing is gated behind it.
 
+## What is dsh-mcp-panel?
+
+官方 DeepSeek Harness MCP client 的 MCP 管理控制台 —— 在设置页可视化增删改 MCP 服务器、试用工具调用，配以诚实的连接状态、健康诊断与安全可逆的 profile 写入。
+
+官方 client = 桥接，本插件 = 控制台：经 `mcp/status` seam 读取状态，只写入只追加、走审批的 profile patch。
+
+![dsh-mcp-panel 终端演示：dsh-mcp-panel — install, then /mcp status per server](https://raw.githubusercontent.com/PerryLink/dsh-mcp-panel/main/docs/assets/dsh-mcp-panel-demo.png)
+
 ## Compatibility
 
 | 维度 | 状态 |
@@ -104,8 +112,12 @@
 ## Quick start
 
 ```sh
+dsh plugin --profile web add github:PerryLink/dsh-mcp-panel
+```
+
+```sh
 # 1. 把 bundle 安装进 profile
-dsh plugin --profile web add "github:PerryLink/dsh-mcp-panel#main"
+dsh plugin --profile web add github:PerryLink/dsh-mcp-panel
 
 # 或从 npm（发布版本）
 dsh plugin --profile web add dsh-mcp-panel
@@ -125,7 +137,7 @@ dsh --profile web --dump-config | grep -A3 'id: mcp-panel'
 
 ## Install & uninstall
 
-- **git 通道**（最新 `main`）：`dsh plugin --profile web add "github:PerryLink/dsh-mcp-panel#main"` —— `prepare` 脚本只用生产依赖构建。
+- **git 通道**（最新 `main`）：`dsh plugin --profile web add github:PerryLink/dsh-mcp-panel` —— `prepare` 脚本只用生产依赖构建。
 - **npm 通道**（发布版本）：`dsh plugin --profile web add dsh-mcp-panel`。
 - **tarball 通道**：在本仓库 `pnpm pack`，再 `dsh plugin --profile web add ./dsh-mcp-panel-<version>.tgz`。
 - **卸载**：从 `cordis.patch.yml` 移除 `mcp-panel` 行（web 面板热重载），从 profile 的 `node_modules` 删除本包，并用 `dsh web --dump-config` 确认没有残留的 `mcp-panel` 行。
