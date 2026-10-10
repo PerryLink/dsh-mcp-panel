@@ -62,6 +62,12 @@ jobs:
           # 404 on PUT — which this probe would read as "already published" and
           # skip. Trusted publishing (id-token: write, no secret) removes the
           # ambiguity; retire the NPM_TOKEN secret so it cannot come back.
+          #
+          # The exchange needs npm >= 11.5.1. The npm bundled with Node 22 is 10.x and
+          # cannot request an OIDC token at all, so it fails with ENEEDAUTH (or a 404
+          # when a bearer token is configured). Upgrade npm before publishing -- the
+          # sibling repos that publish reliably all do this first.
+          npm install -g npm@^11.5.1
           if curl -fsS "https://registry.npmjs.org/dsh-mcp-panel/$(node -p "require('./package.json').version")" >/dev/null 2>&1; then
             echo "version already on the registry; skipping publish"
           else
