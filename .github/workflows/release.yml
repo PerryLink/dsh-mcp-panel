@@ -65,7 +65,7 @@ jobs:
           if curl -fsS "https://registry.npmjs.org/dsh-mcp-panel/$(node -p "require('./package.json').version")" >/dev/null 2>&1; then
             echo "version already on the registry; skipping publish"
           else
-            pnpm publish --provenance --no-git-checks
+            npm publish --access public --provenance
             echo "published dsh-mcp-panel through trusted publishing"
           fi
       - name: Build release notes from the changelog section
