@@ -44,6 +44,10 @@
 
 ![dsh-mcp-panel 终端演示：dsh-mcp-panel — install, then /mcp status per server](https://raw.githubusercontent.com/PerryLink/dsh-mcp-panel/main/docs/assets/dsh-mcp-panel-demo.png)
 
+![Animated terminal demo of dsh-mcp-panel](https://raw.githubusercontent.com/PerryLink/dsh-mcp-panel/main/docs/assets/dsh-mcp-panel-demo.gif)
+
+*同一次运行，动图版。*
+
 ## Compatibility
 
 | 维度 | 状态 |

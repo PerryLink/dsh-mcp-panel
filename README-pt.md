@@ -42,6 +42,10 @@ Cliente oficial = ponte, este plugin = console: leia o status pelo seam `mcp/sta
 
 ![Demonstração de terminal do dsh-mcp-panel: dsh-mcp-panel — install, then /mcp status per server](https://raw.githubusercontent.com/PerryLink/dsh-mcp-panel/main/docs/assets/dsh-mcp-panel-demo.png)
 
+![Animated terminal demo of dsh-mcp-panel](https://raw.githubusercontent.com/PerryLink/dsh-mcp-panel/main/docs/assets/dsh-mcp-panel-demo.gif)
+
+*A mesma execução, animada.*
+
 ## Compatibility
 
 | Superfície | Status |

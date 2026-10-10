@@ -42,6 +42,10 @@ DeepSeek Harness के आधिकारिक MCP क्लाइंट क�
 
 ![dsh-mcp-panel का टर्मिनल डेमो: dsh-mcp-panel — install, then /mcp status per server](https://raw.githubusercontent.com/PerryLink/dsh-mcp-panel/main/docs/assets/dsh-mcp-panel-demo.png)
 
+![Animated terminal demo of dsh-mcp-panel](https://raw.githubusercontent.com/PerryLink/dsh-mcp-panel/main/docs/assets/dsh-mcp-panel-demo.gif)
+
+*वही रन, एनिमेटेड।*
+
 ## Compatibility
 
 | सतह | स्थिति |

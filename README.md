@@ -46,6 +46,10 @@ Official client = bridge, this plugin = console: read status through the `mcp/st
 
 ![Terminal demo of dsh-mcp-panel: dsh-mcp-panel — install, then /mcp status per server](https://raw.githubusercontent.com/PerryLink/dsh-mcp-panel/main/docs/assets/dsh-mcp-panel-demo.png)
 
+![Animated terminal demo of dsh-mcp-panel](https://raw.githubusercontent.com/PerryLink/dsh-mcp-panel/main/docs/assets/dsh-mcp-panel-demo.gif)
+
+*The same run, animated.*
+
 ## Compatibility
 
 | Surface | Status |
