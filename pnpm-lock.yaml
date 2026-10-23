@@ -73,8 +73,8 @@ importers:
         specifier: 0.2.1-rc.2
         version: 0.2.1-rc.2(@deepseek-ai/cordis@4.0.5-alpha.1)
       '@deepseek-ai/schemastery':
-        specifier: ^3.18.5-alpha.1
-        version: 3.18.5-alpha.1
+        specifier: ^3.18.5
+        version: 3.18.5
       '@types/node':
         specifier: ^22.20.5
         version: 22.20.5
@@ -470,9 +470,6 @@ packages:
 
   '@deepseek-ai/schemastery@3.18.5':
     resolution: {integrity: sha512-Mnobvqf9rHsZYv4g5edj5ddxS1oF1kIdSlz0DunUgnY3LWG5F26MqvH3YOOsSaodCgyzJ16OMN9O99/s5Crtdw==}
-
-  '@deepseek-ai/schemastery@3.18.5-alpha.1':
-    resolution: {integrity: sha512-HojoBv1wMQn6N8nDgTgWbc/f4EFAlg/ZsIYN2AChnEDoFOmcWd3+MDzhozNffmywywzV7pcouHRR4x37YZfcjA==}
 
   '@eslint-community/regexpp@4.12.2':
     resolution: {integrity: sha512-EriSTlt5OC9/7SXkRSCAhfSxxoSUgBm33OH+IkwbdpgoqsSsUg7y3uh+IICI/Qg4BBWr3U2i39RpmycbxMq4ew==}
@@ -1280,8 +1277,8 @@ packages:
     resolution: {integrity: sha512-qcJu88Q2IWqJsDD529JKMdwGm/dvInW4HvQnRwiH9JtihJvzGOscDtHE3x1pBKeUOTysQ8kVmLnJ2kJu7yhcGA==}
     engines: {node: '>=12'}
 
-  postcss@8.5.30:
-    resolution: {integrity: sha512-zkd+e9S1AQHhmaBKye9zlFHWjOwVgqXl1q3ECYy8561K7qxR2cREf/STLskulBFd78k6AOFeA+ff1TtEzk9bAA==}
+  postcss@8.5.31:
+    resolution: {integrity: sha512-YUbWYCgErwnMAVkjUnYa+KlMBzGpHwiIt/DE7f0G33AuX2LH9UcTk6KgWxd3zRU+pN3u/C+Xl3EnMLM4Hea7Sg==}
     engines: {node: ^10 || ^12 || >=14}
 
   punycode@2.3.1:
@@ -1659,7 +1656,7 @@ snapshots:
     dependencies:
       '@deepseek-ai/cordis': 4.0.5-alpha.1(@deepseek-ai/cordis-plugin-include@1.0.10-alpha.1)(@deepseek-ai/cordis-plugin-loader@1.0.6-alpha.1)
       '@deepseek-ai/cosmokit': 1.8.6-alpha.1
-      '@deepseek-ai/schemastery': 3.18.5-alpha.1
+      '@deepseek-ai/schemastery': 3.18.5
     optionalDependencies:
       node-addon-require-builtin: 0.1.9
 
@@ -1928,11 +1925,6 @@ snapshots:
   '@deepseek-ai/schemastery@3.18.5':
     dependencies:
       '@deepseek-ai/cosmokit': 1.8.6
-      '@standard-schema/spec': 1.1.0
-
-  '@deepseek-ai/schemastery@3.18.5-alpha.1':
-    dependencies:
-      '@deepseek-ai/cosmokit': 1.8.6-alpha.1
       '@standard-schema/spec': 1.1.0
 
   '@eslint-community/regexpp@4.12.2': {}
@@ -2485,7 +2477,7 @@ snapshots:
 
   picomatch@4.0.7: {}
 
-  postcss@8.5.30:
+  postcss@8.5.31:
     dependencies:
       nanoid: 3.3.20
       picocolors: 1.1.1
@@ -2647,7 +2639,7 @@ snapshots:
     dependencies:
       lightningcss: 1.33.0
       picomatch: 4.0.7
-      postcss: 8.5.30
+      postcss: 8.5.31
       rolldown: 1.2.14
       tinyglobby: 0.2.17
     optionalDependencies:
