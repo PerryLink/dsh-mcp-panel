@@ -78,7 +78,7 @@ jobs:
       - name: Build release notes from the changelog section
         run: node scripts/changelog-section.mjs "${GITHUB_REF_NAME#v}" > release-notes.md
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: '*.tgz'
           body_path: release-notes.md
