@@ -184,7 +184,7 @@
     "vitest": "^5.0.5",
     "tsdown": "^0.23.1",
     "typescript": "^7.0.0",
-    "@deepseek-ai/dsh-subprocess": "0.2.1-rc.2"
+    "@deepseek-ai/dsh-subprocess": "0.2.1-rc.4"
   },
   "scripts": {
     "build": "node scripts/prepare.mjs",
