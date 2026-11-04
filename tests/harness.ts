@@ -12,6 +12,7 @@ import type { Agent } from '@deepseek-ai/dsh-agent'
 import CommandRuntime from '@deepseek-ai/dsh-commands'
 import SessionStore, { SessionId, type Session } from '@deepseek-ai/dsh-session'
 import ToolRuntime from '@deepseek-ai/dsh-tools'
+import * as NativeToolExecutor from '@deepseek-ai/dsh-tool-executor-native'
 import type { McpLoaderRow } from '../src/aggregate.ts'
 import type { McpPanelService } from '../src/service.ts'
 
@@ -102,6 +103,8 @@ export async function mountHarness(entries: FakeEntry[] = [], config: Record<str
   const session = ctx.sessions.create(SessionId('harness-session'))
   ctx.provide('systemPrompt', { tools: () => () => undefined, section: () => () => undefined } as never)
   await ctx.plugin(ToolRuntime)
+  // 0.2.2: raw batch execution lives behind a pluggable executor.
+  await ctx.plugin(NativeToolExecutor)
   await ctx.plugin(CommandRuntime)
   if (jobs !== undefined) ctx.provide('jobs', jobs as never)
   ctx.provide('loader', {

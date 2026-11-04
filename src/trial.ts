@@ -19,7 +19,7 @@
  * @module dsh-mcp-panel/trial
  */
 
-import type { ToolExecutionResult, ToolExecutionInput, ToolRuntime } from '@deepseek-ai/dsh-tools'
+import type { ToolBatchInput, ToolExecutionResult, ToolRuntime } from '@deepseek-ai/dsh-tools'
 
 /** Wire result of one trial call (lossless-JSON scalar payload). */
 export interface McpTrialResult {
@@ -145,16 +145,17 @@ export function createTrialCaller() {
         throw new Error(`tool "${toolName}" is not registered — the server may be down or its sync failed`)
       }
       const agent = sessionId === undefined || sessionId === '' ? undefined : agents?.get(sessionId)
-      const callId = `${TRIAL_CALL_PREFIX}-${++trialCounter}` as unknown as ToolExecutionInput['callId']
+      // 0.2.2: execute() takes a whole batch; one call per trial.
+      const callId = `${TRIAL_CALL_PREFIX}-${++trialCounter}` as unknown as ToolBatchInput['calls'][number]['id']
       const started = Date.now()
-      const execution: ToolExecutionInput = {
-        callId,
-        name: toolName,
-        arguments: argumentsValue,
-        ...agent === undefined ? {} : { agent: agent as NonNullable<ToolExecutionInput['agent']> },
+      const execution: ToolBatchInput = {
+        calls: [{ type: 'tool-call', id: callId, name: toolName, arguments: JSON.stringify(argumentsValue) }],
+        ...agent === undefined ? {} : { agent: agent as NonNullable<ToolBatchInput['agent']> },
         signal: AbortSignal.timeout(limits.timeoutMs),
       }
-      const result = await tools.execute(execution)
+      const batch = await tools.execute(execution)
+      const result = batch.results[0]?.result
+      if (result === undefined) throw new Error(`the tool executor settled no result for "${toolName}"`)
       const durationMs = Date.now() - started
       const { json, truncated } = projectTrialResult(result, limits.maxResultChars)
       return { callId: String(callId), isError: result.isError, truncated, durationMs, resultJson: json }

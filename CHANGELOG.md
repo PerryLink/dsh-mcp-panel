@@ -1,11 +1,16 @@
 # Changelog
 
-## [0.6.30] - 2026-11-04
+## [Unreleased]
 
 ### Changed
 
-- Declare `dsh.capabilities` (`network:egress`) and empty `dsh.labels`; the npm artifact was published before the capabilities wave and still warned DSC-11/13.
+- **Host 0.2.2 line support.** devDependencies move from 0.2.1-rc.2 to 0.2.2-rc.1, cordis to 4.1.0 / include 1.1.0 / loader 1.1.0, and schemastery to ~3.19.0 so a single copy resolves against `@deepseek-ai/dsh-llm` 0.2.2. `engines.dsh` appends `>=0.2.2-0 <0.3.0` (append-only) and `engines.node` becomes `^22.19.0 || >=24.9.0`.
 
+### Fixed
+
+- **The tool trial console uses the 0.2.2 batch executor.** `ctx.tools.execute()` now takes `{ calls, signal }` and settles `{ results }`; the trial call builds a one-call batch from the parsed arguments (so the injected `server` argument survives) and projects `results[0].result`. Without this the trial console failed to compile and, at runtime, had no `calls` to dispatch.
+- **Tests mount the native executor.** Raw batch execution moved behind a pluggable executor in 0.2.2; the harness, the lifecycle spec, and the loader composition rows mount `@deepseek-ai/dsh-tool-executor-native`.
+- Add `@deepseek-ai/dsh-package-manifest`: `@deepseek-ai/dsh-llm` 0.2.2's published types import it but its manifest does not declare it.
 
 ## [0.6.29] - 2026-10-19
 
@@ -67,6 +72,7 @@ All notable changes to this project are documented in this file.
 ### Changed
 
 - Correct the release date in the previous section, which was stamped with the literal string `undefined` by the release stamper. No content or behaviour change; the version is bumped only because npm will not republish an existing version.
+
 
 ## [Unreleased]
 
