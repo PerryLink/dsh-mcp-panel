@@ -59,7 +59,11 @@
         "@deepseek-ai/dsh-client-locale",
         "@deepseek-ai/dsh-client-ui-settings"
       ]
-    }
+    },
+    "capabilities": [
+      "network:egress"
+    ],
+    "labels": []
   },
   "dshWorkshop": {
     "schema": "omdsh-workshop-package/v1",
