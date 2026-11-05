@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="430" viewBox="0 0 1200 430" role="img" aria-label="dsh-mcp-panel console flow">
+<title>dsh-mcp-panel console flow</title>
+<rect width="1200" height="430" rx="18" fill="#0d1117"/>
+<text x="60" y="58" fill="#f0f6fc" font-family="ui-sans-serif,system-ui,sans-serif" font-size="30" font-weight="700">dsh-mcp-panel</text>
+<text x="60" y="92" fill="#8b949e" font-family="ui-monospace,monospace" font-size="16">mcp/status · mcpPanel · cordis.patch.yml</text>
+<line x1="60" y1="118" x2="1140" y2="118" stroke="#30363d"/>
+<rect x="60" y="150" width="180" height="96" rx="14" fill="#161b22" stroke="#4B67B4" stroke-width="2"/>
+<text x="150" y="190" fill="#f0f6fc" text-anchor="middle" font-family="ui-monospace,monospace" font-size="16" font-weight="700">cordis.patch.yml</text>
+<text x="150" y="218" fill="#8b949e" text-anchor="middle" font-family="ui-monospace,monospace" font-size="12">1 row / server</text>
+<path d="M246 198h33" stroke="#8b949e" stroke-width="3"/>
+<path d="M277 191l10 7-10 7" fill="none" stroke="#8b949e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="285" y="150" width="180" height="96" rx="14" fill="#161b22" stroke="#30363d" stroke-width="2"/>
+<text x="375" y="190" fill="#f0f6fc" text-anchor="middle" font-family="ui-monospace,monospace" font-size="16" font-weight="700">mcp-client</text>
+<text x="375" y="218" fill="#8b949e" text-anchor="middle" font-family="ui-monospace,monospace" font-size="12">bridge · mcp__*</text>
+<path d="M471 198h33" stroke="#8b949e" stroke-width="3"/>
+<path d="M502 191l10 7-10 7" fill="none" stroke="#8b949e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="510" y="150" width="180" height="96" rx="14" fill="#161b22" stroke="#30363d" stroke-width="2"/>
+<text x="600" y="190" fill="#f0f6fc" text-anchor="middle" font-family="ui-monospace,monospace" font-size="16" font-weight="700">mcp/status</text>
+<text x="600" y="218" fill="#8b949e" text-anchor="middle" font-family="ui-monospace,monospace" font-size="12">observed only</text>
+<path d="M696 198h33" stroke="#8b949e" stroke-width="3"/>
+<path d="M727 191l10 7-10 7" fill="none" stroke="#8b949e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="735" y="150" width="180" height="96" rx="14" fill="#161b22" stroke="#4B67B4" stroke-width="2"/>
+<text x="825" y="190" fill="#f0f6fc" text-anchor="middle" font-family="ui-monospace,monospace" font-size="16" font-weight="700">dsh-mcp-panel</text>
+<text x="825" y="218" fill="#8b949e" text-anchor="middle" font-family="ui-monospace,monospace" font-size="12">/mcp · MCP tab</text>
+<path d="M921 198h33" stroke="#8b949e" stroke-width="3"/>
+<path d="M952 191l10 7-10 7" fill="none" stroke="#8b949e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="960" y="150" width="180" height="96" rx="14" fill="#161b22" stroke="#3fb950" stroke-width="2"/>
+<text x="1050" y="190" fill="#f0f6fc" text-anchor="middle" font-family="ui-monospace,monospace" font-size="16" font-weight="700">patch write</text>
+<text x="1050" y="218" fill="#8b949e" text-anchor="middle" font-family="ui-monospace,monospace" font-size="12">approval · backup</text>
+<path d="M600 246v54" stroke="#4B67B4" stroke-width="2" stroke-dasharray="5 5"/>
+<path d="M1050 246v54" stroke="#4B67B4" stroke-width="2" stroke-dasharray="5 5"/>
+<rect x="60" y="300" width="1080" height="58" rx="12" fill="#161b22" stroke="#4B67B4" stroke-width="2"/>
+<text x="600" y="335" fill="#f0f6fc" text-anchor="middle" font-family="ui-monospace,monospace" font-size="14">read: mcp/status · write: cordis.patch.yml · verify: loader</text>
+<text x="60" y="398" fill="#8b949e" font-family="ui-monospace,monospace" font-size="13">/mcp · /mcp &lt;server&gt; tools · /mcp &lt;server&gt; health · /mcp &lt;server&gt; call</text>
+</svg>

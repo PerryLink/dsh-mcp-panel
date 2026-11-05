@@ -1,13 +1,13 @@
 // Five-language README sync gate: every README must carry the same number of
-// `## ` sections as the English source, state the install command, and contain
-// every configuration-table key. Section headings may be translated; the
-// English file is the source of truth.
+// `## ` sections as the Chinese source, state the install command, and contain
+// every configuration-table key. Section headings may be translated; README.md
+// (Chinese) is the source of truth and README.en.md is its English counterpart.
 import { readFileSync, existsSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)))
-const FILES = ['README.md', 'README-zh.md', 'README-es.md', 'README-pt.md', 'README-hi.md']
+const FILES = ['README.md', 'README.en.md', 'README.es.md', 'README.pt.md', 'README.hi.md']
 const INSTALL_COMMAND = 'dsh plugin --profile web add dsh-mcp-panel'
 
 const failures = []
@@ -23,10 +23,11 @@ const read = (file) => {
 const sectionCount = (text) => (text.match(/^## /gmu) ?? []).length
 
 // Configuration-table keys: every backtick-quoted token in the first cell of
-// each row under the "## Configuration" section (until the next `## ` heading).
+// each row under the "## Configuration" / "## 配置" section (until the next
+// `## ` heading).
 const configKeysOf = (text) => {
   const lines = text.split(/\r?\n/u)
-  const start = lines.findIndex(line => /^##\s+Configuration\s*$/u.test(line))
+  const start = lines.findIndex(line => /^##\s+(Configuration|配置)\s*$/u.test(line))
   if (start === -1) return []
   const end = lines.findIndex((line, index) => index > start && /^##\s+/u.test(line))
   const section = lines.slice(start, end === -1 ? undefined : end)
@@ -35,7 +36,7 @@ const configKeysOf = (text) => {
     if (!line.startsWith('|')) continue
     const cells = line.split('|').map(cell => cell.trim())
     const key = cells[1]
-    if (key === undefined || key === '' || key === 'Key' || /^-+$/u.test(key)) continue
+    if (key === undefined || key === '' || key === 'Key' || key === '键' || /^-+$/u.test(key)) continue
     const tokens = [...key.matchAll(/`([^`]+)`/gu)].map(match => match[1])
     if (tokens.length > 0) keys.push(...tokens)
     else keys.push(key)
