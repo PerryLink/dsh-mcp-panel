@@ -1,8 +1,8 @@
 <div align="center">
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/dsh-mcp-panel-flow-dark.svg">
-  <img src="docs/assets/dsh-mcp-panel-flow-light.svg" width="100%" alt="dsh-mcp-panel 控制台架构：cordis.patch.yml → mcp-client 桥接 → mcp/status → dsh-mcp-panel 控制台 → 只追加 patch 写入；读取走状态 seam，写入走审批、备份与 loader 复验">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/dsh-mcp-panel-hero-zh-dark.webp">
+  <img src="docs/assets/dsh-mcp-panel-hero-zh-light.webp" width="100%" alt="dsh-mcp-panel 配图：左列是插件名与两行价值句；右侧是设置 → 插件 → MCP 页的服务器列表——github connected、filesystem unknown、fetch waiting，含传输、工具数与重连，下方是只追加的 cordis.patch.yml 片段与审批、备份、loader 复验三枚回执">
 </picture>
 
 # dsh-mcp-panel
@@ -39,6 +39,11 @@ dsh plugin --profile <name> add dsh-mcp-panel
 官方 MCP client 是桥接层：每个 MCP 服务器一行 `@deepseek-ai/dsh-mcp-client`，由它连接传输、同步工具、注册 `mcp__<server>__<tool>`。`dsh-mcp-panel` 是架在这层之上的控制台——通过 `mcp/status` seam、工具注册表和 loader 读取事实，把增删改操作渲染成 `cordis.patch.yml` 的片段，写入只追加、走审批、先备份、写完再复验。传输、OAuth 与协议一概不碰。
 
 面板给的是只读运行时视图：每个 server 的 transport、目标、工具数、连接状态、最近错误与重连计数，加上健康诊断、Resources 浏览与工具试用台。控制台与手写 `cordis.yml` 的差别，只是把易错的 YAML 编辑换成了表单、预览与安全落地。
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/dsh-mcp-panel-flow-v5-dark.svg">
+  <img src="docs/assets/dsh-mcp-panel-flow-v5-light.svg" width="100%" alt="dsh-mcp-panel 结构图：左侧读取通道从 loader、工具注册表与 mcp/status 采集事实，聚合打码成快照后输出到 /mcp 与设置页；右侧写入通道把表单操作渲染成只追加片段，经审批、备份、追加与 loader 复验；顶部回程把落盘的 patch 经 loader 重放回 mcp-client 实例">
+</picture>
 
 ## 三步上手
 
@@ -321,7 +326,7 @@ node scripts/verify-headless.mjs
 
 `pnpm run typecheck` 解析本地 harness checkout 的新鲜类型面（tsconfig `paths`），`typecheck:ci` 解析 npm 已发布的 `0.1.7-rc.2` 类型面；两条都要绿。`scripts/verify-headless.mjs` 启动真实 web profile 并打印 `/mcp` 实际输出。发布：`node scripts/release.mjs <x.y.z>` 跑全量门禁、提交并本地打 `v<x.y.z>` 标签（绝不推送）。
 
-配图由 [`scripts/gen-readme-assets.py`](scripts/gen-readme-assets.py) 程序化生成（Python + Pillow），输出 `docs/assets/dsh-mcp-panel-flow-{light,dark}.svg`，可重复执行。
+配图由 [`scripts/gen-readme-assets.py`](scripts/gen-readme-assets.py) 程序化生成（Python + Pillow 画 hero、手写 SVG 画结构图）：hero 输出 `docs/assets/dsh-mcp-panel-hero-{zh,en}-{light,dark}.webp`，结构图输出 `docs/assets/dsh-mcp-panel-flow-v5-{light,dark}.svg`，可重复执行。
 
 Topics：`dsh`, `dsh-plugin`, `deepseek-harness`, `deepseek`, `cordis`, `mcp`, `mcp-client`, `observability`, `panel`
 

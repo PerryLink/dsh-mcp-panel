@@ -1,8 +1,8 @@
 <div align="center">
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/dsh-mcp-panel-flow-dark.svg">
-  <img src="docs/assets/dsh-mcp-panel-flow-light.svg" width="100%" alt="Arquitectura de la consola dsh-mcp-panel: cordis.patch.yml → puente mcp-client → mcp/status → consola dsh-mcp-panel → escritura de parche de solo-anexar; las lecturas usan el seam de estado y las escrituras pasan por aprobación, copia de seguridad y re-verificación del loader">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/dsh-mcp-panel-hero-en-dark.webp">
+  <img src="docs/assets/dsh-mcp-panel-hero-en-light.webp" width="100%" alt="dsh-mcp-panel: el nombre del plugin y sus dos líneas de valor a la izquierda; a la derecha la lista de servidores de Ajustes → Plugins → MCP — github connected, filesystem unknown, fetch waiting, con transporte, número de herramientas y reconexiones — y debajo el fragmento de cordis.patch.yml de solo-anexar con los sellos de aprobación, copia de seguridad y re-verificación del loader">
 </picture>
 
 # dsh-mcp-panel
@@ -39,6 +39,11 @@ dsh plugin --profile <name> add dsh-mcp-panel
 El cliente MCP oficial es el puente: una fila de `@deepseek-ai/dsh-mcp-client` por servidor MCP, que conecta el transporte, sincroniza las herramientas y registra los nombres `mcp__<servidor>__<herramienta>`. `dsh-mcp-panel` es la consola que va encima: lee los hechos por el seam `mcp/status`, el registro de herramientas y el loader, renderiza las operaciones de alta/edición/borrado como fragmentos de `cordis.patch.yml`, y escribe solo parches de solo-anexar, con aprobación, copia de seguridad y re-verificación contra el estado reaplicado por el loader. Transporte, OAuth y protocolo permanecen intactos.
 
 El panel es una vista de runtime de solo lectura: por servidor, transporte, destino, número de herramientas, estado de conexión, último error y reconexiones, más diagnósticos de salud, navegador de Resources y banco de pruebas de herramientas. La única diferencia con un `cordis.yml` escrito a mano es que la edición de YAML propensa a errores se convierte en formularios, vistas previas y aplicación segura.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/dsh-mcp-panel-flow-v5-dark.svg">
+  <img src="docs/assets/dsh-mcp-panel-flow-v5-light.svg" width="100%" alt="Estructura de dsh-mcp-panel: el canal de lectura de la izquierda recoge hechos del loader, del registro de herramientas y del seam mcp/status, los agrega y los anonimiza en la instantánea que sirve a /mcp y a la pestaña de ajustes; el canal de escritura de la derecha convierte las operaciones del formulario en un fragmento de solo-anexar tras aprobación, copia de seguridad, anexado y re-verificación del loader; la banda superior devuelve el parche aplicado por el loader a las filas de mcp-client">
+</picture>
 
 ## Instalación en tres pasos
 
@@ -321,7 +326,7 @@ node scripts/verify-headless.mjs
 
 `pnpm run typecheck` resuelve las caras de tipos frescas del checkout local del harness mediante los `paths` de tsconfig, mientras que `typecheck:ci` resuelve las caras publicadas en npm `0.1.7-rc.2`; ambas deben quedar en verde. `scripts/verify-headless.mjs` arranca el perfil web real e imprime la salida exacta de `/mcp`. Publicación: `node scripts/release.mjs <x.y.z>` ejecuta la puerta completa, hace commit y etiqueta `v<x.y.z>` en local (nunca empuja).
 
-Las imágenes del README se generan programáticamente con [`scripts/gen-readme-assets.py`](scripts/gen-readme-assets.py) (Python + Pillow), que escribe `docs/assets/dsh-mcp-panel-flow-{light,dark}.svg` y se puede reejecutar sin riesgo.
+Las imágenes del README se generan programáticamente con [`scripts/gen-readme-assets.py`](scripts/gen-readme-assets.py) (Pillow dibuja el hero, el diagrama SVG está escrito a mano): el hero escribe `docs/assets/dsh-mcp-panel-hero-{zh,en}-{light,dark}.webp`, la figura de estructura escribe `docs/assets/dsh-mcp-panel-flow-v5-{light,dark}.svg`, y se puede reejecutar sin riesgo.
 
 Topics: `dsh`, `dsh-plugin`, `deepseek-harness`, `deepseek`, `cordis`, `mcp`, `mcp-client`, `observability`, `panel`
 

@@ -1,8 +1,8 @@
 <div align="center">
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/dsh-mcp-panel-flow-dark.svg">
-  <img src="docs/assets/dsh-mcp-panel-flow-light.svg" width="100%" alt="dsh-mcp-panel कंसोल आर्किटेक्चर: cordis.patch.yml → mcp-client ब्रिज → mcp/status → dsh-mcp-panel कंसोल → केवल-जोड़ने वाला patch लेखन; पढ़ना स्टेटस seam से, लिखना अनुमोदन, बैकअप और loader पुनः-सत्यापन से">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/dsh-mcp-panel-hero-en-dark.webp">
+  <img src="docs/assets/dsh-mcp-panel-hero-en-light.webp" width="100%" alt="dsh-mcp-panel: बाईं ओर प्लगइन का नाम और दो मूल्य-पंक्तियाँ; दाईं ओर Settings → Plugins → MCP की सर्वर सूची — github connected, filesystem unknown, fetch waiting, ट्रांसपोर्ट, टूल संख्या और पुनःकनेक्शन के साथ — और नीचे केवल-जोड़ने वाला cordis.patch.yml फ़्रैगमेंट, अनुमोदन, बैकअप और loader पुनः-सत्यापन की मुहरों सहित">
 </picture>
 
 # dsh-mcp-panel
@@ -39,6 +39,11 @@ dsh plugin --profile <name> add dsh-mcp-panel
 आधिकारिक MCP क्लाइंट ब्रिज है: प्रति MCP सर्वर एक `@deepseek-ai/dsh-mcp-client` पंक्ति, जो ट्रांसपोर्ट जोड़ती है, टूल सिंक करती है और `mcp__<server>__<tool>` नाम रजिस्टर करती है। `dsh-mcp-panel` इसके ऊपर का कंसोल है — यह `mcp/status` seam, टूल रजिस्ट्री और loader से तथ्य पढ़ता है, जोड़ने/बदलने/हटाने की क्रियाओं को `cordis.patch.yml` फ़्रैगमेंट में बदलता है, और केवल जोड़ने वाले, अनुमोदन-आधारित, पहले-बैकअप वाले patch लिखता है जिन्हें loader के पुनः-लागू स्थिति के विरुद्ध सत्यापित किया जाता है। ट्रांसपोर्ट, OAuth और प्रोटोकॉल अछूते रहते हैं।
 
 पैनल केवल-पढ़ने वाला रनटाइम दृश्य है: प्रति सर्वर ट्रांसपोर्ट, लक्ष्य, टूल संख्या, कनेक्शन स्थिति, अंतिम त्रुटि और पुनःकनेक्शन, साथ में स्वास्थ्य निदान, Resources ब्राउज़र और टूल परीक्षण कंसोल। हाथ से लिखे `cordis.yml` से एकमात्र अंतर यह है कि त्रुटि-प्रवण YAML संपादन फ़ॉर्म, पूर्वावलोकन और सुरक्षित अनुप्रयोग बन जाता है।
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/dsh-mcp-panel-flow-v5-dark.svg">
+  <img src="docs/assets/dsh-mcp-panel-flow-v5-light.svg" width="100%" alt="dsh-mcp-panel संरचना: बाईं ओर पढ़ने का चैनल loader, टूल रजिस्ट्री और mcp/status seam से तथ्य इकट्ठा करता है, उन्हें समेकित और मास्क करके /mcp तथा सेटिंग्स टैब को स्नैपशॉट देता है; दाईं ओर लिखने का चैनल फ़ॉर्म क्रियाओं को अनुमोदन, बैकअप, जोड़ने और loader पुनः-सत्यापन के बाद केवल-जोड़ने वाले फ़्रैगमेंट में बदलता है; ऊपरी पट्टी लागू किया गया patch loader से होकर mcp-client पंक्तियों तक लौटाती है">
+</picture>
 
 ## तीन चरणों में शुरुआत
 
@@ -321,7 +326,7 @@ node scripts/verify-headless.mjs
 
 `pnpm run typecheck` tsconfig `paths` के ज़रिए स्थानीय harness checkout के ताज़ा टाइप फ़ेस हल करता है, जबकि `typecheck:ci` npm-प्रकाशित `0.1.7-rc.2` फ़ेस हल करता है; दोनों हरे रहने चाहिए। `scripts/verify-headless.mjs` असली web profile बूट करता है और `/mcp` का सटीक आउटपुट छापता है। रिलीज़: `node scripts/release.mjs <x.y.z>` पूरा गेट चलाता है, कमिट करता है और स्थानीय रूप से `v<x.y.z>` टैग करता है (कभी पुश नहीं)।
 
-README की छवियाँ [`scripts/gen-readme-assets.py`](scripts/gen-readme-assets.py) (Python + Pillow) से प्रोग्रामेटिक रूप से बनती हैं, जो `docs/assets/dsh-mcp-panel-flow-{light,dark}.svg` लिखती है और सुरक्षित रूप से दोबारा चलाई जा सकती है।
+README की छवियाँ [`scripts/gen-readme-assets.py`](scripts/gen-readme-assets.py) से प्रोग्रामेटिक रूप से बनती हैं (Pillow hero बनाता है, SVG संरचना हाथ से लिखी जाती है): hero `docs/assets/dsh-mcp-panel-hero-{zh,en}-{light,dark}.webp` लिखता है, संरचना चित्र `docs/assets/dsh-mcp-panel-flow-v5-{light,dark}.svg` लिखता है, और इसे सुरक्षित रूप से दोबारा चलाया जा सकता है।
 
 Topics: `dsh`, `dsh-plugin`, `deepseek-harness`, `deepseek`, `cordis`, `mcp`, `mcp-client`, `observability`, `panel`
 

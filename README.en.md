@@ -1,8 +1,8 @@
 <div align="center">
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/dsh-mcp-panel-flow-dark.svg">
-  <img src="docs/assets/dsh-mcp-panel-flow-light.svg" width="100%" alt="dsh-mcp-panel console architecture: cordis.patch.yml → mcp-client bridge → mcp/status → dsh-mcp-panel console → append-only patch write; reads use the status seam, writes go through approval, backup, and loader re-verification">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/dsh-mcp-panel-hero-en-dark.webp">
+  <img src="docs/assets/dsh-mcp-panel-hero-en-light.webp" width="100%" alt="dsh-mcp-panel: the plugin name and its two value lines on the left; on the right the Settings → Plugins → MCP server list — github connected, filesystem unknown, fetch waiting, with transport, tool count and reconnect count — and below it the append-only cordis.patch.yml fragment with the approval, backup and loader re-verification stamps">
 </picture>
 
 # dsh-mcp-panel
@@ -39,6 +39,11 @@ dsh plugin --profile <name> add dsh-mcp-panel
 The official MCP client is the bridge: one `@deepseek-ai/dsh-mcp-client` row per MCP server, connecting the transport, syncing tools, and registering `mcp__<server>__<tool>` names. `dsh-mcp-panel` is the console on top — it reads facts through the `mcp/status` seam, the tool registry, and the loader, renders add/edit/remove operations as `cordis.patch.yml` fragments, and writes only append-only, approval-gated, backup-first patches verified against the loader's re-applied state. Transport, OAuth, and protocol stay untouched.
 
 The panel is a read-only runtime view: per-server transport, target, tool count, connection status, last error, and reconnect count, plus health diagnostics, a Resources browser, and a tool trial console. The only difference from a hand-written `cordis.yml` is that error-prone YAML editing becomes forms, previews, and safe application.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/dsh-mcp-panel-flow-v5-dark.svg">
+  <img src="docs/assets/dsh-mcp-panel-flow-v5-light.svg" width="100%" alt="dsh-mcp-panel structure: the read channel on the left collects facts from the loader, the tool registry and the mcp/status seam, aggregates and redacts them into the snapshot served to /mcp and the settings tab; the write channel on the right renders form operations into an append-only fragment behind approval, backup, append and loader re-verification; the top band returns the applied patch through the loader into the mcp-client rows">
+</picture>
 
 ## Three-step setup
 
@@ -321,7 +326,7 @@ node scripts/verify-headless.mjs
 
 `pnpm run typecheck` resolves the local harness checkout's fresh type faces through tsconfig `paths`, while `typecheck:ci` resolves the npm-published `0.1.7-rc.2` faces; both must stay green. `scripts/verify-headless.mjs` boots the real web profile and prints the exact `/mcp` output. Releases: `node scripts/release.mjs <x.y.z>` runs the full gate, commits, and tags `v<x.y.z>` locally (never pushes).
 
-The README images are generated programmatically by [`scripts/gen-readme-assets.py`](scripts/gen-readme-assets.py) (Python + Pillow), which writes `docs/assets/dsh-mcp-panel-flow-{light,dark}.svg` and is safe to re-run.
+The README images are generated programmatically by [`scripts/gen-readme-assets.py`](scripts/gen-readme-assets.py) (Pillow draws the hero, the SVG flow is hand-written): the hero writes `docs/assets/dsh-mcp-panel-hero-{zh,en}-{light,dark}.webp`, the structure figure writes `docs/assets/dsh-mcp-panel-flow-v5-{light,dark}.svg`, and it is safe to re-run.
 
 Topics: `dsh`, `dsh-plugin`, `deepseek-harness`, `deepseek`, `cordis`, `mcp`, `mcp-client`, `observability`, `panel`
 
