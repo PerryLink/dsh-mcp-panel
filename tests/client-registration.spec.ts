@@ -67,7 +67,7 @@ describe('client apply', () => {
     expect(ctx.locale.register).toHaveBeenCalledWith(NS, expect.objectContaining({ zh: expect.anything(), en: expect.anything() }))
     expect(registered).toHaveLength(1)
     expect(registered[0]!.options).toMatchObject({
-      name: 'settings.plugins.tab',
+      name: 'plugins.tab',
       id: 'mcp',
       order: 30,
       locale: 'settings.mcpPanel',

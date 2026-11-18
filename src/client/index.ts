@@ -1,7 +1,7 @@
 /**
  * `dsh-mcp-panel`, browser half: mounts the `mcpPanel` Remote contribution,
  * then registers the MCP management console tab into the Plugins settings
- * section (`settings.plugins.tab`, id `mcp`). All data arrives through the
+ * section (`plugins.tab`, id `mcp`). All data arrives through the
  * `remote.mcpPanel` namespace — the tab issues no other RPC and holds no
  * state of its own beyond expansion, the editor/trial forms, and the last
  * loaded snapshot. The current session id (for approval routing) is read
@@ -16,9 +16,10 @@ import type { Context as ClientContext } from '@deepseek-ai/cordis'
 // the merged contract).
 import type {} from '@deepseek-ai/dsh-api-remotes/client'
 import type {} from '@deepseek-ai/dsh-client-locale/client'
-// Type-only: pulls the 'settings.plugins.tab' SlotMap declaration into this
+// Type-only: pulls the 'plugins.tab' SlotMap declaration into this
 // program so the tab registration typechecks against the real declaration.
 import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
+import type {} from '@deepseek-ai/dsh-client-ui-plugin-manager/client'
 import { McpPanelTab, type McpPanelTabInjected } from './McpPanelTab.tsx'
 // The harness locale registry accepts only the 'en' | 'zh' UI language codes
 // today (its LocaleDictOf face), so the tab ships those two dictionaries and
@@ -67,7 +68,7 @@ export const inject = ['slots', 'locale', 'remote', 'sessions']
 interface McpPanelSlots {
   inject(slot: string, callback: () => unknown): void
   register(options: {
-    name: 'settings.plugins.tab'
+    name: 'plugins.tab'
     id: 'mcp'
     order: number
     label: () => string
@@ -112,8 +113,8 @@ export async function apply(ctx: ClientContext): Promise<void> {
       unwrap<PatchWriteResult>(await scope.remote.mcpPanel.writePatch(opJson, confirmed, currentSessionId(scope.get('sessions'))), 'writePatch')
     const callTool: McpPanelTabInjected['callTool'] = async (requestJson) =>
       unwrap<McpTrialResultWire>(await scope.remote.mcpPanel.callTool(requestJson, currentSessionId(scope.get('sessions'))), 'callTool')
-    slots.inject('settings.plugins.tab', () => slots.register({
-      name: 'settings.plugins.tab',
+    slots.inject('plugins.tab', () => slots.register({
+      name: 'plugins.tab',
       id: 'mcp',
       order: 30,
       label: () => t('tab'),
