@@ -76,6 +76,8 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+## [0.6.33] - 2026-11-18
+
 ## [0.6.21] - 2026-10-04
 
 undefined
