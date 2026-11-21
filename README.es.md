@@ -45,6 +45,11 @@ El panel es una vista de runtime de solo lectura: por servidor, transporte, dest
   <img src="docs/assets/dsh-mcp-panel-flow-v5-light.svg" width="100%" alt="Estructura de dsh-mcp-panel: el canal de lectura de la izquierda recoge hechos del loader, del registro de herramientas y del seam mcp/status, los agrega y los anonimiza en la instantánea que sirve a /mcp y a la pestaña de ajustes; el canal de escritura de la derecha convierte las operaciones del formulario en un fragmento de solo-anexar tras aprobación, copia de seguridad, anexado y re-verificación del loader; la banda superior devuelve el parche aplicado por el loader a las filas de mcp-client">
 </picture>
 
+![dsh-mcp-panel: ejecución real de terminal](docs/assets/dsh-mcp-panel-demo.gif)
+
+*Repetición animada de una ejecución real registrada en este repositorio.*
+
+
 ## Instalación en tres pasos
 
 1. **Instala** (elige un canal):

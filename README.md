@@ -36,6 +36,10 @@ dsh plugin --profile <name> add dsh-mcp-panel
 
 ## 它是什么
 
+![dsh-mcp-panel 真实终端运行](docs/assets/dsh-mcp-panel-demo.gif)
+
+*本仓库一次真实运行的动图回放。*
+
 官方 MCP client 是桥接层：每个 MCP 服务器一行 `@deepseek-ai/dsh-mcp-client`，由它连接传输、同步工具、注册 `mcp__<server>__<tool>`。`dsh-mcp-panel` 是架在这层之上的控制台——通过 `mcp/status` seam、工具注册表和 loader 读取事实，把增删改操作渲染成 `cordis.patch.yml` 的片段，写入只追加、走审批、先备份、写完再复验。传输、OAuth 与协议一概不碰。
 
 面板给的是只读运行时视图：每个 server 的 transport、目标、工具数、连接状态、最近错误与重连计数，加上健康诊断、Resources 浏览与工具试用台。控制台与手写 `cordis.yml` 的差别，只是把易错的 YAML 编辑换成了表单、预览与安全落地。
