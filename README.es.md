@@ -300,7 +300,7 @@ No lo sustituye. `@deepseek-ai/dsh-mcp-client` es el único puente: una instanci
 
 | Superficie | Estado |
 |---|---|
-| Harness | DeepSeek Harness `dsh-v0.2.2-rc.4` (verificado 2026-11-18): `engines.dsh >=0.2.1-0 <0.3.0 || >=0.2.2-0 <0.3.0`; las rutas de compatibilidad P0 tienen pruebas de regresión. |
+| Harness | DeepSeek Harness `dsh-v0.2.2-rc.4` (verificado 2026-11-18): `engines.dsh >=0.2.1-0 <0.3.0 \|\| >=0.2.2-0 <0.3.0`; las rutas de compatibilidad P0 tienen pruebas de regresión. |
 | Node | `^22.19.0 \|\| >=24.9.0` |
 | Plataformas | Web GUI (doble cara: host + navegador) |
 | Modelo | Cualquiera (el panel es de solo lectura; solo la salida de `/mcp` es legible por el modelo) |
