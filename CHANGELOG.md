@@ -76,6 +76,8 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+- Compatibility: declare DeepSeek Harness 0.2.3-alpha.1 support (>=0.2.3-0 <0.3.0-0 in engines.dsh and every @deepseek-ai/dsh-* peer range) and refresh README verification stamps.
+
 ## [0.6.33] - 2026-11-18
 
 ## [0.6.21] - 2026-10-04

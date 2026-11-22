@@ -11,6 +11,8 @@
 
 O console de gestão do cliente MCP oficial do DeepSeek Harness: gerencie servidores em **Ajustes → Plugins → MCP** em vez de escrever YAML à mão.
 
+Última verificação: DeepSeek Harness `dsh-v0.2.3-alpha.1` (2026-11-22).
+
 [Instalar](#instalação-em-três-passos) · [Configuração](#configuração) · [FAQ](#faq) · [简体中文](README.md) · [English](README.en.md) · [Español](README.es.md) · [Português](README.pt.md) · [हिन्दी](README.hi.md)
 
 [![License](https://img.shields.io/badge/license-Apache--2.0-3366CC?style=flat-square&labelColor=2B3245)](LICENSE)
@@ -48,7 +50,6 @@ O painel é uma visão de runtime somente leitura: por servidor, transporte, des
 ![dsh-mcp-panel: execução real de terminal](docs/assets/dsh-mcp-panel-demo.gif)
 
 *Repetição animada de uma execução real registrada neste repositório.*
-
 
 ## Instalação em três passos
 
