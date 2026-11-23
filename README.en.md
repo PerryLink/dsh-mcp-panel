@@ -7,6 +7,8 @@
 
 # dsh-mcp-panel
 
+Current version `0.6.35`.
+
 **Add, edit, remove, and trial-call MCP servers from one settings page — honest status, reversible writes.**
 
 The management console for the official DeepSeek Harness MCP client: manage servers in **Settings → Plugins → MCP** instead of hand-writing YAML.

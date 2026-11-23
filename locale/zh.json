@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "MCP 面板",
+    "description": "官方 DeepSeek Harness MCP client 的管理控制台：不用再手改 YAML，在 设置 → 插件 → MCP 里增删改服务器、看健康诊断、试用工具调用。"
+  }
+}

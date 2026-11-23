@@ -76,6 +76,12 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+## [0.6.35] - 2026-11-22
+
+### Changed
+
+- Marketplace display metadata: icon, localized title/description, author.
+
 ## [0.6.34] - 2026-11-22
 
 - Compatibility: declare DeepSeek Harness 0.2.3-alpha.1 support (>=0.2.3-0 <0.3.0-0 in engines.dsh and every @deepseek-ai/dsh-* peer range) and refresh README verification stamps.
