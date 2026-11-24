@@ -76,6 +76,12 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+## [0.6.36] - 2026-11-24
+
+### Changed
+
+- **`engines.dsh` is now a single `>=0.2.0-0 <0.4.0-0` range.** The append-only union of the 0.1.x/0.2.0/0.2.1/0.2.2/0.2.3 clauses is replaced by one range that admits every 0.2.x-0.3.x host line, so the community plugin index's `0.2.0-0` admission line accepts the published package. Peer dependency ranges and devDependency pins are unchanged; no source or behaviour change.
+
 ## [0.6.35] - 2026-11-22
 
 ### Changed
