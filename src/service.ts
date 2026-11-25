@@ -27,6 +27,9 @@
 
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { existsSync, readFileSync } from 'node:fs'
+import { homedir } from 'node:os'
+import { spawn } from 'node:child_process'
 import type { Context } from '@deepseek-ai/cordis'
 import { TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol'
 import type {} from '@deepseek-ai/cordis-plugin-loader'
@@ -62,6 +65,7 @@ import type {
   McpPanelSnapshot,
   McpProbeView,
   McpTrialResultWire,
+  PatchOpenResult,
   PatchPreview,
   PatchWriteResult,
   ProbeStarted,
@@ -92,6 +96,63 @@ const PROFILE_PATCH_FILENAME = 'cordis.patch.yml'
 
 /** Label prefix written by the `mcp_probe` tool and the panel probe action. */
 const PROBE_LABEL_PREFIX = 'mcp_probe '
+
+/**
+ * One candidate MCP config layer for the "open config file" action.
+ * `hasMcpRows` is a cheap content sniff (`mcp-client` module rows), used to
+ * prefer a layer that actually carries MCP servers over one that exists but
+ * does not.
+ */
+export interface PatchOpenCandidate {
+  /** Absolute file path. */
+  readonly file: string
+  /** Whether the file exists. */
+  readonly exists: boolean
+  /** Whether the content mentions an mcp-client module row. */
+  readonly hasMcpRows: boolean
+}
+
+/**
+ * Choose which patch layer the open button targets: layers that carry MCP
+ * rows win (the last such layer — the global layer — wins ties, since it is
+ * the profile-independent one users mean by "the MCP config file"); with no
+ * MCP rows anywhere, the first existing layer opens. `null` = nothing to open.
+ *
+ * Pure on purpose: unit-testable without touching the filesystem.
+ */
+export function choosePatchFileToOpen(candidates: ReadonlyArray<PatchOpenCandidate>): string | null {
+  const present = candidates.filter(candidate => candidate.exists)
+  if (present.length === 0) return null
+  const withRows = present.filter(candidate => candidate.hasMcpRows)
+  if (withRows.length > 0) return withRows[withRows.length - 1]!.file
+  return present[0]!.file
+}
+
+/** The global cordis patch layer (`$DSH_HOME/cordis.patch.yml`, default `~/.dsh`). */
+function globalPatchFile(): string {
+  const home = process.env['DSH_HOME']
+  const dir = typeof home === 'string' && home !== '' ? home : join(homedir(), '.dsh')
+  return join(dir, PROFILE_PATCH_FILENAME)
+}
+
+/**
+ * Open one text file with the platform opener: `explorer.exe` (win32, hands
+ * the file to the shell's default handler), `open -t` (darwin, default text
+ * editor), `xdg-open` (linux). Fire-and-forget: an opener failure is logged,
+ * never thrown into the panel.
+ */
+function openTextFile(ctx: Context, file: string): void {
+  const platform = process.platform
+  const command = platform === 'win32' ? 'explorer.exe' : platform === 'darwin' ? 'open' : 'xdg-open'
+  const args = platform === 'darwin' ? ['-t', file] : [file]
+  try {
+    const child = spawn(command, args, { detached: true, stdio: 'ignore' })
+    child.on('error', (error) => { ctx.logger.warn(`dsh-mcp-panel: opening ${file} with ${command} failed: ${String(error)}`) })
+    child.unref()
+  } catch (error) {
+    ctx.logger.warn(`dsh-mcp-panel: spawning ${command} failed: ${String(error)}`)
+  }
+}
 
 /**
  * Supervisor phases this panel understands. Upstream payloads are
@@ -461,6 +522,38 @@ private readonly trialCaller = createTrialCaller()
       ops: 1,
       note: 'The web surface hot-reloads cordis.patch.yml edits; other surfaces restart.',
     }
+  }
+
+  /**
+   * Open the MCP config file in the platform text-file opener. Candidates:
+   * the profile patch layer (the layer the console writes) and the global
+   * layer (`$DSH_HOME/cordis.patch.yml`). A layer that carries actual
+   * mcp-client rows wins (see {@link choosePatchFileToOpen}); when neither
+   * layer exists the call fails with an actionable error instead of opening
+   * nothing. Exported by `mcpPanel/openPatchFile`.
+   *
+   * @returns the file that was opened.
+   */
+  openPatchFile(): PatchOpenResult {
+    const candidates: PatchOpenCandidate[] = []
+    for (const file of [this.patchFile(), globalPatchFile()]) {
+      if (file === null) continue
+      let hasMcpRows = false
+      if (existsSync(file)) {
+        try {
+          hasMcpRows = readFileSync(file, 'utf8').includes('mcp-client')
+        } catch {
+          hasMcpRows = false
+        }
+      }
+      candidates.push({ file, exists: existsSync(file), hasMcpRows })
+    }
+    const target = choosePatchFileToOpen(candidates)
+    if (target === null) {
+      throw new Error('dsh-mcp-panel: no MCP config file to open — neither the profile patch layer nor the global layer exists')
+    }
+    openTextFile(this.ctx, target)
+    return { file: target }
   }
 
   /**
