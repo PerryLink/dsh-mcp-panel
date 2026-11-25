@@ -450,6 +450,29 @@ export const MCP_PANEL_WRITE_DESCRIPTOR = Object.freeze({
   sourceLocation: Object.freeze({ file: 'src/wire.ts', line: 1, column: 1 }),
 } as const) satisfies InvocationDescriptor
 
+/** Result of `mcpPanel/openPatchFile`: the config file the opener launched. */
+export interface PatchOpenResult {
+  /** Absolute file that was opened in the platform text-file opener. */
+  file: string
+}
+
+/** Strict wire schema for {@link PatchOpenResult}. */
+export const PATCH_OPEN_RESULT_SCHEMA = z.object({
+  file: z.string(),
+})
+
+/** The `mcpPanel/openPatchFile` invocation descriptor: open the MCP config file. */
+export const MCP_PANEL_OPEN_DESCRIPTOR = Object.freeze({
+  id: 'dsh-mcp-panel#mcpPanel/openPatchFile',
+  service: 'mcpPanel',
+  namespace: 'mcpPanel',
+  method: 'openPatchFile',
+  invocation: Object.freeze({ kind: 'direct' }),
+  parameters: Object.freeze([]),
+  result: strictCodec('dsh-mcp-panel/types#PatchOpenResult', PATCH_OPEN_RESULT_SCHEMA),
+  sourceLocation: Object.freeze({ file: 'src/wire.ts', line: 1, column: 1 }),
+} as const) satisfies InvocationDescriptor
+
 /** Result of `mcpPanel/callTool`: one trial call through the official pipeline. */
 export interface McpTrialResultWire {
   /** Panel-assigned correlation id. */
@@ -509,5 +532,6 @@ export const MCP_PANEL_INVOCATIONS = Object.freeze([
   MCP_PANEL_PROBE_DESCRIPTOR,
   MCP_PANEL_PREVIEW_DESCRIPTOR,
   MCP_PANEL_WRITE_DESCRIPTOR,
+  MCP_PANEL_OPEN_DESCRIPTOR,
   MCP_PANEL_CALLTOOL_DESCRIPTOR,
 ])

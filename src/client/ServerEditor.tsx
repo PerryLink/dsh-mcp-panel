@@ -254,7 +254,10 @@ function MapEditor({ label, rows, setRows, t }: {
             placeholder={t('keyColumn')}
             value={row.key}
             onChange={(event) => {
-              setRows(current => current.map(entry => entry.id === row.id ? { ...entry, key: event.currentTarget.value } : entry))
+              // Capture synchronously: React nulls event.currentTarget before the
+              // deferred setRows updater runs, which previously crashed rendering.
+              const value = event.currentTarget.value
+              setRows(current => current.map(entry => entry.id === row.id ? { ...entry, key: value } : entry))
             }}
           />
           <input
@@ -264,7 +267,8 @@ function MapEditor({ label, rows, setRows, t }: {
             placeholder={t('unchanged')}
             value={row.value}
             onChange={(event) => {
-              setRows(current => current.map(entry => entry.id === row.id ? { ...entry, value: event.currentTarget.value } : entry))
+              const value = event.currentTarget.value
+              setRows(current => current.map(entry => entry.id === row.id ? { ...entry, value } : entry))
             }}
           />
           <button

@@ -10,6 +10,7 @@ import type {
   McpProbeView,
   McpServerView,
   McpTrialResultWire,
+  PatchOpenResult,
   PatchPreview,
   PatchWriteResult,
   ProbeStarted,
@@ -25,6 +26,8 @@ export interface McpPanelTabInjected {
   previewPatch: (opJson: string) => Promise<PatchPreview>
   /** Approval-gated append of one CRUD operation to the profile patch layer. */
   writePatch: (opJson: string, confirmed: boolean) => Promise<PatchWriteResult>
+  /** Open the MCP config file (profile layer, else the global layer) in the platform opener. */
+  openPatchFile: () => Promise<PatchOpenResult>
   /** Trial-call one tool through the official pipeline. */
   callTool: (requestJson: string) => Promise<McpTrialResultWire>
 }
@@ -112,7 +115,7 @@ function diagnosticText(code: string, text: string, t: McpPanelTabProps['t']): s
 }
 
 /** Render the MCP management console tab. */
-export function McpPanelTab({ status, probe, previewPatch, writePatch, callTool, t }: McpPanelTabProps): ReactNode {
+export function McpPanelTab({ status, probe, previewPatch, writePatch, openPatchFile, callTool, t }: McpPanelTabProps): ReactNode {
   const listId = useId()
   const [request, setRequest] = useState(0)
   // Expanded card set: multiple cards may be open at once, so "expand all"
@@ -133,6 +136,8 @@ export function McpPanelTab({ status, probe, previewPatch, writePatch, callTool,
   // Resources browser state: per-server URI input + last browse outcome.
   const [resourceUri, setResourceUri] = useState<Record<string, string>>({})
   const [resourceState, setResourceState] = useState<Record<string, ResourceBrowseState>>({})
+  // Open-config-file action outcome: null = idle.
+  const [openState, setOpenState] = useState<{ readonly kind: 'busy' } | { readonly kind: 'error'; readonly message: string } | { readonly kind: 'done'; readonly file: string } | null>(null)
 
   /** Browse one server's resources through the OFFICIAL shared tools. */
   const runResource = (serverName: string, toolName: string, argsJson: string): void => {
@@ -437,6 +442,31 @@ export function McpPanelTab({ status, probe, previewPatch, writePatch, callTool,
           {probeError !== null ? <p className="dmcp-error-text" role="alert">{t('probeFailedAction')}: {probeError}</p> : null}
           {model.patchFile !== null ? (
             <p className="dmcp-patch-hint">{t('patchHint')} <code>{model.patchFile}</code></p>
+          ) : null}
+
+          <div className="dmcp-toolbar">
+            <button
+              type="button"
+              className="dmcp-action"
+              disabled={openState?.kind === 'busy'}
+              onClick={() => {
+                setOpenState({ kind: 'busy' })
+                void Promise.resolve().then(() => openPatchFile()).then(
+                  (result) => { setOpenState({ kind: 'done', file: result.file }) },
+                  (failure: unknown) => { setOpenState({ kind: 'error', message: failure instanceof Error ? failure.message : String(failure) }) },
+                )
+              }}
+            >
+              {t('openPatchFile')}
+            </button>
+          </div>
+          {openState?.kind === 'done' ? <p className="dmcp-notice">{t('openPatchDone').replace('{file}', openState.file)}</p> : null}
+          {openState?.kind === 'error' ? (
+            <p className="dmcp-error-text" role="alert">
+              {openState.message.includes('no MCP config file to open')
+                ? t('openPatchFileUnknown')
+                : t('openPatchFileFailed').replace('{message}', openState.message)}
+            </p>
           ) : null}
 
           <div className="dmcp-toolbar">

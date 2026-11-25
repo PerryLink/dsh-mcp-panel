@@ -48,6 +48,10 @@ export const zh = {
   probeUnreachable: '不可达',
   probeFailedAction: '探测失败',
   patchHint: '本控制台以"追加操作"方式写入 profile patch 层（永不改写既有内容），每次写入前自动备份。',
+  openPatchFile: '打开MCP配置文件',
+  openPatchDone: '已打开 {file}。',
+  openPatchFileFailed: '打开MCP配置文件失败：{message}',
+  openPatchFileUnknown: '未找到可打开的 MCP 配置文件——profile 层与全局层（$DSH_HOME/cordis.patch.yml）均不存在。',
   // --- Health diagnostics ---
   health: '健康诊断',
   healthSuggestions: '自愈建议',
@@ -191,6 +195,10 @@ export const en = {
   probeUnreachable: 'Unreachable',
   probeFailedAction: 'Probe failed',
   patchHint: 'This console writes the profile patch layer by APPENDING operations (existing content is never rewritten), and backs up the file before every write.',
+  openPatchFile: 'Open MCP config file',
+  openPatchDone: 'Opened {file}.',
+  openPatchFileFailed: 'Failed to open the MCP config file: {message}',
+  openPatchFileUnknown: 'No MCP config file to open — neither the profile patch layer nor the global layer ($DSH_HOME/cordis.patch.yml) exists.',
   // --- Health diagnostics ---
   health: 'Health diagnostics',
   healthSuggestions: 'Self-heal suggestions',

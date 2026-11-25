@@ -13,6 +13,7 @@ import { MCP_PANEL_INVOCATIONS } from '../wire.ts'
 import type {
   McpPanelSnapshot,
   McpTrialResultWire,
+  PatchOpenResult,
   PatchPreview,
   PatchWriteResult,
   ProbeStarted,
@@ -28,6 +29,8 @@ declare module '@deepseek-ai/dsh-typert-protocol' {
     previewPatch: (opJson: string) => Promise<RemoteResult<PatchPreview>>
     /** Approval-gated append of one CRUD operation to the profile patch layer. */
     writePatch: (opJson: string, confirmed: boolean, sessionId?: string) => Promise<RemoteResult<PatchWriteResult>>
+    /** Open the MCP config file (profile layer, else the global layer) in the platform text-file opener. */
+    openPatchFile: () => Promise<RemoteResult<PatchOpenResult>>
     /** Trial-call one tool through the official pipeline. */
     callTool: (requestJson: string, sessionId?: string) => Promise<RemoteResult<McpTrialResultWire>>
   }
@@ -36,6 +39,7 @@ declare module '@deepseek-ai/dsh-typert-protocol' {
     'mcpPanel/probe': (serverName: string) => Promise<RemoteResult<ProbeStarted>>
     'mcpPanel/previewPatch': (opJson: string) => Promise<RemoteResult<PatchPreview>>
     'mcpPanel/writePatch': (opJson: string, confirmed: boolean, sessionId?: string) => Promise<RemoteResult<PatchWriteResult>>
+    'mcpPanel/openPatchFile': () => Promise<RemoteResult<PatchOpenResult>>
     'mcpPanel/callTool': (requestJson: string, sessionId?: string) => Promise<RemoteResult<McpTrialResultWire>>
   }
   interface TypertRemoteNamespaceMap {

@@ -430,3 +430,35 @@ describe('console actions', () => {
     expect(result.approvalPath).toBe('interactive-confirmation')
   })
 })
+
+describe('choosePatchFileToOpen', () => {
+  it('returns null when no candidate layer exists', async () => {
+    const { choosePatchFileToOpen } = await import('../src/service.ts')
+    expect(choosePatchFileToOpen([
+      { file: 'C:/p/cordis.patch.yml', exists: false, hasMcpRows: false },
+      { file: 'C:/g/cordis.patch.yml', exists: false, hasMcpRows: false },
+    ])).toBeNull()
+  })
+
+  it('prefers the layer carrying mcp rows; the global layer wins ties', async () => {
+    const { choosePatchFileToOpen } = await import('../src/service.ts')
+    // Only the global layer has MCP rows (the ragflow case): it wins.
+    expect(choosePatchFileToOpen([
+      { file: 'C:/p/cordis.patch.yml', exists: true, hasMcpRows: false },
+      { file: 'C:/g/cordis.patch.yml', exists: true, hasMcpRows: true },
+    ])).toBe('C:/g/cordis.patch.yml')
+    // Both layers carry rows: the last (global) layer wins.
+    expect(choosePatchFileToOpen([
+      { file: 'C:/p/cordis.patch.yml', exists: true, hasMcpRows: true },
+      { file: 'C:/g/cordis.patch.yml', exists: true, hasMcpRows: true },
+    ])).toBe('C:/g/cordis.patch.yml')
+  })
+
+  it('falls back to the first existing layer when no layer has mcp rows', async () => {
+    const { choosePatchFileToOpen } = await import('../src/service.ts')
+    expect(choosePatchFileToOpen([
+      { file: 'C:/p/cordis.patch.yml', exists: true, hasMcpRows: false },
+      { file: 'C:/g/cordis.patch.yml', exists: false, hasMcpRows: false },
+    ])).toBe('C:/p/cordis.patch.yml')
+  })
+})
